@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS base
+FROM oven/bun:alpine AS base
 WORKDIR /usr/src/app
 
 FROM base AS install
@@ -15,8 +15,7 @@ COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
 
 FROM base AS release
-RUN apt update
-RUN apt install curl
+RUN apk add --no-cache curl
 COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /usr/src/app/src src/
 COPY --from=prerelease /usr/src/app/package.json .
