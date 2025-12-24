@@ -2,7 +2,7 @@ import { App, LogLevel } from "@slack/bolt";
 import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
-const apiKeysFile = path.join(__dirname, "../apiKeys.json");
+const apiKeysFile = path.join(__dirname, "../cache/apiKeys.json");
 
 const app = new App({
     signingSecret: process.env.SIGNING_SECRET,
@@ -22,16 +22,15 @@ const app = new App({
 });
 
 const cacheDir = path.join(__dirname, "../cache");
-if (!fs.existsSync(cacheDir)) {
-    fs.mkdirSync(cacheDir, { recursive: true });
-}
-
 let clients: Record<string, FT> = {};
 
 function loadApiKeys(): Record<string, {
     channel: string;
     projects: string[];
 }> {
+    if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+    }
     if (!fs.existsSync(apiKeysFile)) {
         fs.writeFileSync(apiKeysFile, JSON.stringify({}, null, 2));
     }

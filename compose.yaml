@@ -7,7 +7,7 @@ services:
     ports:
       - 53814:3000
     volumes:
-      - apiKeys:/usr/src/app/apiKeys.json
+      - cache:/usr/src/app/cache
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/healthcheck"]
       interval: 30s
@@ -16,4 +16,4 @@ services:
       start_period: 10s
 
 volumes:
-  apiKeys:
+  cache:
