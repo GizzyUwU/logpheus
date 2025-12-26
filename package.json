@@ -7,7 +7,8 @@
     "@types/bun": "latest"
   },
   "scripts": {
-    "dev": "bun run src/index.ts"
+    "dev:manual": "bun run src/index.ts",
+    "dev": "infisical run --env=dev -- bun run src/index.ts"
   },
   "peerDependencies": {
     "typescript": "^5"
