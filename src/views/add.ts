@@ -83,9 +83,6 @@ export default {
                         type: "mrkdwn",
                         text: `> ${freshProject.description}`
                     }
-                },
-                {
-                    "type": "divider"
                 }
             ]
         });
