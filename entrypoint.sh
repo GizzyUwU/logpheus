@@ -4,4 +4,5 @@ if [ ! -d "/usr/src/app/cache" ]; then
   mkdir -p "/usr/src/app/cache"
 fi
 
-exec bun run src/index.ts
+chown -R bun:bun /usr/src/app/cache
+exec runuser -u bun -- bun run src/index.ts

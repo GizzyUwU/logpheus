@@ -12,6 +12,5 @@ RUN chmod +x /usr/src/app/entrypoint.sh
 RUN chmod 700 /usr/src/app/cache
 RUN --mount=type=cache,target=/var/cache/apk apk add --no-cache curl
 
-USER bun
 EXPOSE 3000/tcp
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
