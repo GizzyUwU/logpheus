@@ -10,7 +10,7 @@ RUn chown -R bun:bun /usr/src/app
 COPY entrypoint.sh /usr/src/app/entrypoint.sh
 RUN chmod +x /usr/src/app/entrypoint.sh
 RUN chmod 700 /usr/src/app/cache
-RUN --mount=type=cache,target=/var/cache/apk apk add --no-cache curl
+RUN --mount=type=cache,target=/var/cache/apk apk add --no-cache curl su-exec
 
 EXPOSE 3000/tcp
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
