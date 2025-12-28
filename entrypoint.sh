@@ -5,4 +5,4 @@ if [ ! -d "/usr/src/app/cache" ]; then
 fi
 
 chown -R bun:bun /usr/src/app/cache
-exec runuser -u bun -- bun run src/index.ts
+exec su-exec bun bun run src/index.ts
