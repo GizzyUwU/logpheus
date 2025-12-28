@@ -9,6 +9,7 @@ RUN mkdir /usr/src/app/cache
 RUn chown -R bun:bun /usr/src/app
 COPY entrypoint.sh /usr/src/app/entrypoint.sh
 RUN chmod +x /usr/src/app/entrypoint.sh
+RUN chmod 700 /usr/src/app/cache
 RUN --mount=type=cache,target=/var/cache/apk apk add --no-cache curl
 
 USER bun
