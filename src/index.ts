@@ -3,6 +3,7 @@ import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
 import type FTypes from "./lib/ft.d"
+import { containsMarkdown, parseMarkdownToSlackBlocks } from "./lib/parseMarkdown";
 const apiKeysFile = path.join(__dirname, "../cache/apiKeys.json");
 const cacheDir = path.join(__dirname, "../cache");
 const app = new App({
@@ -175,38 +176,67 @@ async function checkAllProjects() {
                         const cMinutes = createdAt.getUTCMinutes().toString().padStart(2, '0');
                         const cs50Timestamp = `${year}${month}${day}T${cHours}${cMinutes}+0000`;
 
-                        await app.client.chat.postMessage({
-                            channel: data.channel,
-                            unfurl_links: false,
-                            blocks: [
-                                {
-                                    type: "section",
-                                    text: {
-                                        type: "mrkdwn",
-                                        text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
-                                    }
-                                },
-                                {
-                                    type: "section",
-                                    text: {
-                                        type: "mrkdwn",
-                                        text: `> ${devlog.body}`
-                                    }
-                                },
-                                {
-                                    "type": "divider"
-                                },
-                                {
-                                    "type": "context",
-                                    "elements": [
-                                        {
-                                            "type": "mrkdwn",
-                                            "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
+                        if (!containsMarkdown(devlog.body)) {
+                            await app.client.chat.postMessage({
+                                channel: data.channel,
+                                unfurl_links: false,
+                                blocks: [
+                                    {
+                                        type: "section",
+                                        text: {
+                                            type: "mrkdwn",
+                                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
                                         }
-                                    ]
-                                }
-                            ]
-                        });
+                                    },
+                                    {
+                                        type: "section",
+                                        text: {
+                                            type: "mrkdwn",
+                                            text: `> ${devlog.body}`
+                                        }
+                                    },
+                                    {
+                                        "type": "divider"
+                                    },
+                                    {
+                                        "type": "context",
+                                        "elements": [
+                                            {
+                                                "type": "mrkdwn",
+                                                "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
+                                            }
+                                        ]
+                                    }
+                                ]
+                            });
+                        } else {
+                            await app.client.chat.postMessage({
+                                channel: data.channel,
+                                unfurl_links: false,
+                                blocks: [
+                                    {
+                                        type: "section",
+                                        text: {
+                                            type: "mrkdwn",
+                                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
+                                        }
+                                    },
+                                    ...parseMarkdownToSlackBlocks(devlog.body),
+                                    {
+                                        "type": "divider"
+                                    },
+                                    {
+                                        "type": "context",
+                                        "elements": [
+                                            {
+                                                "type": "mrkdwn",
+                                                "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
+                                            }
+                                        ]
+                                    }
+                                ]
+                            });
+                        }
                     } catch (err) {
                         console.error(`Error posting to Slack for project ${projectId}:`, err);
                     }
