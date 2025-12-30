@@ -2,6 +2,8 @@ import type { AckFn, RespondArguments, RespondFn, Logger, SlashCommand } from "@
 import type { WebClient } from "@slack/web-api";
 import fs from "node:fs";
 import path from "node:path";
+import type { Database } from "bun:sqlite"
+import FT from "../lib/ft";
 
 export default {
     name: process.env.DEV_MODE === "true" ? '/devlpheus-remove' : '/logpheus-remove',
@@ -11,57 +13,52 @@ export default {
         client: WebClient,
         respond: RespondFn,
         logger: Logger
-    }, { loadApiKeys }: {
-        loadApiKeys: () => Record<string, {
-            channel: string;
-            projects: string[];
-        }>
+    }, { db, clients }: {
+        db: Database;
+        clients: Record<string, FT>;
     }) => {
         try {
-            await ack();
             const channel = await client.conversations.info({
                 channel: command.channel_id
             })
             if (!channel) return await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND")
-            if (command.user_id !== channel.channel?.creator) return await respond("You can only run this command in a channel that you are the creator of");
-            const apiKeys = loadApiKeys();
+            if (command.user_id !== channel.channel?.creator) return await ack("You can only run this command in a channel that you are the creator of");
             const projectId = command.text.trim();
 
             if (projectId.length > 0) {
-                if (!Number.isInteger(Number(projectId))) return await respond("Project ID must be a valid number.");
-                for (const [apiToken, entry] of Object.entries(apiKeys)) {
-                    if (entry.projects.includes(projectId)) {
-                        entry.projects = entry.projects.filter(p => p !== projectId);
-
-                        if (entry.projects.length === 0) {
-                            delete apiKeys[apiToken];
+                if (!Number.isInteger(Number(projectId))) return await ack("Project ID must be a valid number.");
+                await ack();
+                const rows = db.query(`SELECT * FROM api_keys`).all() as { api_key: string; channel: string; projects: string }[];
+                for (const row of rows) {
+                    const projects: string[] = JSON.parse(row.projects);
+                    if (projects.includes(projectId)) {
+                        if (clients[row.api_key]) delete clients[row.api_key];
+                        const updatedProjects = projects.filter(p => p !== projectId);
+                        if (updatedProjects.length > 0) {
+                            db.run(`UPDATE api_keys SET projects = ? WHERE api_key = ?`, [JSON.stringify(updatedProjects), row.api_key]);
+                        } else {
+                            db.run(`DELETE FROM api_keys WHERE api_key = ?`, [row.api_key]);
                         }
 
-                        delete apiKeys[projectId];
-                        fs.writeFileSync(path.join(__dirname, "../../cache/apiKeys.json"), JSON.stringify(apiKeys, null, 2), "utf-8");
-                        const cacheFilePath = path.join(path.join(__dirname, "../../cache"), `${projectId}.json`);
-
-                        if (fs.existsSync(cacheFilePath)) {
-                            fs.unlinkSync(cacheFilePath);
-                        }
-
-                        await respond(`Removed project ${projectId} from list.`)
+                        db.run(`DELETE FROM project_cache WHERE project_id = ?`, [projectId]);
+                        if (clients[row.api_key]) delete clients[row.api_key];
+                        return await respond({ text: `Project ${projectId} has been disconnected from this channel.`, response_type: "ephemeral" });
                     }
                 }
             } else {
-                let foundKey: string | null = null;
+                const row = db.query(`SELECT * FROM api_keys WHERE channel = ?`).get(command.channel_id) as { api_key: string; projects: string } | undefined;
+                if (!row) return await ack("No API key found for this channel.");
+                await ack()
+                if (clients[row.api_key]) delete clients[row.api_key];
 
-                for (const [apiToken, entry] of Object.entries(apiKeys)) {
-                    if (entry.channel === command.channel_id) {
-                        foundKey = apiToken;
-                        break;
-                    }
+                const projects: string[] = JSON.parse(row.projects);
+                for (const pid of projects) {
+                    db.run(`DELETE FROM project_cache WHERE project_id = ?`, [pid]);
                 }
 
-                if (!foundKey) return await respond("No API key found for this channel.");
-                delete apiKeys[foundKey];
-                fs.writeFileSync(path.join(__dirname, "../../cache/apiKeys.json"), JSON.stringify(apiKeys, null, 2), "utf-8");
-                return await respond("Removed all projects for this channel.");
+                db.run(`DELETE FROM api_keys WHERE api_key = ?`, [row.api_key]);
+                if (clients[row.api_key]) delete clients[row.api_key];
+                return await respond({ text: "All projects previously connected to this channel have been disconnected.", response_type: "ephemeral" });
             }
         } catch (error: any) {
             if (error.code === "slack_webapi_platform_error" && error.data?.error === "channel_not_found") {
