@@ -51,6 +51,8 @@ export default {
 
         await client.chat.postMessage({
             channel: channelId,
+            unfurl_links: false,
+            unfurl_media: false,
             blocks: [
                 {
                     type: "section",

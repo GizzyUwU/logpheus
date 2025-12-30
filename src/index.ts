@@ -288,6 +288,7 @@ async function checkAllProjects() {
                             await app.client.chat.postMessage({
                                 channel: data.channel,
                                 unfurl_links: false,
+                                unfurl_media: false,
                                 blocks: [
                                     {
                                         type: "section",
@@ -321,6 +322,7 @@ async function checkAllProjects() {
                             await app.client.chat.postMessage({
                                 channel: data.channel,
                                 unfurl_links: false,
+                                unfurl_media: false,
                                 blocks: [
                                     {
                                         type: "section",
@@ -357,6 +359,7 @@ async function checkAllProjects() {
                         await app.client.chat.postMessage({
                             channel: data.channel,
                             unfurl_links: false,
+                            unfurl_media: false,
                             blocks: [
                                 {
                                     type: "section",
@@ -372,6 +375,7 @@ async function checkAllProjects() {
                         await app.client.chat.postMessage({
                             channel: data.channel,
                             unfurl_links: false,
+                            unfurl_media: false,
                             blocks: [
                                 {
                                     type: "section",
