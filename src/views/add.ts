@@ -19,7 +19,9 @@ export default {
         const channelId = view.title.text;
         if (!projectId) return await ack('Project ID is required');
         if (!apiKey) return await ack('Flavortown API key is required');
-
+        if(apiKey.startsWith("ft_sk_") === false) return await ack('Flavortown API key is invalid every api key should start with ft_sk_');
+        if(apiKey.length !== 46) return await ack('Flavortown API key is invalid every api key should be 46 characters long');
+        
         const existingRow = db.query(`SELECT * FROM api_keys WHERE api_key = ?`).get(apiKey) as { channel: string; projects: string; api_key: string } | undefined;
         let projects: string[] = [];
         if (existingRow) {
