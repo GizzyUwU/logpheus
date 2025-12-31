@@ -4,5 +4,10 @@ if [ ! -d "/usr/src/app/cache" ]; then
   mkdir -p "/usr/src/app/cache"
 fi
 
+if [ ! -d "/usr/src/app/cache/pg" ]; then
+  mkdir -p "/usr/src/app/cache"
+  exec su-exec bun bun run migrate
+fi
+
 chown -R bun:bun /usr/src/app/cache
 exec su-exec bun bun run src/index.ts

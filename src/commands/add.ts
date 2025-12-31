@@ -1,21 +1,28 @@
-import type { AckFn, RespondArguments, Logger, SlashCommand } from "@slack/bolt";
+import type { AckFn, RespondArguments, Logger, SlashCommand, RespondFn } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 
 export default {
     name: process.env.DEV_MODE === "true" ? '/devlpheus-add' : '/logpheus-add',
-    execute: async ({ command, ack, client, logger }: {
+    execute: async ({ command, ack, client, logger, respond }: {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,
         client: WebClient,
-        logger: Logger
+        logger: Logger,
+        respond: RespondFn
     }) => {
         try {
+            await ack();
             const channel = await client.conversations.info({
                 channel: command.channel_id
             })
-            if (!channel) return await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND")
-            if (command.user_id !== channel.channel?.creator) return await ack("You can only run this command in a channel that you are the creator of");
-            await ack()
+            if (!channel) return await respond({
+                text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+                response_type: "ephemeral"
+            })
+            if (command.user_id !== channel.channel?.creator) return await respond({
+                text: "You can only run this command in a channel that you are the creator of",
+                response_type: "ephemeral"
+            });
             await client.views.open({
                 trigger_id: command.trigger_id,
                 view: {
@@ -26,6 +33,14 @@ export default {
                         text: command.channel_id
                     },
                     blocks: [
+                        {
+                            type: "section",
+                            block_id: "user_id",
+                            text: {
+                                type: "plain_text",
+                                text: "User: " + command.user_id
+                            },
+                        },
                         {
                             type: 'input',
                             block_id: 'projId',
@@ -63,10 +78,10 @@ export default {
             if (error.code === "slack_webapi_platform_error" && error.data?.error === "channel_not_found") {
                 await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND");
                 return;
+            } else {
+                logger.error(error);
+                await ack("An unexpected error occurred. Check logs.");
             }
-
-            logger.error(error);
-            await ack("An unexpected error occurred. Check logs.");
         }
     }
 };

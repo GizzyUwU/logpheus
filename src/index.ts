@@ -5,9 +5,19 @@ import path from "path";
 import type FTypes from "./lib/ft.d"
 import { containsMarkdown, parseMarkdownToSlackBlocks } from "./lib/parseMarkdown";
 import { Database } from "bun:sqlite";
-const db = new Database(path.join(__dirname, "../cache/logpheus.db"), { create: true, strict: true });
-const apiKeysFile = path.join(__dirname, "../cache/apiKeys.json");
+import { drizzle } from "drizzle-orm/pglite";
+import { eq } from "drizzle-orm";
+import { apiKeys } from "./schema/apiKeys";
+import { metadata } from "./schema/meta";
+import { projectData } from "./schema/project";
+import migrate from "./migration"
+
 const cacheDir = path.join(__dirname, "../cache");
+const db = new Database(path.join(__dirname, "../cache/logpheus.db"), { create: true });
+const pg = drizzle(path.join(cacheDir, "pg"), {
+    casing: 'snake_case'
+})
+const apiKeysFile = path.join(__dirname, "../cache/apiKeys.json");
 const app = new App({
     signingSecret: process.env.SIGNING_SECRET,
     token: process.env.BOT_TOKEN,
@@ -25,159 +35,26 @@ const app = new App({
     ]
 });
 
-db.run(`
-  PRAGMA journal_mode = WAL;
-
-  CREATE TABLE IF NOT EXISTS project_cache (
-    project_id INTEGER PRIMARY KEY,
-    ids TEXT NOT NULL,
-    -- JSON array: string[]
-    ship_status TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS api_keys (
-    api_key TEXT PRIMARY KEY,
-    channel TEXT NOT NULL UNIQUE,
-    projects TEXT NOT NULL
-    -- JSON array: string[]
-  );
-
-  CREATE TABLE IF NOT EXISTS meta (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  );
-`);
-
 interface ProjectCache {
     ids: number[];
     ship_status?: "pending" | "submitted" | null;
 }
 
-async function migrateCache(): Promise<void> {
-    if (!fs.existsSync(cacheDir)) return;
-
-    const files = fs.readdirSync(cacheDir).filter(f => f.endsWith(".json"));
-
-    for (const file of files) {
-        const filePath = path.join(cacheDir, file);
-        try {
-            const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-            let migrated: ProjectCache | null = null;
-
-            if (Array.isArray(data)) {
-                const ids = data.filter(x => typeof x === "number")
-                    .concat(data.filter(x => x && typeof x.id === "number").map(x => x.id));
-
-                migrated = { ids, ship_status: null };
-            } else if (data.ids && Array.isArray(data.ids)) {
-                continue;
-            } else {
-                continue;
-            }
-
-            fs.writeFileSync(filePath, JSON.stringify(migrated, null, 2));
-            console.log(`[Cache Migration] Migrated ${file}`);
-        } catch (err) {
-            console.error(`[Cache Migration] Failed to migrate ${file}:`, err);
-        }
-    }
-
-    return;
-}
-
-function hasMigrated(key: string): boolean {
-    const row = db
-        .query(`SELECT value FROM meta WHERE key = ?`)
-        .get(key) as any;
-    return row?.value === "true";
-}
-
-function markMigrated(key: string) {
-    db.prepare(`
-      INSERT INTO meta (key, value)
-      VALUES (?, 'true')
-      ON CONFLICT(key) DO UPDATE SET value = 'true'
-    `).run(key);
-}
-
-
-function migrateProjectCacheFromJson() {
-    if (hasMigrated("project_cache")) return;
-    if (!fs.existsSync(cacheDir)) return;
-
-    const insertProject = db.prepare(`
-        INSERT OR IGNORE INTO project_cache (project_id, ids, ship_status)
-        VALUES (?, ?, ?)
-    `);
-
-    for (const file of fs.readdirSync(cacheDir)) {
-        if (!file.endsWith(".json")) continue;
-        if (file === "apiKeys.json") continue;
-        const projectId = Number(file.replace(".json", ""));
-        if (!Number.isFinite(projectId)) continue;
-
-        try {
-            const data = JSON.parse(fs.readFileSync(path.join(cacheDir, file), "utf-8"));
-            if (!Array.isArray(data.ids)) continue;
-            const sortedIds = data.ids
-                .map((id: string) => Number(id))
-                .filter((id: number) => Number.isFinite(id))
-                .sort((a: number, b: number) => a - b)
-                .map(String);
-            const idsJson = JSON.stringify(sortedIds);
-            insertProject.run(projectId, idsJson, data.ship_status ?? null);
-            console.log(`[Migration] ${projectId} project got migrated to the sqlite database.`);
-        } catch (err) {
-            console.error(`[Migration] Failed project ${projectId}`, err);
-        }
-    }
-
-    markMigrated("project_cache");
-}
-
-function migrateApiKeysFromJson() {
-    if (hasMigrated("api_keys")) return;
-    if (!fs.existsSync(apiKeysFile)) return;
-
-    const data = JSON.parse(fs.readFileSync(apiKeysFile, "utf-8"));
-
-    const insert = db.prepare(`
-        INSERT OR IGNORE INTO api_keys (api_key, channel, projects)
-        VALUES (?, ?, ?)
-    `);
-
-    for (const [apiKey, cfg] of Object.entries<any>(data)) {
-        if (typeof cfg?.channel !== "string") continue;
-        insert.run(
-            apiKey,
-            cfg.channel,
-            JSON.stringify(
-                Array.isArray(cfg.projects)
-                    ? cfg.projects.map(String)
-                    : []
-            )
-        );
-        console.log(`[Migration] ${cfg.channel} has had its api key that was subscribed to it migrated to sqlite.`);
-    }
-
-    markMigrated("api_keys");
-}
-
 let clients: Record<string, FT> = {};
 
-function loadApiKeys(): Record<string, { channel: string; projects: string[] }> {
+async function loadApiKeys(): Promise<Record<string, { channel: string; projects: string[] }>> {
     const result: Record<string, { channel: string; projects: string[] }> = {};
-    const rows = db.query(`SELECT api_key, channel, projects FROM api_keys`).all() as any[];
+    const rows = await pg.select().from(apiKeys);
     for (const row of rows) {
         try {
-            const projects = JSON.parse(row.projects);
-            result[row.api_key] = {
+            const projects = row.projects;
+            result[row.apiKey] = {
                 channel: row.channel,
                 projects: Array.isArray(projects) ? projects.map(String) : []
             };
         } catch (err) {
-            console.error(`[loadApiKeys] Failed to parse projects for API key ${row.api_key}:`, err);
-            result[row.api_key] = { channel: row.channel, projects: [] };
+            console.error(`[loadApiKeys] Failed to parse projects for API key ${row.apiKey}:`, err);
+            result[row.apiKey] = { channel: row.channel, projects: [] };
         }
     }
 
@@ -197,20 +74,20 @@ async function getNewDevlogs(
 
         const devlogIds = Array.isArray(project?.devlog_ids) ? project.devlog_ids : [];
 
-        const row = db
-            .prepare(`SELECT ids, ship_status FROM project_cache WHERE project_id = ?`)
-            .get(projectId) as any;
+        const row = await pg.select()
+            .from(projectData)
+            .where(eq(projectData.projectId, Number(projectId)));
 
         let cachedIds: string[] = [];
         let cachedShipStatus: "pending" | "submitted" | null = null;
 
-        if (row) {
+        if (row.length > 0) {
             try {
-                cachedIds = JSON.parse(row.ids).map(String);
+                cachedIds = row[0]!.ids.map(String);
             } catch {
                 cachedIds = [];
             }
-            cachedShipStatus = row.ship_status;
+            cachedShipStatus = row[0]!.shipStatus === "pending" || row[0]!.shipStatus === "submitted" ? row[0]!.shipStatus : null;
         }
 
         const cachedSet = new Set(cachedIds);
@@ -222,13 +99,12 @@ async function getNewDevlogs(
         }
 
         const updatedIds = Array.from(new Set([...cachedIds, ...newIds]));
-        db.prepare(`
-            INSERT INTO project_cache (project_id, ids, ship_status)
-            VALUES (?, ?, ?)
-            ON CONFLICT(project_id) DO UPDATE SET
-            ids = excluded.ids,
-            ship_status = excluded.ship_status
-        `).run(projectId, JSON.stringify(updatedIds), project.ship_status ?? cachedShipStatus);
+        await pg.update(projectData)
+            .set({
+                ids: updatedIds,
+                shipStatus: shipped !== undefined ? shipped : null
+            })
+            .where(eq(projectData.projectId, Number(projectId)));
 
         if (newIds.length === 0) {
             return { name: project.title, devlogs: [], ...(shipped ? { shipped } : {}) };
@@ -407,7 +283,7 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
         // @ts-ignore
         app[type](module.name, async (args) => {
             try {
-                await module.execute(args, { loadApiKeys, db, clients });
+                await module.execute(args, { loadApiKeys, pg, clients });
             } catch (err) {
                 console.error(`Error executing ${type} ${module.name}:`, err);
             }
@@ -422,9 +298,8 @@ loadHandlers(app, "views", "view");
 
 (async () => {
     try {
-        await migrateCache()
-        migrateProjectCacheFromJson();
-        migrateApiKeysFromJson();
+        await migrate()
+
         app.logger.setName("[Logpheus]")
         app.logger.setLevel('error' as LogLevel);
 

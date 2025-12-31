@@ -5,8 +5,9 @@ RUN --mount=type=cache,target=/root/.npm \
     bun install --frozen-lockfile --production
 
 COPY src/ /usr/src/app/src/
+COPY drizzle.config.ts /usr/src/app/drizzle.config.ts
 RUN mkdir /usr/src/app/cache
-RUn chown -R bun:bun /usr/src/app
+RUN chown -R bun:bun /usr/src/app
 COPY entrypoint.sh /usr/src/app/entrypoint.sh
 RUN chmod +x /usr/src/app/entrypoint.sh
 RUN chmod 700 /usr/src/app/cache

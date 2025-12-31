@@ -7,6 +7,7 @@
     "@types/bun": "latest"
   },
   "scripts": {
+    "migrate": "bunx drizzle-kit push && bun run src/migration.ts",
     "dev:manual": "bun run src/index.ts",
     "dev": "infisical run --env=dev -- bun run src/index.ts"
   },
@@ -14,8 +15,11 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.13.0",
-    "axios": "^1.13.2"
+    "axios": "^1.13.2",
+    "drizzle-kit": "^0.31.8",
+    "drizzle-orm": "^0.45.1"
   }
 }

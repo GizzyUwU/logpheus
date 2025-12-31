@@ -1,7 +1,11 @@
 import type { AckFn, RespondArguments, RespondFn, Logger, SlashCommand } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
-import type { Database } from "bun:sqlite"
+import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { PGlite } from "@electric-sql/pglite";
 import FT from "../lib/ft";
+import { apiKeys } from "../schema/apiKeys";
+import { eq } from "drizzle-orm";
+import { projectData } from "../schema/project";
 
 export default {
     name: process.env.DEV_MODE === "true" ? '/devlpheus-remove' : '/logpheus-remove',
@@ -11,61 +15,80 @@ export default {
         client: WebClient,
         respond: RespondFn,
         logger: Logger
-    }, { db, clients }: {
-        db: Database;
+    }, { pg, clients }: {
+        pg: PgliteDatabase<Record<string, never>> & {
+            $client: PGlite;
+        }
         clients: Record<string, FT>;
     }) => {
+        await ack();
         try {
             const channel = await client.conversations.info({
                 channel: command.channel_id
             })
-            if (!channel) return await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND")
-            if (command.user_id !== channel.channel?.creator) return await ack("You can only run this command in a channel that you are the creator of");
+            if (!channel) return await respond({
+                text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+                response_type: "ephemeral"
+            })
+            if (command.user_id !== channel.channel?.creator) return await respond({
+                text: "You can only run this command in a channel that you are the creator of",
+                response_type: "ephemeral"
+            });
             const projectId = command.text.trim();
+            const res = await pg.select().from(apiKeys).where(eq(apiKeys.channel, command.channel_id))
+            if (res.length === 0) return await respond({
+                text: `No API key found for this channel.`,
+                response_type: "ephemeral"
+            });
+            const data = res[0];
 
             if (projectId.length > 0) {
-                if (!Number.isInteger(Number(projectId))) return await ack("Project ID must be a valid number.");
-                await ack();
-                const rows = db.query(`SELECT * FROM api_keys`).all() as { api_key: string; channel: string; projects: string }[];
-                for (const row of rows) {
-                    const projects: string[] = JSON.parse(row.projects);
-                    if (projects.includes(projectId)) {
-                        if (clients[row.api_key]) delete clients[row.api_key];
-                        const updatedProjects = projects.filter(p => p !== projectId);
-                        if (updatedProjects.length > 0) {
-                            db.run(`UPDATE api_keys SET projects = ? WHERE api_key = ?`, [JSON.stringify(updatedProjects), row.api_key]);
-                        } else {
-                            db.run(`DELETE FROM api_keys WHERE api_key = ?`, [row.api_key]);
-                        }
+                if (!Number.isInteger(Number(projectId))) return await respond({
+                    text: "Project ID must be a valid number.",
+                    response_type: "ephemeral"
+                });
 
-                        db.run(`DELETE FROM project_cache WHERE project_id = ?`, [projectId]);
-                        if (clients[row.api_key]) delete clients[row.api_key];
-                        return await respond({ text: `Project ${projectId} has been disconnected from this channel.`, response_type: "ephemeral" });
-                    }
+                if (!data?.projects.includes(Number(projectId))) return await respond({
+                    text: "This project id isn't subscribed to this channel.",
+                    response_type: "ephemeral"
+                })
+
+                const updatedProjects = data.projects.filter(p => p !== projectId);
+                if (updatedProjects.length > 0) {
+                    await pg.update(apiKeys)
+                        .set({
+                            projects: updatedProjects
+                        })
+                        .where(eq(apiKeys.channel, command.channel_id));
+                } else {
+                    await pg.delete(apiKeys).where(eq(apiKeys.channel, command.channel_id));
                 }
+
+                if (clients[data.apiKey]) delete clients[data.apiKey];
+                return await respond({
+                    text: `Project ${projectId} has been disconnected from this channel.`,
+                    response_type: "ephemeral"
+                });
             } else {
-                const row = db.query(`SELECT * FROM api_keys WHERE channel = ?`).get(command.channel_id) as { api_key: string; projects: string } | undefined;
-                if (!row) return await ack("No API key found for this channel.");
-                await ack()
-                if (clients[row.api_key]) delete clients[row.api_key];
-
-                const projects: string[] = JSON.parse(row.projects);
-                for (const pid of projects) {
-                    db.run(`DELETE FROM project_cache WHERE project_id = ?`, [pid]);
+                for (const pid of data?.projects!) {
+                    await pg.delete(projectData).where(eq(projectData.projectId, Number(pid)));
                 }
 
-                db.run(`DELETE FROM api_keys WHERE api_key = ?`, [row.api_key]);
-                if (clients[row.api_key]) delete clients[row.api_key];
-                return await respond({ text: "All projects previously connected to this channel have been disconnected.", response_type: "ephemeral" });
+                await pg.delete(apiKeys).where(eq(apiKeys.channel, command.channel_id));
+                if (clients[data!.apiKey]) delete clients[data!.apiKey];
+                return await respond({
+                    text: "All projects previously connected to this channel have been disconnected.",
+                    response_type: "ephemeral"
+                });
             }
         } catch (error: any) {
             if (error.code === "slack_webapi_platform_error" && error.data?.error === "channel_not_found") {
                 await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND");
                 return;
+            } else {
+                logger.error(error);
+                await ack("An unexpected error occurred. Check logs.");
             }
-
-            logger.error(error);
-            await ack("An unexpected error occurred. Check logs.");
         }
     }
 }

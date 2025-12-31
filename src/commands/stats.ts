@@ -1,6 +1,9 @@
 import type { AckFn, RespondArguments, RespondFn, Logger, SlashCommand } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
-import type { Database } from "bun:sqlite"
+import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { PGlite } from "@electric-sql/pglite";
+import { apiKeys } from "../schema/apiKeys";
+import { eq, count } from "drizzle-orm";
 export default {
     name: process.env.DEV_MODE === "true" ? '/devlpheus-stats' : '/logpheus-stats',
     execute: async ({ ack, respond, logger }: {
@@ -9,17 +12,21 @@ export default {
         client: WebClient,
         respond: RespondFn,
         logger: Logger
-    }, { loadApiKeys, db }: {
-        loadApiKeys: () => Record<string, {
-            channel: string;
-            projects: string[];
-        }>;
-        db: Database;
+    }, { pg }: {
+        pg: PgliteDatabase<Record<string, never>> & {
+            $client: PGlite;
+        }
     }) => {
         try {
             await ack();
-            const result = db.query(`SELECT COUNT(*) AS count FROM api_keys`).get() as { count: number };
-            const recordCount = result?.count || 0;
+            const data =  await pg
+                .select()
+                .from(apiKeys);
+            console.log(data)
+            const result = await pg
+                .select({ count: count() })
+                .from(apiKeys);
+            const recordCount = result[0]?.count || 0;
 
             await respond({
                 text: `There ${recordCount === 1 ? 'is' : 'are'} ${recordCount} record${recordCount === 1 ? '' : 's'} in the database indicating the amount of users.`,
