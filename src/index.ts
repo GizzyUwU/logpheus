@@ -318,7 +318,7 @@ loadHandlers(app, "views", "view");
 
 (async () => {
     try {
-        // await migration(pg);
+        await migration(pg);
         app.logger.setName("[Logpheus]")
         app.logger.setLevel('error' as LogLevel);
 
