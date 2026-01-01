@@ -15,8 +15,8 @@ import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 type DatabaseType =
-  | (NodePgDatabase<Record<string, never>> & { $client: Pool })
-  | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
+    | (NodePgDatabase<Record<string, never>> & { $client: Pool })
+    | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 const cacheDir = path.join(__dirname, "../cache");
 let pg: DatabaseType;
 
@@ -106,7 +106,9 @@ async function getNewDevlogs(
             } catch {
                 cachedIds = [];
             }
-            cachedShipStatus = row[0]!.shipStatus === "pending" || row[0]!.shipStatus === "submitted" ? row[0]!.shipStatus : null;
+            cachedShipStatus = row[0]?.shipStatus === "pending" || row[0]?.shipStatus === "submitted"
+                ? row[0]!.shipStatus as "pending" | "submitted"
+                : null;
         }
 
         const cachedSet = new Set(cachedIds);
@@ -121,7 +123,7 @@ async function getNewDevlogs(
         await pg.update(projectData)
             .set({
                 ids: updatedIds,
-                shipStatus: shipped !== undefined ? shipped : null
+                shipStatus: shipped ?? cachedShipStatus
             })
             .where(eq(projectData.projectId, Number(projectId)));
 
