@@ -183,111 +183,111 @@ async function checkAllProjects() {
                         const cMinutes = createdAt.getUTCMinutes().toString().padStart(2, '0');
                         const cs50Timestamp = `${year}${month}${day}T${cHours}${cMinutes}+0000`;
 
-                        // if (!containsMarkdown(devlog.body)) {
-                        //     await app.client.chat.postMessage({
-                        //         channel: data.channel,
-                        //         unfurl_links: false,
-                        //         unfurl_media: false,
-                        //         blocks: [
-                        //             {
-                        //                 type: "section",
-                        //                 text: {
-                        //                     type: "mrkdwn",
-                        //                     text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
-                        //                 }
-                        //             },
-                        //             {
-                        //                 type: "section",
-                        //                 text: {
-                        //                     type: "mrkdwn",
-                        //                     text: `> ${devlog.body}`
-                        //                 }
-                        //             },
-                        //             {
-                        //                 "type": "divider"
-                        //             },
-                        //             {
-                        //                 "type": "context",
-                        //                 "elements": [
-                        //                     {
-                        //                         "type": "mrkdwn",
-                        //                         "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
-                        //                     }
-                        //                 ]
-                        //             }
-                        //         ]
-                        //     });
-                        // } else {
-                        //     await app.client.chat.postMessage({
-                        //         channel: data.channel,
-                        //         unfurl_links: false,
-                        //         unfurl_media: false,
-                        //         blocks: [
-                        //             {
-                        //                 type: "section",
-                        //                 text: {
-                        //                     type: "mrkdwn",
-                        //                     text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
-                        //                 }
-                        //             },
-                        //             ...parseMarkdownToSlackBlocks(devlog.body),
-                        //             {
-                        //                 "type": "divider"
-                        //             },
-                        //             {
-                        //                 "type": "context",
-                        //                 "elements": [
-                        //                     {
-                        //                         "type": "mrkdwn",
-                        //                         "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
-                        //                     }
-                        //                 ]
-                        //             }
-                        //         ]
-                        //     });
-                        // }
+                        if (!containsMarkdown(devlog.body)) {
+                            await app.client.chat.postMessage({
+                                channel: data.channel,
+                                unfurl_links: false,
+                                unfurl_media: false,
+                                blocks: [
+                                    {
+                                        type: "section",
+                                        text: {
+                                            type: "mrkdwn",
+                                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
+                                        }
+                                    },
+                                    {
+                                        type: "section",
+                                        text: {
+                                            type: "mrkdwn",
+                                            text: `> ${devlog.body}`
+                                        }
+                                    },
+                                    {
+                                        "type": "divider"
+                                    },
+                                    {
+                                        "type": "context",
+                                        "elements": [
+                                            {
+                                                "type": "mrkdwn",
+                                                "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
+                                            }
+                                        ]
+                                    }
+                                ]
+                            });
+                        } else {
+                            await app.client.chat.postMessage({
+                                channel: data.channel,
+                                unfurl_links: false,
+                                unfurl_media: false,
+                                blocks: [
+                                    {
+                                        type: "section",
+                                        text: {
+                                            type: "mrkdwn",
+                                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
+                                        }
+                                    },
+                                    ...parseMarkdownToSlackBlocks(devlog.body),
+                                    {
+                                        "type": "divider"
+                                    },
+                                    {
+                                        "type": "context",
+                                        "elements": [
+                                            {
+                                                "type": "mrkdwn",
+                                                "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
+                                            }
+                                        ]
+                                    }
+                                ]
+                            });
+                        }
                         console.log(`[Devlog Notification] New devlog for project ${projectId} skipped (Markdown detection is disabled).`);
                     } catch (err) {
                         console.error(`Error posting to Slack for project ${projectId}:`, err);
                     }
                 }
             }
-            // if (projData.shipped) {
-            //     switch (projData.shipped) {
-            //         case "pending":
-            //             await app.client.chat.postMessage({
-            //                 channel: data.channel,
-            //                 unfurl_links: false,
-            //                 unfurl_media: false,
-            //                 blocks: [
-            //                     {
-            //                         type: "section",
-            //                         text: {
-            //                             type: "mrkdwn",
-            //                             text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> just got shipped and now is pending a ship review! :shipitparrot:`
-            //                         }
-            //                     },
-            //                 ]
-            //             });
-            //             return;
-            //         case "submitted":
-            //             await app.client.chat.postMessage({
-            //                 channel: data.channel,
-            //                 unfurl_links: false,
-            //                 unfurl_media: false,
-            //                 blocks: [
-            //                     {
-            //                         type: "section",
-            //                         text: {
-            //                             type: "mrkdwn",
-            //                             text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> ship has got accepted and now has entered voting! :shipitparrot:`
-            //                         }
-            //                     },
-            //                 ]
-            //             });
-            //             return;
-            //     }
-            // }
+            if (projData.shipped) {
+                switch (projData.shipped) {
+                    case "pending":
+                        await app.client.chat.postMessage({
+                            channel: data.channel,
+                            unfurl_links: false,
+                            unfurl_media: false,
+                            blocks: [
+                                {
+                                    type: "section",
+                                    text: {
+                                        type: "mrkdwn",
+                                        text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> just got shipped and now is pending a ship review! :shipitparrot:`
+                                    }
+                                },
+                            ]
+                        });
+                        return;
+                    case "submitted":
+                        await app.client.chat.postMessage({
+                            channel: data.channel,
+                            unfurl_links: false,
+                            unfurl_media: false,
+                            blocks: [
+                                {
+                                    type: "section",
+                                    text: {
+                                        type: "mrkdwn",
+                                        text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> ship has got accepted and now has entered voting! :shipitparrot:`
+                                    }
+                                },
+                            ]
+                        });
+                        return;
+                }
+            }
             await new Promise(res => setTimeout(res, 2000));
             continue;
         }
