@@ -59,7 +59,7 @@ export default {
         await pg.update(apiKeys)
             .set({
                 apiKey
-            }).where(eq(apiKeys.apiKey, apiKey))
+            }).where(eq(apiKeys.channel, channelId))
 
         return await client.chat.postEphemeral({
             channel: channelId,

@@ -106,7 +106,7 @@ async function getNewDevlogs(
             } catch {
                 cachedIds = [];
             }
-            cachedShipStatus = row[0]?.shipStatus === "pending" || row[0]?.shipStatus === "submitted"
+            cachedShipStatus = (row[0]?.shipStatus === "pending" || row[0]?.shipStatus === "submitted")
                 ? row[0]!.shipStatus as "pending" | "submitted"
                 : null;
         }
@@ -120,12 +120,14 @@ async function getNewDevlogs(
         }
 
         const updatedIds = Array.from(new Set([...cachedIds, ...newIds]));
-        await pg.update(projectData)
-            .set({
-                ids: updatedIds,
-                shipStatus: shipped ?? cachedShipStatus
-            })
-            .where(eq(projectData.projectId, Number(projectId)));
+        if (newIds.length > 0 || shipped) {
+            await pg.update(projectData)
+                .set({
+                    ids: Array.from(new Set([...cachedIds, ...newIds])),
+                    shipStatus: shipped ?? cachedShipStatus
+                })
+                .where(eq(projectData.projectId, Number(projectId)));
+        }
 
         if (newIds.length === 0) {
             return { name: project.title, devlogs: [], ...(shipped ? { shipped } : {}) };
@@ -138,6 +140,7 @@ async function getNewDevlogs(
         }
 
         return { name: project.title, devlogs, ...(shipped ? { shipped } : {}) };
+
     } catch (err) {
         console.error(`Error fetching devlogs for project ${projectId}:`, err);
         return;
