@@ -8,7 +8,7 @@
     "@types/pg": "^8.16.0"
   },
   "scripts": {
-    "migrate": "bunx drizzle-kit push",
+    "migrate": "bunx drizzle-kit migrate",
     "dev:manual": "bun run src/index.ts",
     "dev": "infisical run --env=dev -- bun run src/index.ts"
   },
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",
+    "@sentry/bun": "^10.36.0",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.13.0",
     "axios": "^1.13.2",

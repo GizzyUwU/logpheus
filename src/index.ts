@@ -4,21 +4,31 @@ import fs from "fs";
 import path from "path";
 import type FTypes from "./lib/ft.d"
 import { containsMarkdown, parseMarkdownToSlackBlocks } from "./lib/parseMarkdown";
-import { Database } from "bun:sqlite";
 import { eq } from "drizzle-orm";
 import { apiKeys } from "./schema/apiKeys";
-import { metadata } from "./schema/meta";
 import { projectData } from "./schema/project";
 import { migration } from "./migration";
 import { PGlite } from "@electric-sql/pglite";
 import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import * as Sentry from "@sentry/bun"
+let sentryEnabled = false;
 type DatabaseType =
     | (NodePgDatabase<Record<string, never>> & { $client: Pool })
     | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 const cacheDir = path.join(__dirname, "../cache");
 let pg: DatabaseType;
+if (process.env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        release: process.env.SENTRY_NAME || "logpheus",
+        integrations: [],
+        tracesSampleRate: 0,
+        sendDefaultPii: true,
+    });
+    sentryEnabled = true
+}
 
 if (process.env.PGLITE === "false") {
     const { drizzle } = await import("drizzle-orm/node-postgres");
@@ -37,7 +47,7 @@ if (process.env.PGLITE === "false") {
         casing: 'snake_case'
     })
 }
-const apiKeysFile = path.join(__dirname, "../cache/apiKeys.json");
+
 const app = new App({
     signingSecret: process.env.SIGNING_SECRET,
     token: process.env.BOT_TOKEN,
@@ -55,17 +65,26 @@ const app = new App({
     ]
 });
 
-interface ProjectCache {
-    ids: number[];
-    ship_status?: "pending" | "submitted" | null;
-}
-
 let clients: Record<string, FT> = {};
 
 async function loadApiKeys(): Promise<Record<string, { channel: string; projects: string[] }>> {
     const result: Record<string, { channel: string; projects: string[] }> = {};
     const rows = await pg.select().from(apiKeys);
-    for (const row of rows) {
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row) {
+            if (sentryEnabled) {
+                Sentry.captureMessage("Row is missing", {
+                    level: "error",
+                    extra: {
+                        rowIndex: i
+                    }
+                })
+            } else {
+                console.error(`[loadApiKeys] Row is missing, index: ${i}`);
+            }
+            continue;
+        }
         try {
             const projects = row.projects;
             result[row.apiKey] = {
@@ -73,11 +92,18 @@ async function loadApiKeys(): Promise<Record<string, { channel: string; projects
                 projects: Array.isArray(projects) ? projects.map(String) : []
             };
         } catch (err) {
-            console.error(`[loadApiKeys] Failed to parse projects for API key ${row.apiKey}:`, err);
+            if (sentryEnabled) {
+                Sentry.captureException(err, {
+                    extra: {
+                        rowIndex: i
+                    }
+                })
+            } else {
+                console.error(`[loadApiKeys] Failed to parse projects for API key ${row.apiKey}:`, err);
+            }
             result[row.apiKey] = { channel: row.channel, projects: [] };
         }
     }
-
     return result;
 }
 
@@ -87,12 +113,56 @@ async function getNewDevlogs(
 ): Promise<{ name: string; devlogs: FTypes.Devlog[]; shipped?: "pending" | "submitted" } | void> {
     try {
         const client = clients[apiKey];
-        if (!client) return console.error(`No FT client for project ${projectId}`);
+        if (!client) {
+            if (sentryEnabled) {
+                Sentry.captureMessage("No FT Client for the project", {
+                    level: "error",
+                    extra: {
+                        projectId
+                    }
+                })
+            } else {
+                console.error(`No FT client for project ${projectId}`);
+            }
+            return;
+        }
         const project = await client.project({ id: Number(projectId) });
-        if (!project) return console.error("No project exists at id", projectId);
+        if (!project) {
+            const row = await pg
+                .select()
+                .from(apiKeys)
+                .where(eq(apiKeys.apiKey, apiKey))
+                .limit(1);
+
+            const disabled = row[0]?.disabled;
+            if (disabled !== true) {
+                if (client.lastCode === 401) {
+                    await pg.update(apiKeys).set({
+                        disabled: true
+                    }).where(eq(apiKeys.apiKey, apiKey))
+
+                    await app.client.chat.postMessage({
+                        channel: String(row[0]?.channel),
+                        text: "Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /logpheus-config to get it re-enabled."
+                    })
+                } else {
+                    if (sentryEnabled) {
+                        Sentry.captureMessage("No project exists at id", {
+                            level: "error",
+                            extra: {
+                                projectId
+                            }
+                        })
+                    } else {
+                        console.error("No project exists at id", projectId);
+                    }
+                }
+            }
+
+            return;
+        }
 
         const devlogIds = Array.isArray(project?.devlog_ids) ? project.devlog_ids : [];
-
         const row = await pg.select()
             .from(projectData)
             .where(eq(projectData.projectId, Number(projectId)));
@@ -141,7 +211,15 @@ async function getNewDevlogs(
         return { name: project.title, devlogs, ...(shipped ? { shipped } : {}) };
 
     } catch (err) {
-        console.error(`Error fetching devlogs for project ${projectId}:`, err);
+        if (sentryEnabled) {
+            Sentry.captureException(err, {
+                extra: {
+                    projectId
+                }
+            })
+        } else {
+            console.error(`Error fetching devlogs for project ${projectId}:`, err);
+        }
         return;
     }
 }
@@ -246,9 +324,16 @@ async function checkAllProjects() {
                                 ]
                             });
                         }
-                        console.log(`[Devlog Notification] New devlog for project ${projectId} skipped (Markdown detection is disabled).`);
                     } catch (err) {
-                        console.error(`Error posting to Slack for project ${projectId}:`, err);
+                        if (sentryEnabled) {
+                            Sentry.captureException(err, {
+                                extra: {
+                                    projectId,
+                                }
+                            })
+                        } else {
+                            console.error(`Error posting to Slack for project ${projectId}:`, err);
+                        }
                     }
                 }
             }
@@ -306,9 +391,18 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
         // @ts-ignore
         app[type](module.name, async (args) => {
             try {
-                await module.execute(args, { loadApiKeys, pg, clients });
+                await module.execute(args, { loadApiKeys, pg, clients, SentryEnabled: sentryEnabled, sentry: Sentry });
             } catch (err) {
-                console.error(`Error executing ${type} ${module.name}:`, err);
+                if (sentryEnabled) {
+                    Sentry.captureException(err, {
+                        extra: {
+                            type,
+                            module: module.name
+                        }
+                    })
+                } else {
+                    console.error(`Error executing ${type} ${module.name}:`, err);
+                }
             }
         });
 
@@ -336,7 +430,11 @@ loadHandlers(app, "views", "view");
 
         await checkAllProjects()
         setInterval(checkAllProjects, 60 * 1000);
-    } catch (error) {
-        console.error('Unable to start app:', error);
+    } catch (err) {
+        if (sentryEnabled) {
+            Sentry.captureException(err)
+        } else {
+            console.error('Unable to start app:', err);
+        }
     }
 })();

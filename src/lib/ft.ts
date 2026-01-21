@@ -20,18 +20,8 @@ export default class FT {
         this.ready = Promise.resolve();
     }
 
-    private async handleError(err: unknown, projectId?: string, log: boolean = true): Promise<void> {
+    private async handleError(err: unknown, projectId?: string): Promise<void> {
         if (axios.isAxiosError(err)) {
-            const status = err.response?.status ?? "No status";
-            const message = err.response?.data?.message ?? err.message;
-            if (log) {
-                if (projectId) {
-                    console.error(`[${status}] for project ${projectId}: ${message}`);
-                } else {
-                    console.error(`[${status}]: ${message}`);
-                }
-            }
-
             this.lastCode =
                 err?.response?.status ??
                 err?.status ??
@@ -39,9 +29,7 @@ export default class FT {
 
             return;
         } else {
-            if (log) {
-                console.error("Unexpected error:", err);
-            }
+            console.error("Unexpected error:", err);
             return
         }
     }
@@ -142,7 +130,7 @@ export default class FT {
                 return res.data;
             })
             .catch(async (err) => {
-                await this.handleError(err, String(param.id), false);
+                await this.handleError(err, String(param.id));
                 return {} as FTypes.User;
             });
     }

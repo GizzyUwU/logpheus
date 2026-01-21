@@ -56,10 +56,18 @@ export default {
             .where(eq(apiKeys.channel, channelId))
         if (dbData.length === 0) return await ack('No entry found for this channel ID');
 
-        await pg.update(apiKeys)
-            .set({
-                apiKey
-            }).where(eq(apiKeys.channel, channelId))
+        if (dbData[0]?.disabled) {
+            await pg.update(apiKeys)
+                .set({
+                    apiKey,
+                    disabled: false
+                }).where(eq(apiKeys.channel, channelId))
+        } else {
+            await pg.update(apiKeys)
+                .set({
+                    apiKey
+                }).where(eq(apiKeys.channel, channelId))
+        }
 
         return await client.chat.postEphemeral({
             channel: channelId,
