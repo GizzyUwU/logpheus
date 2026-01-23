@@ -1,4 +1,4 @@
-import type { AckFn, ViewOutput, RespondArguments, RespondFn } from "@slack/bolt";
+import type { ViewOutput, RespondFn } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
@@ -7,9 +7,8 @@ import { eq } from "drizzle-orm";
 import FT from "../lib/ft";
 
 export default {
-    name: "logpheus_config",
-    execute: async ({ ack, view, client, respond }: {
-        ack: AckFn<string | RespondArguments>
+    name: "config",
+    execute: async ({ view, client, respond }: {
         view: ViewOutput
         client: WebClient
         respond: RespondFn

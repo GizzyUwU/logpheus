@@ -5,7 +5,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { apiKeys } from "../schema/apiKeys";
 import { eq, count } from "drizzle-orm";
 export default {
-    name: process.env.DEV_MODE === "true" ? '/devlpheus-stats' : '/logpheus-stats',
+    name: 'stats',
     execute: async ({ ack, respond, logger }: {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,

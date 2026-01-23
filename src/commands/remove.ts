@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { projectData } from "../schema/project";
 
 export default {
-    name: process.env.DEV_MODE === "true" ? '/devlpheus-remove' : '/logpheus-remove',
+    name: 'remove',
     execute: async ({ command, ack, client, respond, logger }: {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,

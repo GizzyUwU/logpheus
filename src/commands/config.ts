@@ -6,17 +6,18 @@ import { apiKeys } from "../schema/apiKeys";
 import { eq } from "drizzle-orm";
 
 export default {
-    name: process.env.DEV_MODE === "true" ? '/devlpheus-config' : '/logpheus-config',
+    name: 'config',
     execute: async ({ command, ack, client, logger, respond }: {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,
         client: WebClient,
-        logger: Logger
-        respond: RespondFn
-    }, { pg }: {
+        logger: Logger,
+        respond: RespondFn,
+    }, { pg, callbackId }: {
         pg: PgliteDatabase<Record<string, never>> & {
             $client: PGlite;
-        }
+        },
+        callbackId: string
     }) => {
         try {
             const channel = await client.conversations.info({
@@ -40,7 +41,7 @@ export default {
                 trigger_id: command.trigger_id,
                 view: {
                     type: 'modal',
-                    callback_id: 'logpheus_config',
+                    callback_id: callbackId,
                     title: {
                         type: 'plain_text',
                         text: command.channel_id

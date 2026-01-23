@@ -384,37 +384,36 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
     const folderPath = path.join(__dirname, folder);
     fs.readdirSync(folderPath).forEach(file => {
         if (!file.endsWith(".ts") && !file.endsWith(".js")) return;
-
         const module = require(path.join(folderPath, file)).default;
-
         if (!module?.name || typeof module.execute !== "function") return;
 
-        // @ts-ignore
-        app[type](prefix + module.name, async (args) => {
-            try {
-                const ack: AckFn<string | RespondArguments> = args.ack;
-                await ack();
-                await module.execute(args, { loadApiKeys, pg, clients, SentryEnabled: sentryEnabled, sentry: Sentry });
-            } catch (err) {
-                if (sentryEnabled) {
-                    Sentry.captureException(err, {
-                        extra: {
-                            type,
-                            module: module.name
-                        }
-                    })
-                } else {
-                    console.error(`Error executing ${type} ${module.name}:`, err);
-                }
-            }
-        });
+        const suffix = type === "view" ? "_" + module.name : "-" + module.name;
+        const callbackId = `${prefix}_${module.name}`;
+        const format = type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
 
+        const registerHandler = (id: string, mod: typeof module) => {
+            (app[type as "view" | "command"] as Function)(format, async (args: any) => {
+                try {
+                    const ack: AckFn<string | RespondArguments> = args.ack;
+                    await ack();
+                    console.log(id)
+                    await mod.execute(args, { loadApiKeys, pg, clients, SentryEnabled: sentryEnabled, sentry: Sentry, callbackId: id });
+                } catch (err) {
+                    if (sentryEnabled) {
+                        Sentry.captureException(err, {
+                            extra: { type, module: mod.name }
+                        });
+                    } else {
+                        console.error(`Error executing ${type} ${mod.name}:`, err);
+                    }
+                }
+            });
+        };
+
+        registerHandler(callbackId, module);
         console.log(`[Logpheus] Registered ${type}: ${module.name}`);
     });
 }
-
-loadHandlers(app, "commands", "command");
-loadHandlers(app, "views", "view");
 
 (async () => {
     try {
@@ -422,15 +421,15 @@ loadHandlers(app, "views", "view");
         app.logger.setName("[Logpheus]")
         app.logger.setLevel('error' as LogLevel);
         const self = await app.client.auth.test()
-        if(self.user_id === "U0A50Q9SYK1") {
-            prefix = "devlpheus" + "-"
+        if (self.user_id === "U0A50Q9SYK1") {
+            prefix = "devlpheus"
             console.log("[Logpheus] My prefix is", prefix)
-        } else if(self.user_id === "U0A5CFG4EAJ") {
-            prefix = "logpheus" + "-"
+        } else if (self.user_id === "U0A5CFG4EAJ") {
+            prefix = "logpheus"
             console.log("[Logpheus] My prefix is", prefix)
         } else {
-            if(!self.user || !self.user_id) throw new Error("No username or user id for prefix")
-            prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user + "-";
+            if (!self.user || !self.user_id) throw new Error("No username or user id for prefix")
+            prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
             console.log("[Logpheus] My prefix is", prefix)
         }
         if (process.env.SOCKET_MODE === "true" && process.env.APP_TOKEN) {
@@ -441,6 +440,9 @@ loadHandlers(app, "views", "view");
             await app.start(port);
             console.info('[Logpheus] Running on port:', port);
         }
+
+        loadHandlers(app, "commands", "command");
+        loadHandlers(app, "views", "view");
 
         await checkAllProjects()
         setInterval(checkAllProjects, 60 * 1000);

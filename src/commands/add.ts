@@ -2,13 +2,18 @@ import type { AckFn, RespondArguments, Logger, SlashCommand, RespondFn } from "@
 import type { WebClient } from "@slack/web-api";
 
 export default {
-    name: process.env.DEV_MODE === "true" ? '/devlpheus-add' : '/logpheus-add',
-    execute: async ({ command, ack, client, logger, respond }: {
+    name: 'add',
+    execute: async ({ command, ack, client, logger, respond }:  {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,
         client: WebClient,
         logger: Logger,
-        respond: RespondFn
+        respond: RespondFn,
+        callbackId: string
+    }, {
+        callbackId
+    }: {
+        callbackId: string
     }) => {
         try {
             const channel = await client.conversations.info({
@@ -22,11 +27,12 @@ export default {
                 text: "You can only run this command in a channel that you are the creator of",
                 response_type: "ephemeral"
             });
+            console.log(callbackId)
             await client.views.open({
                 trigger_id: command.trigger_id,
                 view: {
                     type: 'modal',
-                    callback_id: 'logpheus_add',
+                    callback_id: callbackId,
                     title: {
                         type: 'plain_text',
                         text: command.channel_id

@@ -2,7 +2,6 @@ import type {
   AckFn,
   ViewOutput,
   RespondArguments,
-  RespondFn,
 } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import FT from "../lib/ft";
@@ -13,10 +12,9 @@ import { eq } from "drizzle-orm";
 import { projectData } from "../schema/project";
 
 export default {
-  name: "logpheus_add",
+  name: "add",
   execute: async (
     {
-      ack,
       view,
       client,
     }: {
@@ -105,7 +103,6 @@ export default {
       projects.push(normalizedProjectId);
 
       projects.push(projectId);
-      console.log("aaaaaaa");
       await pg
         .update(apiKeys)
         .set({ projects })
