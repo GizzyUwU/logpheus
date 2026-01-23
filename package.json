@@ -9,6 +9,7 @@
   },
   "scripts": {
     "migrate": "bunx drizzle-kit migrate",
+    "i-migrate": "infisical run --env=dev -- bunx drizzle-kit migrate",
     "dev:manual": "bun run src/index.ts",
     "dev": "infisical run --env=dev -- bun run src/index.ts"
   },

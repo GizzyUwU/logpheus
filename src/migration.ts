@@ -11,10 +11,9 @@ import type { Pool } from "pg";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 const cacheDir = path.join(__dirname, "../cache");
 const apiKeysFile = path.join(__dirname, "../cache/apiKeys.json");
-const db = new Database(path.join(__dirname, "../cache/logpheus.db"), { create: true });
 type DB =
-  | (NodePgDatabase<Record<string, never>> & { $client: Pool })
-  | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
+    | (NodePgDatabase<Record<string, never>> & { $client: Pool })
+    | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 
 async function hasMigratedPg(key: string, pg: DB): Promise<boolean> {
     try {
@@ -37,7 +36,7 @@ async function markMigratedPg(key: string, pg: DB) {
         .onConflictDoUpdate({
             target: metadata.key,
             set: { value: "true" },
-       });
+        });
 }
 
 async function migrateFromJson(pg: DB) {
@@ -103,7 +102,7 @@ async function migrateFromJson(pg: DB) {
     }
 }
 
-async function migrateProjectsFromSqlite(pg: DB) {
+async function migrateProjectsFromSqlite(pg: DB, db: Database) {
     const rows = db
         .query(`SELECT project_id, ids, ship_status FROM project_cache`)
         .all() as any[];
@@ -142,7 +141,7 @@ async function migrateProjectsFromSqlite(pg: DB) {
     }
 }
 
-async function migrateApiKeysFromSqlite(pg: DB) {
+async function migrateApiKeysFromSqlite(pg: DB, db: Database) {
     const rows = db
         .query(`SELECT api_key, channel, projects FROM api_keys`)
         .all() as any[];
@@ -174,34 +173,45 @@ async function migrateApiKeysFromSqlite(pg: DB) {
 
 export async function migration(pg: DB): Promise<void> {
     if (await hasMigratedPg("api_keys", pg) && await hasMigratedPg("projects", pg)) return;
-    const existingTables = db
-        .prepare(
-            `SELECT name FROM sqlite_master WHERE type = 'table'`
-        )
-        .all()
-        .map((r: any) => r.name);
+    if (fs.existsSync("../cache/")) {
 
-    const hasAllTables = ["api_keys", "project_cache"].every(t =>
-        existingTables.includes(t)
-    );
+        let db: Database;
+        let existingTables: any;
+        if (fs.existsSync("../cache/logpheus.db")) {
+            db = new Database(path.join(__dirname, "../cache/logpheus.db"), { create: true });
+            existingTables = db
+                .prepare(
+                    `SELECT name FROM sqlite_master WHERE type = 'table'`
+                )
+                .all()
+                .map((r: any) => r.name);
 
-    if (hasAllTables) {
-        if (!await hasMigratedPg("api_keys", pg)) {
-            await migrateApiKeysFromSqlite(pg)
+
+            const hasAllTables = ["api_keys", "project_cache"].every(t =>
+                existingTables.includes(t)
+            );
+
+            if (hasAllTables) {
+                if (!await hasMigratedPg("api_keys", pg)) {
+                    await migrateApiKeysFromSqlite(pg, db)
+                }
+
+                if (!await hasMigratedPg("projects", pg)) {
+                    await migrateProjectsFromSqlite(pg, db)
+                }
+            }
+
         }
 
-        if (!await hasMigratedPg("projects", pg)) {
-            await migrateProjectsFromSqlite(pg)
+        const jsonFiles = fs.readdirSync(cacheDir).filter(f => f.endsWith(".json"));
+
+        if (jsonFiles.length > 0) {
+            await migrateFromJson(pg);
         }
+
+        await markMigratedPg("projects", pg);
+        await markMigratedPg("api_keys", pg);
     }
-
-    const jsonFiles = fs.readdirSync(cacheDir).filter(f => f.endsWith(".json"));
-
-    if (jsonFiles.length > 0) {
-        await migrateFromJson(pg);
-    }
-
-    await markMigratedPg("projects", pg);
-    await markMigratedPg("api_keys", pg);
+    
     Promise.resolve();
 }

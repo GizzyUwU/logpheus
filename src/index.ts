@@ -14,6 +14,7 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun"
 let sentryEnabled = false;
+let prefix: string;
 type DatabaseType =
     | (NodePgDatabase<Record<string, never>> & { $client: Pool })
     | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
@@ -389,7 +390,7 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
         if (!module?.name || typeof module.execute !== "function") return;
 
         // @ts-ignore
-        app[type](module.name, async (args) => {
+        app[type](prefix + module.name, async (args) => {
             try {
                 await module.execute(args, { loadApiKeys, pg, clients, SentryEnabled: sentryEnabled, sentry: Sentry });
             } catch (err) {
@@ -418,7 +419,18 @@ loadHandlers(app, "views", "view");
         await migration(pg);
         app.logger.setName("[Logpheus]")
         app.logger.setLevel('error' as LogLevel);
-
+        const self = await app.client.auth.test()
+        if(self.user_id === "U0A50Q9SYK1") {
+            prefix = "devlpheus" + "-"
+            console.log("[Logpheus] My prefix is", prefix)
+        } else if(self.user_id === "U0A5CFG4EAJ") {
+            prefix = "logpheus" + "-"
+            console.log("[Logpheus] My prefix is", prefix)
+        } else {
+            if(!self.user || !self.user_id) throw new Error("No username or user id for prefix")
+            prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user + "-";
+            console.log("[Logpheus] My prefix is", prefix)
+        }
         if (process.env.SOCKET_MODE === "true" && process.env.APP_TOKEN) {
             await app.start();
             console.info('[Logpheus] Running as Socket Mode');
