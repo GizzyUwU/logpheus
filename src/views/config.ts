@@ -24,8 +24,7 @@ export default {
         );
         const userId = userIdBlock?.text?.text.slice("User: ".length);
         const channelId = view.title.text;
-        if (!channelId || !userId) return await ack("No channel or user id");
-        await ack();
+        if (!channelId || !userId) return console.log("No channel or user id");
         const values = view.state.values;
         const apiKey = values.ftApiKey?.api_input?.value?.trim();
         if (!apiKey) return await client.chat.postEphemeral({
@@ -54,7 +53,11 @@ export default {
         const dbData = await pg.select()
             .from(apiKeys)
             .where(eq(apiKeys.channel, channelId))
-        if (dbData.length === 0) return await ack('No entry found for this channel ID');
+        if (dbData.length === 0) return await client.chat.postEphemeral({
+            channel: channelId,
+            user: userId,
+            text: 'No entry found for this channel ID'
+        });
 
         if (dbData[0]?.disabled) {
             await pg.update(apiKeys)

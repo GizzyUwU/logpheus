@@ -21,7 +21,6 @@ export default {
         }
         clients: Record<string, FT>;
     }) => {
-        await ack();
         try {
             const channel = await client.conversations.info({
                 channel: command.channel_id
@@ -83,11 +82,17 @@ export default {
             }
         } catch (error: any) {
             if (error.code === "slack_webapi_platform_error" && error.data?.error === "channel_not_found") {
-                await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND");
+                await respond({
+                    text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+                    response_type: "ephemeral"
+                });
                 return;
             } else {
                 logger.error(error);
-                await ack("An unexpected error occurred. Check logs.");
+                await respond({
+                    text: "An unexpected error occurred. Check logs.",
+                    response_type: "ephemeral"
+                });
             }
         }
     }

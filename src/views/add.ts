@@ -39,7 +39,6 @@ export default {
     const userId = userIdBlock?.text?.text.slice("User: ".length);
     const channelId = view.title.text;
     if (!channelId || !userId) return console.log("No channel id or user id");
-    await ack();
     const values = view.state.values;
     const projectId = values.projId?.proj_input?.value?.trim();
     const apiKey = values.ftApiKey?.api_input?.value?.trim();

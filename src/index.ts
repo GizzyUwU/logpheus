@@ -1,4 +1,4 @@
-import { App, LogLevel } from "@slack/bolt";
+import { App, LogLevel, type AckFn, type RespondArguments } from "@slack/bolt";
 import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
@@ -392,6 +392,8 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
         // @ts-ignore
         app[type](prefix + module.name, async (args) => {
             try {
+                const ack: AckFn<string | RespondArguments> = args.ack;
+                await ack();
                 await module.execute(args, { loadApiKeys, pg, clients, SentryEnabled: sentryEnabled, sentry: Sentry });
             } catch (err) {
                 if (sentryEnabled) {
