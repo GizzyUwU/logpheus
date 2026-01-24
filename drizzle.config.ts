@@ -4,12 +4,12 @@ const usePgLite = process.env.PGLITE === "false" && process.env.DB_URL && proces
 export default defineConfig({
     dialect: 'postgresql',
     driver: usePgLite ? undefined : "pglite",
-    out: "./drizzle",
+    out: "./migrations",
     dbCredentials: usePgLite
         ? {
             url: process.env.DB_URL || ""
         }
         : { url: "./cache/pg" },
     casing: "snake_case",
-    schema: './src/schema'
+    schema: './src/schema/**/*.ts'
 })

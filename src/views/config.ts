@@ -1,15 +1,15 @@
-import type { AckFn, ViewOutput, RespondArguments, RespondFn } from "@slack/bolt";
+import type { ViewOutput, RespondFn } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../schema/apiKeys";
+import { apiKeys } from "../migrationSchema/apiKeys";
 import { eq } from "drizzle-orm";
 import FT from "../lib/ft";
+import { users } from "../schema/users";
 
 export default {
-    name: "logpheus_config",
-    execute: async ({ ack, view, client, respond }: {
-        ack: AckFn<string | RespondArguments>
+    name: "config",
+    execute: async ({ view, client, respond }: {
         view: ViewOutput
         client: WebClient
         respond: RespondFn
@@ -24,8 +24,7 @@ export default {
         );
         const userId = userIdBlock?.text?.text.slice("User: ".length);
         const channelId = view.title.text;
-        if (!channelId || !userId) return await ack("No channel or user id");
-        await ack();
+        if (!channelId || !userId) return console.log("No channel or user id");
         const values = view.state.values;
         const apiKey = values.ftApiKey?.api_input?.value?.trim();
         if (!apiKey) return await client.chat.postEphemeral({
@@ -52,18 +51,22 @@ export default {
         });
 
         const dbData = await pg.select()
-            .from(apiKeys)
+            .from(users)
             .where(eq(apiKeys.channel, channelId))
-        if (dbData.length === 0) return await ack('No entry found for this channel ID');
+        if (dbData.length === 0) return await client.chat.postEphemeral({
+            channel: channelId,
+            user: userId,
+            text: 'No entry found for this channel ID'
+        });
 
         if (dbData[0]?.disabled) {
-            await pg.update(apiKeys)
+            await pg.update(users)
                 .set({
                     apiKey,
                     disabled: false
                 }).where(eq(apiKeys.channel, channelId))
         } else {
-            await pg.update(apiKeys)
+            await pg.update(users)
                 .set({
                     apiKey
                 }).where(eq(apiKeys.channel, channelId))

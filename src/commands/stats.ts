@@ -2,10 +2,10 @@ import type { AckFn, RespondArguments, RespondFn, Logger, SlashCommand } from "@
 import type { WebClient } from "@slack/web-api";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../schema/apiKeys";
-import { eq, count } from "drizzle-orm";
+import { count } from "drizzle-orm";
+import { users } from "../schema/users";
 export default {
-    name: process.env.DEV_MODE === "true" ? '/devlpheus-stats' : '/logpheus-stats',
+    name: 'stats',
     execute: async ({ ack, respond, logger }: {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,
@@ -18,13 +18,9 @@ export default {
         }
     }) => {
         try {
-            await ack();
-            const data =  await pg
-                .select()
-                .from(apiKeys);
             const result = await pg
                 .select({ count: count() })
-                .from(apiKeys);
+                .from(users);
             const recordCount = result[0]?.count || 0;
 
             await respond({
@@ -33,12 +29,18 @@ export default {
             });
         } catch (error: any) {
             if (error.code === "slack_webapi_platform_error" && error.data?.error === "channel_not_found") {
-                await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND");
+                await respond({
+                    text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+                    response_type: "ephemeral"
+                });
                 return;
+            } else {
+                logger.error(error);
+                await respond({
+                    text: "An unexpected error occurred. Check logs.",
+                    response_type: "ephemeral"
+                });
             }
-
-            logger.error(error);
-            await ack("An unexpected error occurred. Check logs.");
         }
     }
 }

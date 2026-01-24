@@ -2,16 +2,20 @@ import type { AckFn, RespondArguments, Logger, SlashCommand, RespondFn } from "@
 import type { WebClient } from "@slack/web-api";
 
 export default {
-    name: process.env.DEV_MODE === "true" ? '/devlpheus-add' : '/logpheus-add',
-    execute: async ({ command, ack, client, logger, respond }: {
+    name: 'add',
+    execute: async ({ command, ack, client, logger, respond }:  {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,
         client: WebClient,
         logger: Logger,
-        respond: RespondFn
+        respond: RespondFn,
+        callbackId: string
+    }, {
+        callbackId
+    }: {
+        callbackId: string
     }) => {
         try {
-            await ack();
             const channel = await client.conversations.info({
                 channel: command.channel_id
             })
@@ -23,11 +27,12 @@ export default {
                 text: "You can only run this command in a channel that you are the creator of",
                 response_type: "ephemeral"
             });
+            console.log(callbackId)
             await client.views.open({
                 trigger_id: command.trigger_id,
                 view: {
                     type: 'modal',
-                    callback_id: 'logpheus_add',
+                    callback_id: callbackId,
                     title: {
                         type: 'plain_text',
                         text: command.channel_id
@@ -76,11 +81,17 @@ export default {
             });
         } catch (error: any) {
             if (error.code === "slack_webapi_platform_error" && error.data?.error === "channel_not_found") {
-                await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND");
+                await respond({
+                    text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+                    response_type: "ephemeral"
+                });
                 return;
             } else {
                 logger.error(error);
-                await ack("An unexpected error occurred. Check logs.");
+                await respond({
+                    text: "An unexpected error occurred. Check logs.",
+                    response_type: "ephemeral"
+                });
             }
         }
     }

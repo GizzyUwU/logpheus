@@ -3,12 +3,12 @@ import type { WebClient } from "@slack/web-api";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
 import FT from "../lib/ft";
-import { apiKeys } from "../schema/apiKeys";
 import { eq } from "drizzle-orm";
-import { projectData } from "../schema/project";
+import { users } from "../schema/users";
+import { projectData } from "../migrationSchema/project";
 
 export default {
-    name: process.env.DEV_MODE === "true" ? '/devlpheus-remove' : '/logpheus-remove',
+    name: 'remove',
     execute: async ({ command, ack, client, respond, logger }: {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,
@@ -21,7 +21,6 @@ export default {
         }
         clients: Record<string, FT>;
     }) => {
-        await ack();
         try {
             const channel = await client.conversations.info({
                 channel: command.channel_id
@@ -35,7 +34,7 @@ export default {
                 response_type: "ephemeral"
             });
             const projectId = command.text.trim();
-            const res = await pg.select().from(apiKeys).where(eq(apiKeys.channel, command.channel_id))
+            const res = await pg.select().from(users).where(eq(users.channel, command.channel_id))
             if (res.length === 0) return await respond({
                 text: `No API key found for this channel.`,
                 response_type: "ephemeral"
@@ -55,13 +54,13 @@ export default {
 
                 const updatedProjects = data.projects.filter(p => p !== Number(projectId));
                 if (updatedProjects.length > 0) {
-                    await pg.update(apiKeys)
+                    await pg.update(users)
                         .set({
                             projects: updatedProjects
                         })
-                        .where(eq(apiKeys.channel, command.channel_id));
+                        .where(eq(users.channel, command.channel_id));
                 } else {
-                    await pg.delete(apiKeys).where(eq(apiKeys.channel, command.channel_id));
+                    await pg.delete(users).where(eq(users.channel, command.channel_id));
                 }
 
                 if (clients[data.apiKey]) delete clients[data.apiKey];
@@ -74,7 +73,7 @@ export default {
                     await pg.delete(projectData).where(eq(projectData.projectId, Number(pid)));
                 }
 
-                await pg.delete(apiKeys).where(eq(apiKeys.channel, command.channel_id));
+                await pg.delete(users).where(eq(users.channel, command.channel_id));
                 if (clients[data!.apiKey]) delete clients[data!.apiKey];
                 return await respond({
                     text: "All projects previously connected to this channel have been disconnected.",
@@ -83,11 +82,17 @@ export default {
             }
         } catch (error: any) {
             if (error.code === "slack_webapi_platform_error" && error.data?.error === "channel_not_found") {
-                await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND");
+                await respond({
+                    text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+                    response_type: "ephemeral"
+                });
                 return;
             } else {
                 logger.error(error);
-                await ack("An unexpected error occurred. Check logs.");
+                await respond({
+                    text: "An unexpected error occurred. Check logs.",
+                    response_type: "ephemeral"
+                });
             }
         }
     }

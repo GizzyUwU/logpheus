@@ -2,23 +2,23 @@ import type { AckFn, RespondArguments, Logger, SlashCommand, RespondFn } from "@
 import type { WebClient } from "@slack/web-api";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../schema/apiKeys";
 import { eq } from "drizzle-orm";
+import { users } from "../schema/users";
 
 export default {
-    name: process.env.DEV_MODE === "true" ? '/devlpheus-config' : '/logpheus-config',
+    name: 'config',
     execute: async ({ command, ack, client, logger, respond }: {
         command: SlashCommand,
         ack: AckFn<string | RespondArguments>,
         client: WebClient,
-        logger: Logger
-        respond: RespondFn
-    }, { pg }: {
+        logger: Logger,
+        respond: RespondFn,
+    }, { pg, callbackId }: {
         pg: PgliteDatabase<Record<string, never>> & {
             $client: PGlite;
-        }
+        },
+        callbackId: string
     }) => {
-        await ack();
         try {
             const channel = await client.conversations.info({
                 channel: command.channel_id
@@ -32,7 +32,7 @@ export default {
                 text: "You can only run this command in a channel that you are the creator of",
                 response_type: "ephemeral"
             });
-            const res = await pg.select().from(apiKeys).where(eq(apiKeys.channel, channel.channel.id))
+            const res = await pg.select().from(users).where(eq(users.channel, channel.channel.id))
             if (res.length === 0) return await respond({
                 text: "Gng you don't even got an api key set to this channel run /logpheus-add first.",
                 response_type: "ephemeral"
@@ -41,7 +41,7 @@ export default {
                 trigger_id: command.trigger_id,
                 view: {
                     type: 'modal',
-                    callback_id: 'logpheus_config',
+                    callback_id: callbackId,
                     title: {
                         type: 'plain_text',
                         text: command.channel_id
@@ -77,11 +77,17 @@ export default {
             });
         } catch (error: any) {
             if (error.code === "slack_webapi_platform_error" && error.data?.error === "channel_not_found") {
-                await ack("If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND");
+                await respond({
+                    text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+                    response_type: "ephemeral"
+                });
                 return;
             } else {
                 logger.error(error);
-                await ack("An unexpected error occurred. Check logs.");
+                await respond({
+                    text: "An unexpected error occurred. Check logs.",
+                    response_type: "ephemeral"
+                });
             }
         }
     }
