@@ -71,20 +71,20 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
         }
 
         if (/^### /.test(line)) {
-            blocks.push({ type: "header", text: { type: "plain_text", text: line.replace(/^### /, "") } });
+            blocks.push({ type: "header", text: { type: "plain_text", text: line.replace(/^### /, ""), emoji: true } });
             continue;
         }
 
         if (/^## /.test(line)) {
             blocks.push({
                 type: "rich_text",
-                elements: [{ type: "rich_text_section", elements: parseInline(line.replace(/^## /, "")) }],
+                elements: [{ type: "rich_text_section", elements: parseInline(line.replace(/^## /, "")),}],
             } as RichTextBlock);
             continue;
         }
 
         if (/^# /.test(line)) {
-            blocks.push({ type: "header", text: { type: "plain_text", text: line.replace(/^# /, "") } });
+            blocks.push({ type: "header", text: { type: "plain_text", text: line.replace(/^# /, ""), emoji: true } });
             continue;
         }
 
@@ -124,7 +124,7 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
             const content = parseInline(line.replace(/^- /, ""));
             blocks.push({
                 type: "rich_text",
-                elements: [{ type: "rich_text_section", elements: [{ type: "text", text: "• " }, ...content] }],
+                elements: [{ type: "rich_text_section", elements: [{ type: "text", text: "•" + " " }, ...content] }],
             } as RichTextBlock);
             continue;
         }
