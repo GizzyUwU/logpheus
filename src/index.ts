@@ -40,7 +40,7 @@ if (process.env.PGLITE === "false") {
   });
   pg = db;
   await migrate(db, {
-    migrationsFolder: "../migrations",
+    migrationsFolder: "./migrations",
   });
 } else {
   const { drizzle } = await import("drizzle-orm/pglite");
@@ -53,7 +53,7 @@ if (process.env.PGLITE === "false") {
   });
   pg = db
   await migrate(db, {
-    migrationsFolder: "../migrations",
+    migrationsFolder: "./migrations",
   });
 }
 
