@@ -1,15 +1,11 @@
-import type {
-  AckFn,
-  ViewOutput,
-  RespondArguments,
-} from "@slack/bolt";
+import type { AckFn, ViewOutput, RespondArguments } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import FT from "../lib/ft";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../schema/apiKeys";
+import { users } from "../schema/users";
+import { projects } from "../schema/projects";
 import { eq } from "drizzle-orm";
-import { projectData } from "../schema/project";
 
 export default {
   name: "add",
@@ -74,8 +70,8 @@ export default {
       });
     const exists = await pg
       .select()
-      .from(apiKeys)
-      .where(eq(apiKeys.apiKey, apiKey));
+      .from(users)
+      .where(eq(users.apiKey, apiKey));
     if (exists.length > 0) {
       const row = exists[0];
       if (exists[0]?.channel !== channelId)
@@ -84,15 +80,14 @@ export default {
           user: userId,
           text: "This API key is already bound to a different channel",
         });
-      const normalizedProjectId = String(Number(projectId));
 
       const projects = Array.isArray(row?.projects)
         ? Array.from(
-            new Set(row.projects.map((p) => String(Number(p))).filter(Boolean)),
+            new Set(row.projects.map((p) => Number(p)).filter(Boolean)),
           )
         : [];
 
-      if (projects.includes(normalizedProjectId)) {
+      if (projects.includes(Number(projectId))) {
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
@@ -100,43 +95,35 @@ export default {
         });
       }
 
-      projects.push(normalizedProjectId);
+      projects.push(Number(projectId));
 
-      projects.push(projectId);
-      await pg
-        .update(apiKeys)
-        .set({ projects })
-        .where(eq(apiKeys.apiKey, apiKey));
+      await pg.update(users).set({ projects }).where(eq(users.apiKey, apiKey));
     } else {
-      await pg.insert(apiKeys).values({
+      await pg.insert(users).values({
         apiKey,
+        userId: userId,
         channel: channelId,
-        projects: [projectId],
+        projects: [Number(projectId)],
       });
     }
 
     const freshProject = await ftClient.project({ id: Number(projectId) });
     if (!freshProject) return;
 
-    const ids = Array.isArray(freshProject.devlog_ids)
+    const devlogIds = Array.isArray(freshProject.devlog_ids)
       ? freshProject.devlog_ids
       : [];
-    const shipStatus =
-      typeof freshProject.ship_status === "string"
-        ? freshProject.ship_status
-        : null;
+
     await pg
-      .insert(projectData)
+      .insert(projects)
       .values({
-        projectId: Number(projectId),
-        ids,
-        shipStatus,
+        id: Number(projectId),
+        devlogIds,
       })
       .onConflictDoUpdate({
-        target: projectData.projectId,
+        target: projects.id,
         set: {
-          ids,
-          shipStatus,
+          devlogIds,
         },
       });
 

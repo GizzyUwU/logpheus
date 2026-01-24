@@ -2,8 +2,8 @@ import type { AckFn, RespondArguments, RespondFn, Logger, SlashCommand } from "@
 import type { WebClient } from "@slack/web-api";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../schema/apiKeys";
-import { eq, count } from "drizzle-orm";
+import { count } from "drizzle-orm";
+import { users } from "../schema/users";
 export default {
     name: 'stats',
     execute: async ({ ack, respond, logger }: {
@@ -18,12 +18,9 @@ export default {
         }
     }) => {
         try {
-            const data = await pg
-                .select()
-                .from(apiKeys);
             const result = await pg
                 .select({ count: count() })
-                .from(apiKeys);
+                .from(users);
             const recordCount = result[0]?.count || 0;
 
             await respond({

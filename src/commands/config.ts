@@ -2,8 +2,8 @@ import type { AckFn, RespondArguments, Logger, SlashCommand, RespondFn } from "@
 import type { WebClient } from "@slack/web-api";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../schema/apiKeys";
 import { eq } from "drizzle-orm";
+import { users } from "../schema/users";
 
 export default {
     name: 'config',
@@ -32,7 +32,7 @@ export default {
                 text: "You can only run this command in a channel that you are the creator of",
                 response_type: "ephemeral"
             });
-            const res = await pg.select().from(apiKeys).where(eq(apiKeys.channel, channel.channel.id))
+            const res = await pg.select().from(users).where(eq(users.channel, channel.channel.id))
             if (res.length === 0) return await respond({
                 text: "Gng you don't even got an api key set to this channel run /logpheus-add first.",
                 response_type: "ephemeral"

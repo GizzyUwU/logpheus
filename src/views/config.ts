@@ -2,9 +2,10 @@ import type { ViewOutput, RespondFn } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../schema/apiKeys";
+import { apiKeys } from "../migrationSchema/apiKeys";
 import { eq } from "drizzle-orm";
 import FT from "../lib/ft";
+import { users } from "../schema/users";
 
 export default {
     name: "config",
@@ -50,7 +51,7 @@ export default {
         });
 
         const dbData = await pg.select()
-            .from(apiKeys)
+            .from(users)
             .where(eq(apiKeys.channel, channelId))
         if (dbData.length === 0) return await client.chat.postEphemeral({
             channel: channelId,
@@ -59,13 +60,13 @@ export default {
         });
 
         if (dbData[0]?.disabled) {
-            await pg.update(apiKeys)
+            await pg.update(users)
                 .set({
                     apiKey,
                     disabled: false
                 }).where(eq(apiKeys.channel, channelId))
         } else {
-            await pg.update(apiKeys)
+            await pg.update(users)
                 .set({
                     apiKey
                 }).where(eq(apiKeys.channel, channelId))

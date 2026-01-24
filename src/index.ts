@@ -2,455 +2,153 @@ import { App, LogLevel, type AckFn, type RespondArguments } from "@slack/bolt";
 import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
-import type FTypes from "./lib/ft.d"
-import { containsMarkdown, parseMarkdownToSlackBlocks } from "./lib/parseMarkdown";
-import { eq } from "drizzle-orm";
-import { apiKeys } from "./schema/apiKeys";
-import { projectData } from "./schema/project";
-import { migration } from "./migration";
+import checkAllProjects from "./handlers/checkForNewDevlogs";
+import { users } from "./schema/users";
+import runMigrations from "./migrate";
 import { PGlite } from "@electric-sql/pglite";
 import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import * as Sentry from "@sentry/bun"
+import * as Sentry from "@sentry/bun";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
-    | (NodePgDatabase<Record<string, never>> & { $client: Pool })
-    | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
+  | (NodePgDatabase<Record<string, never>> & { $client: Pool })
+  | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 const cacheDir = path.join(__dirname, "../cache");
 let pg: DatabaseType;
 if (process.env.SENTRY_DSN) {
-    Sentry.init({
-        dsn: process.env.SENTRY_DSN,
-        release: process.env.SENTRY_NAME || "logpheus",
-        integrations: [],
-        tracesSampleRate: 0,
-        sendDefaultPii: true,
-    });
-    sentryEnabled = true
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    release: process.env.SENTRY_NAME || "logpheus",
+    integrations: [],
+    tracesSampleRate: 0,
+    sendDefaultPii: true,
+  });
+  sentryEnabled = true;
 }
 
 if (process.env.PGLITE === "false") {
-    const { drizzle } = await import("drizzle-orm/node-postgres");
-    const pool = new Pool({
-        connectionString: process.env.DB_URL
-    })
-    pg = drizzle({
-        client: pool,
-        casing: 'snake_case'
-    })
+  const { drizzle } = await import("drizzle-orm/node-postgres");
+  const pool = new Pool({
+    connectionString: process.env.DB_URL,
+  });
+  pg = drizzle({
+    client: pool,
+    casing: "snake_case",
+  });
 } else {
-    const { drizzle } = await import("drizzle-orm/pglite");
-    const pgClient = new PGlite(path.join(cacheDir, "pg"));
-    pg = drizzle({
-        client: pgClient,
-        casing: 'snake_case'
-    })
+  const { drizzle } = await import("drizzle-orm/pglite");
+  const pgClient = new PGlite(path.join(cacheDir, "pg"));
+  pg = drizzle({
+    client: pgClient,
+    casing: "snake_case",
+  });
 }
 
 const app = new App({
-    signingSecret: process.env.SIGNING_SECRET,
-    token: process.env.BOT_TOKEN,
-    appToken: process.env.APP_TOKEN,
-    socketMode: process.env.APP_TOKEN ? process.env.SOCKET_MODE === "true" : false,
-    customRoutes: [
-        {
-            path: '/healthcheck',
-            method: ['GET'],
-            handler: (req, res) => {
-                res.writeHead(200);
-                res.end("I'm okay!");
-            }
-        }
-    ]
+  signingSecret: process.env.SIGNING_SECRET,
+  token: process.env.BOT_TOKEN,
+  appToken: process.env.APP_TOKEN,
+  socketMode: process.env.APP_TOKEN
+    ? process.env.SOCKET_MODE === "true"
+    : false,
+  customRoutes: [
+    {
+      path: "/healthcheck",
+      method: ["GET"],
+      handler: (req, res) => {
+        res.writeHead(200);
+        res.end("I'm okay!");
+      },
+    },
+  ],
 });
 
 let clients: Record<string, FT> = {};
 
-async function loadApiKeys(): Promise<Record<string, { channel: string; projects: string[] }>> {
-    const result: Record<string, { channel: string; projects: string[] }> = {};
-    const rows = await pg.select().from(apiKeys);
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row) {
-            if (sentryEnabled) {
-                Sentry.captureMessage("Row is missing", {
-                    level: "error",
-                    extra: {
-                        rowIndex: i
-                    }
-                })
-            } else {
-                console.error(`[loadApiKeys] Row is missing, index: ${i}`);
-            }
-            continue;
-        }
-        try {
-            const projects = row.projects;
-            result[row.apiKey] = {
-                channel: row.channel,
-                projects: Array.isArray(projects) ? projects.map(String) : []
-            };
-        } catch (err) {
-            if (sentryEnabled) {
-                Sentry.captureException(err, {
-                    extra: {
-                        rowIndex: i
-                    }
-                })
-            } else {
-                console.error(`[loadApiKeys] Failed to parse projects for API key ${row.apiKey}:`, err);
-            }
-            result[row.apiKey] = { channel: row.channel, projects: [] };
-        }
-    }
-    return result;
-}
-
-async function getNewDevlogs(
-    apiKey: string,
-    projectId: string
-): Promise<{ name: string; devlogs: FTypes.Devlog[]; shipped?: "pending" | "submitted" } | void> {
-    try {
-        const client = clients[apiKey];
-        if (!client) {
-            if (sentryEnabled) {
-                Sentry.captureMessage("No FT Client for the project", {
-                    level: "error",
-                    extra: {
-                        projectId
-                    }
-                })
-            } else {
-                console.error(`No FT client for project ${projectId}`);
-            }
-            return;
-        }
-        const project = await client.project({ id: Number(projectId) });
-        if (!project) {
-            const row = await pg
-                .select()
-                .from(apiKeys)
-                .where(eq(apiKeys.apiKey, apiKey))
-                .limit(1);
-
-            const disabled = row[0]?.disabled;
-            if (disabled !== true) {
-                if (client.lastCode === 401) {
-                    await pg.update(apiKeys).set({
-                        disabled: true
-                    }).where(eq(apiKeys.apiKey, apiKey))
-
-                    await app.client.chat.postMessage({
-                        channel: String(row[0]?.channel),
-                        text: "Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /logpheus-config to get it re-enabled."
-                    })
-                } else {
-                    if (sentryEnabled) {
-                        Sentry.captureMessage("No project exists at id", {
-                            level: "error",
-                            extra: {
-                                projectId
-                            }
-                        })
-                    } else {
-                        console.error("No project exists at id", projectId);
-                    }
-                }
-            }
-
-            return;
-        }
-
-        const devlogIds = Array.isArray(project?.devlog_ids) ? project.devlog_ids : [];
-        const row = await pg.select()
-            .from(projectData)
-            .where(eq(projectData.projectId, Number(projectId)));
-
-        let cachedIds: string[] = [];
-        let cachedShipStatus: "pending" | "submitted" | null = null;
-
-        if (row.length > 0) {
-            try {
-                cachedIds = row[0]!.ids.map(String);
-            } catch {
-                cachedIds = [];
-            }
-            cachedShipStatus = (row[0]?.shipStatus === "pending" || row[0]?.shipStatus === "submitted")
-                ? row[0]!.shipStatus as "pending" | "submitted"
-                : null;
-        }
-
-        const cachedSet = new Set(cachedIds);
-        const newIds = devlogIds.filter(id => !cachedSet.has(String(id)));
-
-        let shipped: "pending" | "submitted" | undefined;
-        if (project.ship_status && project.ship_status !== "draft" && cachedShipStatus !== project.ship_status) {
-            shipped = project.ship_status as "pending" | "submitted";
-        }
-
-        if (newIds.length > 0 || shipped) {
-            await pg.update(projectData)
-                .set({
-                    ids: Array.from(new Set([...cachedIds, ...newIds])),
-                    shipStatus: shipped ?? cachedShipStatus
-                })
-                .where(eq(projectData.projectId, Number(projectId)));
-        }
-
-        if (newIds.length === 0) {
-            return { name: project.title, devlogs: [], ...(shipped ? { shipped } : {}) };
-        }
-
-        const devlogs: FTypes.Devlog[] = [];
-        for (const id of newIds) {
-            const res = await client.devlog({ projectId: Number(projectId), devlogId: id });
-            if (res) devlogs.push(res);
-        }
-
-        return { name: project.title, devlogs, ...(shipped ? { shipped } : {}) };
-
-    } catch (err) {
-        if (sentryEnabled) {
-            Sentry.captureException(err, {
-                extra: {
-                    projectId
-                }
-            })
-        } else {
-            console.error(`Error fetching devlogs for project ${projectId}:`, err);
-        }
-        return;
-    }
-}
-
-async function checkAllProjects() {
-    const apiKeys = await loadApiKeys();
-    if (!apiKeys) return;
-    for (const [apiKey] of Object.entries(apiKeys)) {
-        if (!clients[apiKey]) {
-            clients[apiKey] = new FT(apiKey);
-        }
-    }
-
-    for (const [apiKey, data] of Object.entries(apiKeys)) {
-        for (const projectId of data.projects) {
-            const projData = await getNewDevlogs(apiKey, projectId);
-            if (!projData) continue;
-            if (projData.devlogs.length > 0) {
-                for (const devlog of projData.devlogs) {
-                    try {
-                        const days = Math.floor(devlog.duration_seconds / (24 * 3600));
-                        const hours = Math.floor((devlog.duration_seconds % (24 * 3600)) / 3600);
-                        const minutes = Math.floor((devlog.duration_seconds % 3600) / 60);
-                        let durationParts = [];
-                        if (days > 0) durationParts.push(`${days} day${days > 1 ? 's' : ''}`);
-                        if (hours > 0) durationParts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
-                        if (minutes > 0) durationParts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
-                        const durationString = durationParts.join(' ');
-                        const createdAt = new Date(devlog.created_at);
-                        const timestamp = createdAt.toLocaleString('en-GB', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                            timeZone: 'UTC'
-                        });
-                        const year = createdAt.getUTCFullYear();
-                        const month = (createdAt.getUTCMonth() + 1).toString().padStart(2, '0');
-                        const day = createdAt.getUTCDate().toString().padStart(2, '0');
-                        const cHours = createdAt.getUTCHours().toString().padStart(2, '0');
-                        const cMinutes = createdAt.getUTCMinutes().toString().padStart(2, '0');
-                        const cs50Timestamp = `${year}${month}${day}T${cHours}${cMinutes}+0000`;
-
-                        if (!containsMarkdown(devlog.body)) {
-                            await app.client.chat.postMessage({
-                                channel: data.channel,
-                                unfurl_links: false,
-                                unfurl_media: false,
-                                blocks: [
-                                    {
-                                        type: "section",
-                                        text: {
-                                            type: "mrkdwn",
-                                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
-                                        }
-                                    },
-                                    {
-                                        type: "section",
-                                        text: {
-                                            type: "mrkdwn",
-                                            text: `> ${devlog.body}`
-                                        }
-                                    },
-                                    {
-                                        "type": "divider"
-                                    },
-                                    {
-                                        "type": "context",
-                                        "elements": [
-                                            {
-                                                "type": "mrkdwn",
-                                                "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
-                                            }
-                                        ]
-                                    }
-                                ]
-                            });
-                        } else {
-                            await app.client.chat.postMessage({
-                                channel: data.channel,
-                                unfurl_links: false,
-                                unfurl_media: false,
-                                blocks: [
-                                    {
-                                        type: "section",
-                                        text: {
-                                            type: "mrkdwn",
-                                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`
-                                        }
-                                    },
-                                    ...parseMarkdownToSlackBlocks(devlog.body),
-                                    {
-                                        "type": "divider"
-                                    },
-                                    {
-                                        "type": "context",
-                                        "elements": [
-                                            {
-                                                "type": "mrkdwn",
-                                                "text": `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`
-                                            }
-                                        ]
-                                    }
-                                ]
-                            });
-                        }
-                    } catch (err) {
-                        if (sentryEnabled) {
-                            Sentry.captureException(err, {
-                                extra: {
-                                    projectId,
-                                }
-                            })
-                        } else {
-                            console.error(`Error posting to Slack for project ${projectId}:`, err);
-                        }
-                    }
-                }
-            }
-            if (projData.shipped) {
-                switch (projData.shipped) {
-                    case "pending":
-                        await app.client.chat.postMessage({
-                            channel: data.channel,
-                            unfurl_links: false,
-                            unfurl_media: false,
-                            blocks: [
-                                {
-                                    type: "section",
-                                    text: {
-                                        type: "mrkdwn",
-                                        text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> just got shipped and now is pending a ship review! :shipitparrot:`
-                                    }
-                                },
-                            ]
-                        });
-                        return;
-                    case "submitted":
-                        await app.client.chat.postMessage({
-                            channel: data.channel,
-                            unfurl_links: false,
-                            unfurl_media: false,
-                            blocks: [
-                                {
-                                    type: "section",
-                                    text: {
-                                        type: "mrkdwn",
-                                        text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> ship has got accepted and now has entered voting! :shipitparrot:`
-                                    }
-                                },
-                            ]
-                        });
-                        return;
-                }
-            }
-            await new Promise(res => setTimeout(res, 2000));
-            continue;
-        }
-    }
-}
-
 function loadHandlers(app: App, folder: string, type: "command" | "view") {
-    const folderPath = path.join(__dirname, folder);
-    fs.readdirSync(folderPath).forEach(file => {
-        if (!file.endsWith(".ts") && !file.endsWith(".js")) return;
-        const module = require(path.join(folderPath, file)).default;
-        if (!module?.name || typeof module.execute !== "function") return;
+  const folderPath = path.join(__dirname, folder);
+  fs.readdirSync(folderPath).forEach((file) => {
+    if (!file.endsWith(".ts") && !file.endsWith(".js")) return;
+    const module = require(path.join(folderPath, file)).default;
+    if (!module?.name || typeof module.execute !== "function") return;
 
-        const suffix = type === "view" ? "_" + module.name : "-" + module.name;
-        const callbackId = `${prefix}_${module.name}`;
-        const format = type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
+    const suffix = type === "view" ? "_" + module.name : "-" + module.name;
+    const callbackId = `${prefix}_${module.name}`;
+    const format =
+      type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
 
-        const registerHandler = (id: string, mod: typeof module) => {
-            (app[type as "view" | "command"] as Function)(format, async (args: any) => {
-                try {
-                    const ack: AckFn<string | RespondArguments> = args.ack;
-                    await ack();
-                    console.log(id)
-                    await mod.execute(args, { loadApiKeys, pg, clients, SentryEnabled: sentryEnabled, sentry: Sentry, callbackId: id });
-                } catch (err) {
-                    if (sentryEnabled) {
-                        Sentry.captureException(err, {
-                            extra: { type, module: mod.name }
-                        });
-                    } else {
-                        console.error(`Error executing ${type} ${mod.name}:`, err);
-                    }
-                }
+    const registerHandler = (id: string, mod: typeof module) => {
+      (app[type as "view" | "command"] as Function)(
+        format,
+        async (args: any) => {
+          try {
+            const ack: AckFn<string | RespondArguments> = args.ack;
+            await ack();
+            console.log(id);
+            await mod.execute(args, {
+              pg,
+              clients,
+              SentryEnabled: sentryEnabled,
+              sentry: Sentry,
+              callbackId: id,
             });
-        };
+          } catch (err) {
+            if (sentryEnabled) {
+              Sentry.captureException(err, {
+                extra: { type, module: mod.name },
+              });
+            } else {
+              console.error(`Error executing ${type} ${mod.name}:`, err);
+            }
+          }
+        },
+      );
+    };
 
-        registerHandler(callbackId, module);
-        console.log(`[Logpheus] Registered ${type}: ${module.name}`);
-    });
+    registerHandler(callbackId, module);
+    console.log(`[Logpheus] Registered ${type}: ${module.name}`);
+  });
 }
 
 (async () => {
-    try {
-        await migration(pg);
-        app.logger.setName("[Logpheus]")
-        app.logger.setLevel('error' as LogLevel);
-        const self = await app.client.auth.test()
-        if (self.user_id === "U0A50Q9SYK1") {
-            prefix = "devlpheus"
-            console.log("[Logpheus] My prefix is", prefix)
-        } else if (self.user_id === "U0A5CFG4EAJ") {
-            prefix = "logpheus"
-            console.log("[Logpheus] My prefix is", prefix)
-        } else {
-            if (!self.user || !self.user_id) throw new Error("No username or user id for prefix")
-            prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
-            console.log("[Logpheus] My prefix is", prefix)
-        }
-        if (process.env.SOCKET_MODE === "true" && process.env.APP_TOKEN) {
-            await app.start();
-            console.info('[Logpheus] Running as Socket Mode');
-        } else {
-            const port = process.env.PORT ? parseInt(process.env.PORT) : 3000
-            await app.start(port);
-            console.info('[Logpheus] Running on port:', port);
-        }
-
-        loadHandlers(app, "commands", "command");
-        loadHandlers(app, "views", "view");
-
-        await checkAllProjects()
-        setInterval(checkAllProjects, 60 * 1000);
-    } catch (err) {
-        if (sentryEnabled) {
-            Sentry.captureException(err)
-        } else {
-            console.error('Unable to start app:', err);
-        }
+  try {
+    await runMigrations(pg);
+    app.logger.setName("[Logpheus]");
+    app.logger.setLevel("error" as LogLevel);
+    const self = await app.client.auth.test();
+    if (self.user_id === "U0A50Q9SYK1") {
+      prefix = "devlpheus";
+    } else if (self.user_id === "U0A5CFG4EAJ") {
+      prefix = "logpheus";
+    } else {
+      if (!self.user || !self.user_id)
+        throw new Error("No username or user id for prefix");
+      prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
     }
+    if (process.env.SOCKET_MODE === "true" && process.env.APP_TOKEN) {
+      await app.start();
+      console.info("[Logpheus] Running as Socket Mode");
+    } else {
+      const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+      await app.start(port);
+      console.info("[Logpheus] Running on port:", port);
+    }
+
+    loadHandlers(app, "commands", "command");
+    loadHandlers(app, "views", "view");
+    console.log('[Logpheus] My prefix is', Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m" );
+
+    checkAllProjects(app.client, clients, pg, sentryEnabled, Sentry);
+    setInterval(() => {
+      checkAllProjects(app.client, clients, pg, sentryEnabled, Sentry);
+    }, 60 * 1000);
+  } catch (err) {
+    if (sentryEnabled) {
+      Sentry.captureException(err);
+    } else {
+      console.error("Unable to start app:", err);
+    }
+  }
 })();
