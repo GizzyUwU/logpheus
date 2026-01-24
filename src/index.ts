@@ -30,19 +30,30 @@ if (process.env.SENTRY_DSN) {
 
 if (process.env.PGLITE === "false") {
   const { drizzle } = await import("drizzle-orm/node-postgres");
+  const { migrate } = await import("drizzle-orm/node-postgres/migrator");
   const pool = new Pool({
     connectionString: process.env.DB_URL,
   });
-  pg = drizzle({
+  const db = drizzle({
     client: pool,
     casing: "snake_case",
   });
+  pg = db;
+  migrate(db, {
+    migrationsFolder: "../migrations",
+  });
 } else {
   const { drizzle } = await import("drizzle-orm/pglite");
+  const { migrate } = await import("drizzle-orm/pglite/migrator");
+
   const pgClient = new PGlite(path.join(cacheDir, "pg"));
-  pg = drizzle({
+  const db = drizzle({
     client: pgClient,
     casing: "snake_case",
+  });
+  pg = db
+  migrate(db, {
+    migrationsFolder: "../migrations",
   });
 }
 
@@ -138,7 +149,10 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
 
     loadHandlers(app, "commands", "command");
     loadHandlers(app, "views", "view");
-    console.log('[Logpheus] My prefix is', Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m" );
+    console.log(
+      "[Logpheus] My prefix is",
+      Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
+    );
 
     checkAllProjects(app.client, clients, pg, sentryEnabled, Sentry);
     setInterval(() => {
