@@ -5,6 +5,7 @@ RUN --mount=type=cache,target=/root/.npm \
     bun install --frozen-lockfile --production
 
 COPY src/ /usr/src/app/src/
+COPY migrations/ /usr/src/app/migrations
 COPY drizzle.config.ts /usr/src/app/drizzle.config.ts
 RUN mkdir /usr/src/app/cache
 RUN chown -R bun:bun /usr/src/app
