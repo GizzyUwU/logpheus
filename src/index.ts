@@ -39,7 +39,7 @@ if (process.env.PGLITE === "false") {
     casing: "snake_case",
   });
   pg = db;
-  migrate(db, {
+  await migrate(db, {
     migrationsFolder: "../migrations",
   });
 } else {
@@ -52,7 +52,7 @@ if (process.env.PGLITE === "false") {
     casing: "snake_case",
   });
   pg = db
-  migrate(db, {
+  await migrate(db, {
     migrationsFolder: "../migrations",
   });
 }
