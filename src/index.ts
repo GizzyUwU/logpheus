@@ -1,15 +1,22 @@
-import { App, LogLevel, type AckFn, type RespondArguments } from "@slack/bolt";
+import {
+  App,
+  LogLevel,
+  type AckFn,
+  type RespondArguments,
+  type SlackCommandMiddlewareArgs,
+  type SlackViewMiddlewareArgs,
+} from "@slack/bolt";
 import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
 import checkAllProjects from "./handlers/checkForNewDevlogs";
-import { users } from "./schema/users";
 import runMigrations from "./migrate";
 import { PGlite } from "@electric-sql/pglite";
 import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun";
+import type { WebClient } from "@slack/web-api";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
@@ -51,7 +58,7 @@ if (process.env.PGLITE === "false") {
     client: pgClient,
     casing: "snake_case",
   });
-  pg = db
+  pg = db;
   await migrate(db, {
     migrationsFolder: "./migrations",
   });
@@ -78,6 +85,15 @@ const app = new App({
 
 let clients: Record<string, FT> = {};
 
+export type RequestHandler = {
+  pg: DatabaseType;
+  client: WebClient
+  clients: Record<string, FT>;
+  sentryEnabled: boolean;
+  Sentry: typeof import("@sentry/bun");
+  callbackId: string;
+};
+
 function loadHandlers(app: App, folder: string, type: "command" | "view") {
   const folderPath = path.join(__dirname, folder);
   fs.readdirSync(folderPath).forEach((file) => {
@@ -89,29 +105,58 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
     const callbackId = `${prefix}_${module.name}`;
     const format =
       type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
-
     const registerHandler = (id: string, mod: typeof module) => {
       (app[type as "view" | "command"] as Function)(
         format,
-        async (args: any) => {
-          try {
-            const ack: AckFn<string | RespondArguments> = args.ack;
-            await ack();
-            console.log(id);
+        async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
+          const run = async () => {
+            await args.ack();
             await mod.execute(args, {
               pg,
+              client: app.client,
               clients,
-              SentryEnabled: sentryEnabled,
+              sentryEnabled: sentryEnabled,
               sentry: Sentry,
               callbackId: id,
             });
-          } catch (err) {
-            if (sentryEnabled) {
-              Sentry.captureException(err, {
-                extra: { type, module: mod.name },
-              });
-            } else {
+          };
+
+          if (!sentryEnabled) {
+            try {
+              run();
+            } catch (err) {
               console.error(`Error executing ${type} ${mod.name}:`, err);
+            }
+          } else {
+            await Sentry.withScope(async (scope) => {
+              scope.setTag("handler.type", type);
+              scope.setTag("handler.module", mod.name);
+              scope.setContext("handler", {
+                type,
+                module: mod.name,
+              });
+              scope.setContext("slack", {
+                type,
+                kind: args.body.type === "view_submission" ? "view" : "command",
+                user:
+                  "user_id" in args.body
+                    ? args.body.user_id
+                    : args.body.user?.id,
+                channel:
+                  "channel_id" in args.body
+                    ? args.body.channel_id
+                    : args.body.view?.title?.text,
+                triggerId:
+                  "trigger_id" in args.body
+                    ? args.body.trigger_id
+                    : "",
+              });
+            });
+
+            try {
+              run();
+            } catch (err) {
+              Sentry.captureException(err);
             }
           }
         },

@@ -1,4 +1,9 @@
-import type { AckFn, ViewOutput, RespondArguments } from "@slack/bolt";
+import type {
+  AckFn,
+  ViewOutput,
+  RespondArguments,
+  SlackViewMiddlewareArgs,
+} from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import FT from "../lib/ft";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -6,25 +11,13 @@ import type { PGlite } from "@electric-sql/pglite";
 import { users } from "../schema/users";
 import { projects } from "../schema/projects";
 import { eq } from "drizzle-orm";
+import type { RequestHandler } from "..";
 
 export default {
   name: "add",
   execute: async (
-    {
-      view,
-      client,
-    }: {
-      ack: AckFn<string | RespondArguments>;
-      view: ViewOutput;
-      client: WebClient;
-    },
-    {
-      pg,
-    }: {
-      pg: PgliteDatabase<Record<string, never>> & {
-        $client: PGlite;
-      };
-    },
+    { view }: SlackViewMiddlewareArgs,
+    { pg, client, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     const userIdBlock = view.blocks.find(
       (block): block is { type: "section"; text: { text: string } } =>
@@ -32,7 +25,15 @@ export default {
     );
     const userId = userIdBlock?.text?.text.slice("User: ".length);
     const channelId = view.title.text;
-    if (!channelId || !userId) return console.log("No channel id or user id");
+    if (!channelId || !userId) {
+      if (sentryEnabled) {
+        Sentry.setContext("view", { ...view })
+        Sentry.captureMessage("There is no channel id for this channel?");
+      } else {
+        console.error("There is no channel id?", view);
+      }
+      return;
+    }
     const values = view.state.values;
     const projectId = values.projId?.proj_input?.value?.trim();
     const apiKey = values.ftApiKey?.api_input?.value?.trim();

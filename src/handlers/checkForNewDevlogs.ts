@@ -32,11 +32,11 @@ async function getNewDevlogs(
     const client = clients[apiKey];
     if (!client) {
       if (sentryEnabled) {
+        Sentry.setContext("project", {
+          id: projectId,
+        });
         Sentry.captureMessage("No FT Client for the project", {
           level: "error",
-          extra: {
-            projectId,
-          },
         });
       } else {
         console.error(`No FT client for project ${projectId}`);
@@ -65,16 +65,30 @@ async function getNewDevlogs(
             channel: String(row[0]?.channel),
             text: "Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /logpheus-config to get it re-enabled.",
           });
-        } else {
+        } else if (client.lastCode === 404) {
           if (sentryEnabled) {
+            Sentry.setContext("project", {
+              id: projectId,
+            });
             Sentry.captureMessage("No project exists at id", {
               level: "error",
-              extra: {
-                projectId,
-              },
             });
           } else {
             console.error("No project exists at id", projectId);
+          }
+        } else {
+          if (sentryEnabled) {
+            Sentry.setContext("project", {
+              id: projectId,
+            });
+            Sentry.captureMessage(
+              client.lastCode + " " + "Failed to get project",
+              {
+                level: "error",
+              },
+            );
+          } else {
+            console.error(client.lastCode, "Failed to get project", projectId);
           }
         }
       }
@@ -85,7 +99,7 @@ async function getNewDevlogs(
     const devlogIds = Array.isArray(project?.devlog_ids)
       ? project.devlog_ids
       : [];
-      
+
     const row = await db
       .select()
       .from(projects)
@@ -129,11 +143,10 @@ async function getNewDevlogs(
     return { name: project.title, devlogs };
   } catch (err) {
     if (sentryEnabled) {
-      Sentry.captureException(err, {
-        extra: {
-          projectId,
-        },
+      Sentry.setContext("project", {
+        id: projectId,
       });
+      Sentry.captureException(err);
     } else {
       console.error(`Error fetching devlogs for project ${projectId}:`, err);
     }
@@ -263,11 +276,10 @@ export default async function checkAllProjects(
             }
           } catch (err) {
             if (sentryEnabled) {
-              Sentry.captureException(err, {
-                extra: {
-                  projectId,
-                },
+              Sentry.setContext("project", {
+                id: projectId,
               });
+              Sentry.captureException(err);
             } else {
               console.error(
                 `Error posting to Slack for project ${projectId}:`,
