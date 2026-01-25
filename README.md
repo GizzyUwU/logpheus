@@ -37,6 +37,9 @@ APP_TOKEN= # String
 BOT_TOKEN= # String
 SIGNING_SECRET= # String
 SOCKET_MODE= # Boolean
+PGLITE= # Boolean - Optional
+SENTRY_DSN= # String - Optional
+DB_URL= # String - Optional (Missing = Use PGLite)
 ```
 
 If you don't make use of Socket Mode the endpoints needed to set on the dashboard are
