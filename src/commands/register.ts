@@ -1,5 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 
@@ -33,10 +33,11 @@ export default {
       }
 
       const res = await pg
-        .select()
+        .select({ count: count() })
         .from(users)
-        .where(eq(users.userId, users.userId));
-      if (res.length !== 0)
+        .limit(1)
+        .where(eq(users.userId, users.userId)) as { count: number }[];
+      if (Number(res[0]?.count) !== 0)
         return await respond({
           text: "You already got an api key setup in db. Run /" + prefix + "-config to change it",
           response_type: "ephemeral",
