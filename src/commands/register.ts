@@ -36,7 +36,7 @@ export default {
         .select({ count: count() })
         .from(users)
         .limit(1)
-        .where(eq(users.userId, users.userId)) as { count: number }[];
+        .where(eq(users.userId, command.user_id)) as { count: number }[];
       if (Number(res[0]?.count) !== 0)
         return await respond({
           text: "You already got an api key setup in db. Run /" + prefix + "-config to change it",
