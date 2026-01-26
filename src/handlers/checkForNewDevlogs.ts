@@ -76,6 +76,8 @@ async function getNewDevlogs(
           } else {
             console.error("No project exists at id", projectId);
           }
+        } else if (Number(client.lastCode) >= 500 && Number(client.lastCode) < 600) {
+          return;
         } else {
           if (sentryEnabled) {
             Sentry.setContext("project", {
