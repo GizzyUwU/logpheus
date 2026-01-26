@@ -1,19 +1,20 @@
 import type {
+  AckFn,
   ViewOutput,
-  RespondFn,
+  RespondArguments,
   SlackViewMiddlewareArgs,
 } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
+import FT from "../lib/ft";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../migrationSchema/apiKeys";
-import { eq } from "drizzle-orm";
-import FT from "../lib/ft";
 import { users } from "../schema/users";
+import { projects } from "../schema/projects";
+import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
 
 export default {
-  name: "config",
+  name: "register",
   execute: async (
     { view }: SlackViewMiddlewareArgs,
     { pg, client, sentryEnabled, Sentry }: RequestHandler,
@@ -35,6 +36,7 @@ export default {
     }
     const values = view.state.values;
     const apiKey = values.ftApiKey?.api_input?.value?.trim();
+
     if (!apiKey)
       return await client.chat.postEphemeral({
         channel: channelId,
@@ -62,60 +64,28 @@ export default {
         text: "Flavortown API Key is invalid, provide a valid one.",
       });
 
-    const dbData = await pg
+    const exists = await pg
       .select()
       .from(users)
       .limit(1)
-      .where(eq(users.channel, channelId));
-    if (dbData.length === 0)
+      .where(eq(users.apiKey, apiKey));
+    if (exists.length > 0)
       return await client.chat.postEphemeral({
         channel: channelId,
         user: userId,
-        text: "No entry found for this channel ID",
+        text: "This API key is already bound to a user.",
       });
 
-    if (dbData[0]?.disabled) {
-      if (!dbData[0]?.userId) {
-        await pg
-          .update(users)
-          .set({
-            apiKey,
-            userId,
-            disabled: false,
-          })
-          .where(eq(apiKeys.channel, channelId));
-      } else {
-        await pg
-          .update(users)
-          .set({
-            apiKey,
-            disabled: false,
-          })
-          .where(eq(apiKeys.channel, channelId));
-      }
-    } else {
-      if (!dbData[0]?.userId) {
-        await pg
-          .update(users)
-          .set({
-            apiKey,
-            userId,
-          })
-          .where(eq(apiKeys.channel, channelId));
-      } else {
-        await pg
-          .update(users)
-          .set({
-            apiKey,
-          })
-          .where(eq(apiKeys.channel, channelId));
-      }
-    }
+    await pg.insert(users).values({
+      apiKey,
+      userId: userId,
+      disabled: false,
+    });
 
-    return await client.chat.postEphemeral({
+    await client.chat.postEphemeral({
       channel: channelId,
       user: userId,
-      text: "API key has been updated",
-    });
+      markdown_text: ":woah-dino: You sucessfully registered! :yay:"
+    })
   },
 };

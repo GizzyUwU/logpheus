@@ -1,8 +1,6 @@
 import {
   App,
   LogLevel,
-  type AckFn,
-  type RespondArguments,
   type SlackCommandMiddlewareArgs,
   type SlackViewMiddlewareArgs,
 } from "@slack/bolt";
@@ -87,14 +85,19 @@ let clients: Record<string, FT> = {};
 
 export type RequestHandler = {
   pg: DatabaseType;
-  client: WebClient
+  client: WebClient;
   clients: Record<string, FT>;
   sentryEnabled: boolean;
   Sentry: typeof import("@sentry/bun");
+  prefix: string;
   callbackId: string;
 };
 
-function loadHandlers(app: App, folder: string, type: "command" | "view") {
+function loadRequestHandlers(
+  app: App,
+  folder: string,
+  type: "command" | "view",
+) {
   const folderPath = path.join(__dirname, folder);
   fs.readdirSync(folderPath).forEach((file) => {
     if (!file.endsWith(".ts") && !file.endsWith(".js")) return;
@@ -115,8 +118,9 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
               pg,
               client: app.client,
               clients,
-              sentryEnabled: sentryEnabled,
-              sentry: Sentry,
+              sentryEnabled,
+              Sentry,
+              prefix,
               callbackId: id,
             });
           };
@@ -147,9 +151,7 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
                     ? args.body.channel_id
                     : args.body.view?.title?.text,
                 triggerId:
-                  "trigger_id" in args.body
-                    ? args.body.trigger_id
-                    : "",
+                  "trigger_id" in args.body ? args.body.trigger_id : "",
               });
             });
 
@@ -166,6 +168,48 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
     registerHandler(callbackId, module);
     console.log(`[Logpheus] Registered ${type}: ${module.name}`);
   });
+}
+
+async function loadHandlers() {
+  const handlerDir = path.resolve(__dirname, "./handlers");
+  const files = fs
+    .readdirSync(handlerDir)
+    .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
+
+  for (const file of files) {
+    try {
+      const mod = require(path.join(handlerDir, file)).default;
+      if (!mod?.name || typeof mod.execute !== "function") return;
+      try {
+        await mod.execute({
+          pg,
+          client: app.client,
+          clients,
+          sentryEnabled,
+          sentry: Sentry,
+        });
+      } catch (err) {
+        if (sentryEnabled) {
+          Sentry.setContext("data", {
+            module: mod.name,
+            file,
+          });
+          Sentry.captureException(err);
+        } else {
+          console.error(`Failed to run ${mod?.name} handler:`, err);
+        }
+      }
+    } catch (err) {
+      if (sentryEnabled) {
+        Sentry.setContext("data", {
+          file,
+        });
+        Sentry.captureException(err);
+      } else {
+        console.error(`Error running handler ${file}:`, err);
+      }
+    }
+  }
 }
 
 (async () => {
@@ -192,17 +236,15 @@ function loadHandlers(app: App, folder: string, type: "command" | "view") {
       console.info("[Logpheus] Running on port:", port);
     }
 
-    loadHandlers(app, "commands", "command");
-    loadHandlers(app, "views", "view");
+    loadRequestHandlers(app, "commands", "command");
+    loadRequestHandlers(app, "views", "view");
     console.log(
       "[Logpheus] My prefix is",
       Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
     );
 
-    checkAllProjects(app.client, clients, pg, sentryEnabled, Sentry);
-    setInterval(() => {
-      checkAllProjects(app.client, clients, pg, sentryEnabled, Sentry);
-    }, 60 * 1000);
+    loadHandlers();
+    setInterval(loadHandlers, 60 * 1000);
   } catch (err) {
     if (sentryEnabled) {
       Sentry.captureException(err);

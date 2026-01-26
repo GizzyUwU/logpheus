@@ -45,7 +45,7 @@ export default {
             response_type: "ephemeral",
           });
 
-        if (!data?.projects.includes(Number(projectId)))
+        if (!data?.projects?.includes(Number(projectId)))
           return await respond({
             text: "This project id isn't subscribed to this channel.",
             response_type: "ephemeral",

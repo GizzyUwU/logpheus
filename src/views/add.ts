@@ -27,7 +27,7 @@ export default {
     const channelId = view.title.text;
     if (!channelId || !userId) {
       if (sentryEnabled) {
-        Sentry.setContext("view", { ...view })
+        Sentry.setContext("view", { ...view });
         Sentry.captureMessage("There is no channel id for this channel?");
       } else {
         console.error("There is no channel id?", view);
@@ -72,10 +72,11 @@ export default {
     const exists = await pg
       .select()
       .from(users)
+      .limit(1)
       .where(eq(users.apiKey, apiKey));
     if (exists.length > 0) {
       const row = exists[0];
-      if (exists[0]?.channel !== channelId)
+      if (row?.channel && row?.channel !== channelId)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
@@ -98,12 +99,28 @@ export default {
 
       projects.push(Number(projectId));
 
-      await pg.update(users).set({ projects }).where(eq(users.apiKey, apiKey));
+      if (!row?.userId) {
+        await pg
+          .update(users)
+          .set({ projects, userId })
+          .where(eq(users.apiKey, apiKey));
+      } else if (!row?.channel && !row?.userId) {
+        await pg
+          .update(users)
+          .set({ projects, userId, channel: channelId })
+          .where(eq(users.apiKey, apiKey));
+      } else {
+        await pg
+          .update(users)
+          .set({ projects })
+          .where(eq(users.apiKey, apiKey));
+      }
     } else {
       await pg.insert(users).values({
         apiKey,
         userId: userId,
         channel: channelId,
+        disabled: false,
         projects: [Number(projectId)],
       });
     }

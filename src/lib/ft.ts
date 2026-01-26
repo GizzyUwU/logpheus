@@ -45,7 +45,7 @@ export default class FT {
             });
         }
 
-        return this.fetch.get("/projects" + queryString)
+        return this.fetch.get("/projects" + String(queryString))
             .then((res) => {
                 this.lastCode = res.status;
                 return res.data;
@@ -78,7 +78,7 @@ export default class FT {
             });
         }
 
-        return this.fetch.get("/projects/" + param.id + "/devlogs" + queryString)
+        return this.fetch.get("/projects/" + param.id + "/devlogs" + String(queryString))
             .then((res) => {
                 this.lastCode = res.status;
                 return res.data;
@@ -111,7 +111,8 @@ export default class FT {
                 }
             });
         }
-        return this.fetch.get("/users/" + queryString)
+
+        return this.fetch.get("/users?" + String(queryString))
             .then((res) => {
                 this.lastCode = res.status;
                 return res.data;
