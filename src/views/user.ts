@@ -133,7 +133,7 @@ export default {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*Account ID*: ${targetUser.id}\n*Cookies*: ${targetUser.cookies}\n*Votes Count*: ${targetUser.vote_count}\n*Like Count*: ${targetUser.like_count}\n*Time today*: ${formatDuration(targetUser.devlog_seconds_today)}\n*Total Time*: ${formatDuration(targetUser.devlog_seconds_total)}`,
+            text: `*Account ID*: ${targetUser.id}\n*Cookies*: ${targetUser.cookies ?? 0}\n*Votes Count*: ${targetUser.vote_count}\n*Like Count*: ${targetUser.like_count}\n*Time today*: ${formatDuration(targetUser.devlog_seconds_today)}\n*Total Time*: ${formatDuration(targetUser.devlog_seconds_total)}`,
           },
           accessory: {
             type: "image",
