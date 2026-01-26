@@ -116,7 +116,29 @@ export default {
         text: "User doesn't have an FT account.",
       });
 
-
+    const userText = [
+      { label: "Account ID", value: targetUser.id },
+      { label: "Cookies", value: targetUser.cookies ?? 0 },
+      { label: "Votes Count", value: targetUser.vote_count },
+      { label: "Like Count", value: targetUser.like_count },
+      {
+        label: "Time today",
+        value: formatDuration(targetUser.devlog_seconds_today),
+      },
+      {
+        label: "Total Time",
+        value: formatDuration(targetUser.devlog_seconds_total),
+      },
+      {
+        label: "Projects",
+        value: (targetUser.project_ids ?? [])
+          .map(
+            (id: string | number) =>
+              `<https://flavortown.hackclub.com/projects/${id}|${id}>`
+          )
+          .join(", "),
+      }
+    ].map(f => `*${f.label}*: ${f.value}`).join("\n");
     return await client.chat.postEphemeral({
       channel: channelId,
       user: userId,
@@ -133,7 +155,7 @@ export default {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*Account ID*: ${targetUser.id}\n*Cookies*: ${targetUser.cookies ?? 0}\n*Votes Count*: ${targetUser.vote_count}\n*Like Count*: ${targetUser.like_count}\n*Time today*: ${formatDuration(targetUser.devlog_seconds_today)}\n*Total Time*: ${formatDuration(targetUser.devlog_seconds_total)}`,
+            text: userText,
           },
           accessory: {
             type: "image",
