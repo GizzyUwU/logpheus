@@ -28,7 +28,6 @@ async function getNewDevlogs(
   devlogs: FTypes.Devlog[];
   shipped?: "pending" | "submitted";
 } | void> {
-  console.log("a")
   try {
     const client = clients[apiKey];
     if (!client) {
@@ -192,7 +191,6 @@ export default {
           sentryEnabled,
           Sentry,
         );
-        console.log(projData)
         if (!projData) continue;
         if (projData.devlogs.length > 0) {
           for (const devlog of projData.devlogs) {
