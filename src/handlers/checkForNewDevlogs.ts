@@ -28,6 +28,7 @@ async function getNewDevlogs(
   devlogs: FTypes.Devlog[];
   shipped?: "pending" | "submitted";
 } | void> {
+  console.log("a")
   try {
     const client = clients[apiKey];
     if (!client) {
@@ -129,16 +130,14 @@ async function getNewDevlogs(
           devlogIds: Array.from(new Set([...cachedIds, ...newIds])),
         })
         .where(eq(projects.id, Number(projectId)));
-    }
-
-    if (newIds.length === 0) {
+    } else {
       return { name: project.title, devlogs: [] };
     }
 
     const devlogs: FTypes.Devlog[] = [];
     for (const id of newIds) {
       const res = await client.devlog({
-        projectId: Number(projectId),
+        projectId: projectId,
         devlogId: id,
       });
       if (res) devlogs.push(res);
@@ -185,6 +184,7 @@ export default {
           sentryEnabled,
           Sentry,
         );
+        console.log(projData)
         if (!projData) continue;
         if (projData.devlogs.length > 0) {
           for (const devlog of projData.devlogs) {

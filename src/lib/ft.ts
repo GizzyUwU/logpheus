@@ -89,9 +89,9 @@ export default class FT {
             });
     }
 
-    async devlog(param: FTypes.DevlogParam, query?: FTypes.DevlogsQuery): Promise<FTypes.Devlog | void> {
+    async devlog(param: FTypes.DevlogParam): Promise<FTypes.Devlog | void> {
         await this.ready;
-        return this.fetch.get("/projects/" + param.projectId + "/devlogs/" + param.devlogId)
+        return this.fetch.get("/devlogs/" + param.devlogId)
             .then((res) => {
                 this.lastCode = res.status;
                 return res.data;

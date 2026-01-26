@@ -1,13 +1,7 @@
 import type {
-  AckFn,
-  ViewOutput,
-  RespondArguments,
   SlackViewMiddlewareArgs,
 } from "@slack/bolt";
-import type { WebClient } from "@slack/web-api";
 import FT from "../lib/ft";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
-import type { PGlite } from "@electric-sql/pglite";
 import { users } from "../schema/users";
 import { projects } from "../schema/projects";
 import { eq } from "drizzle-orm";
@@ -85,8 +79,8 @@ export default {
 
       const projects = Array.isArray(row?.projects)
         ? Array.from(
-            new Set(row.projects.map((p) => Number(p)).filter(Boolean)),
-          )
+          new Set(row.projects.map((p) => Number(p)).filter(Boolean)),
+        )
         : [];
 
       if (projects.includes(Number(projectId))) {
@@ -108,6 +102,11 @@ export default {
         await pg
           .update(users)
           .set({ projects, userId, channel: channelId })
+          .where(eq(users.apiKey, apiKey));
+      } else if (!row?.channel) {
+        await pg
+          .update(users)
+          .set({ projects, channel: channelId })
           .where(eq(users.apiKey, apiKey));
       } else {
         await pg
@@ -145,7 +144,7 @@ export default {
         },
       });
 
-    if(!clients[apiKey]) {
+    if (!clients[apiKey]) {
       clients[apiKey] = ftClient;
     }
 

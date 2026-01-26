@@ -14,8 +14,8 @@ export type Devlog = {
 };
 
 export type DevlogParam = {
-  projectId: number;
-  devlogId: number;
+  projectId: string | number;
+  devlogId: string | number;
 };
 
 export type Devlogs = {
@@ -76,7 +76,7 @@ export type Project = {
 
 export type ProjectParam = {
   id: number | string;
-};
+};param
 
 export type Projects = {
   projects: Project[];
