@@ -14,6 +14,16 @@ To make use of it, in a channel made by you run the command:
 
 It should open up a model asking for your FT Project Id and FT API Key unless you don't own the channel then it will error. Once you enter the data it will send a successfully added notification and the bot will start poll every minute using your api key to see if any new devlog has been posted and if one has it will send a message in your channel like this:
 
+### Not a personal channel owner?
+
+You can still make use# of the bot for general flavourtown commands like the user command by registering with
+
+```
+/logpheus-register
+```
+
+It opens a slack modal asking for your api key to register you so you can use the general FT commands.
+
 ![Example of a Devlog notification in a channel](/screenshots/devlog.png)
 
 ## Decided you don't want it posting anymore?
@@ -97,3 +107,5 @@ The current set out commands for the bot that need to be added manually when usi
 - (prefix)-config
 - (prefix)-remove
 - (prefix)-stats
+- (prefx)-register
+- (prefix)-user
