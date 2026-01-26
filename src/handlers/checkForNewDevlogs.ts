@@ -123,27 +123,35 @@ async function getNewDevlogs(
     const cachedSet = new Set(cachedIds);
     const newIds = devlogIds.filter((id) => !cachedSet.has(Number(id)));
 
-    if (newIds.length > 0) {
+    if (newIds.length === 0) {
+      return { name: project.title, devlogs: [] };
+    } else {
+      const devlogs: FTypes.Devlog[] = [];
+      for (const id of newIds) {
+        const res = await client.devlog({
+          projectId: projectId,
+          devlogId: id,
+        });
+        if (res) devlogs.push(res);
+      }
+
+      if(devlogs.length === 0) {
+        Sentry.setContext("user", {
+          project: projectId
+        })
+        Sentry.captureMessage("There was a new id but yet devlogs array stayed empty this could indicate a bug.", "warning")
+        return { name: project.title, devlogs: [] };
+      }
+
       await db
         .update(projects)
         .set({
           devlogIds: Array.from(new Set([...cachedIds, ...newIds])),
         })
         .where(eq(projects.id, Number(projectId)));
-    } else {
-      return { name: project.title, devlogs: [] };
-    }
 
-    const devlogs: FTypes.Devlog[] = [];
-    for (const id of newIds) {
-      const res = await client.devlog({
-        projectId: projectId,
-        devlogId: id,
-      });
-      if (res) devlogs.push(res);
+      return { name: project.title, devlogs };
     }
-
-    return { name: project.title, devlogs };
   } catch (err) {
     if (sentryEnabled) {
       Sentry.setContext("project", {
