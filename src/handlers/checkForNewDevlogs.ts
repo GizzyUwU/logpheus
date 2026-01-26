@@ -43,6 +43,7 @@ async function getNewDevlogs(
       }
       return;
     }
+
     const project = await client.project({ id: Number(projectId) });
     if (!project) {
       const row = await db
@@ -61,6 +62,7 @@ async function getNewDevlogs(
             })
             .where(eq(users.apiKey, apiKey));
 
+          delete clients[apiKey];
           await app.chat.postMessage({
             channel: String(row[0]?.channel),
             text: "Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /logpheus-config to get it re-enabled.",

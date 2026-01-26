@@ -3,8 +3,8 @@ import type {
 } from "@slack/bolt";
 import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
-import { projectData } from "../migrationSchema/project";
 import type { RequestHandler } from "..";
+import { projects } from "../schema/projects";
 
 export default {
   name: "remove",
@@ -73,8 +73,8 @@ export default {
       } else {
         for (const pid of data?.projects!) {
           await pg
-            .delete(projectData)
-            .where(eq(projectData.projectId, Number(pid)));
+            .delete(projects)
+            .where(eq(projects.id, Number(pid)));
         }
 
         await pg.delete(users).where(eq(users.channel, command.channel_id));

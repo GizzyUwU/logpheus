@@ -1,15 +1,8 @@
 import type {
-  AckFn,
-  ViewOutput,
-  RespondArguments,
   SlackViewMiddlewareArgs,
 } from "@slack/bolt";
-import type { WebClient } from "@slack/web-api";
 import FT from "../lib/ft";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
-import type { PGlite } from "@electric-sql/pglite";
 import { users } from "../schema/users";
-import { projects } from "../schema/projects";
 import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
 
@@ -32,7 +25,7 @@ function formatDuration(totalSeconds: number): string {
 export default {
   name: "user",
   execute: async (
-    { view, payload }: SlackViewMiddlewareArgs,
+    { view }: SlackViewMiddlewareArgs,
     { pg, client, clients, sentryEnabled, Sentry, prefix }: RequestHandler,
   ) => {
     const { target_user } = view.state.values as {
@@ -118,7 +111,7 @@ export default {
 
     const userText = [
       { label: "Account ID", value: targetUser.id },
-      { label: "Cookies", value: targetUser.cookies ?? 0 },
+      { label: "Cookies", value: targetUser.cookies ?? "Disabled" },
       { label: "Votes Count", value: targetUser.vote_count },
       { label: "Like Count", value: targetUser.like_count },
       {

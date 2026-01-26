@@ -57,7 +57,7 @@ export default class FT {
 
     async project(param: FTypes.ProjectParam): Promise<FTypes.Project | void> {
         await this.ready;
-        return this.fetch.get("/projects/" + param.id)
+        return this.fetch.get("/projects/" + Number(param.id))
             .then((res) => {
                 this.lastCode = res.status;
                 return res.data;
@@ -78,7 +78,7 @@ export default class FT {
             });
         }
 
-        return this.fetch.get("/projects/" + param.id + "/devlogs" + String(queryString))
+        return this.fetch.get("/projects/" + Number(param.id) + "/devlogs" + String(queryString))
             .then((res) => {
                 this.lastCode = res.status;
                 return res.data;
@@ -125,7 +125,7 @@ export default class FT {
 
     async user(param: FTypes.UserParams): Promise<FTypes.User | void> {
         await this.ready;
-        return this.fetch.get("/users/" + param.id)
+        return this.fetch.get("/users/" + Number(param.id))
             .then((res) => {
                 this.lastCode = res.status;
                 return res.data;

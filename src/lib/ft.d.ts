@@ -75,7 +75,7 @@ export type Project = {
 };
 
 export type ProjectParam = {
-  id: number;
+  id: number | string;
 };
 
 export type Projects = {

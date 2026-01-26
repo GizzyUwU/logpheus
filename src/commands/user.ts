@@ -1,7 +1,6 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { eq, count } from "drizzle-orm";
 import { users } from "../schema/users";
-import { projectData } from "../migrationSchema/project";
 import type { RequestHandler } from "..";
 
 export default {

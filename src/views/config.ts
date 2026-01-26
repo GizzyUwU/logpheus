@@ -1,12 +1,6 @@
 import type {
-  ViewOutput,
-  RespondFn,
   SlackViewMiddlewareArgs,
 } from "@slack/bolt";
-import type { WebClient } from "@slack/web-api";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
-import type { PGlite } from "@electric-sql/pglite";
-import { apiKeys } from "../migrationSchema/apiKeys";
 import { eq } from "drizzle-orm";
 import FT from "../lib/ft";
 import { users } from "../schema/users";
@@ -16,7 +10,7 @@ export default {
   name: "config",
   execute: async (
     { view }: SlackViewMiddlewareArgs,
-    { pg, client, sentryEnabled, Sentry }: RequestHandler,
+    { pg, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     const userIdBlock = view.blocks.find(
       (block): block is { type: "section"; text: { text: string } } =>
@@ -83,7 +77,7 @@ export default {
             userId,
             disabled: false,
           })
-          .where(eq(apiKeys.channel, channelId));
+          .where(eq(users.channel, channelId));
       } else {
         await pg
           .update(users)
@@ -91,7 +85,7 @@ export default {
             apiKey,
             disabled: false,
           })
-          .where(eq(apiKeys.channel, channelId));
+          .where(eq(users.channel, channelId));
       }
     } else {
       if (!dbData[0]?.userId) {
@@ -101,17 +95,21 @@ export default {
             apiKey,
             userId,
           })
-          .where(eq(apiKeys.channel, channelId));
+          .where(eq(users.channel, channelId));
       } else {
         await pg
           .update(users)
           .set({
             apiKey,
           })
-          .where(eq(apiKeys.channel, channelId));
+          .where(eq(users.channel, channelId));
       }
     }
 
+    if(!clients[apiKey]) {
+      clients[apiKey] = ftClient
+    }
+    
     return await client.chat.postEphemeral({
       channel: channelId,
       user: userId,

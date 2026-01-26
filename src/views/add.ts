@@ -17,7 +17,7 @@ export default {
   name: "add",
   execute: async (
     { view }: SlackViewMiddlewareArgs,
-    { pg, client, sentryEnabled, Sentry }: RequestHandler,
+    { pg, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     const userIdBlock = view.blocks.find(
       (block): block is { type: "section"; text: { text: string } } =>
@@ -144,6 +144,10 @@ export default {
           devlogIds,
         },
       });
+
+    if(!clients[apiKey]) {
+      clients[apiKey] = ftClient;
+    }
 
     await client.chat.postMessage({
       channel: channelId,
