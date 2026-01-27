@@ -186,7 +186,7 @@ async function loadHandlers() {
           client: app.client,
           clients,
           sentryEnabled,
-          sentry: Sentry,
+          Sentry,
         });
       } catch (err) {
         if (sentryEnabled) {
