@@ -83,14 +83,14 @@ const app = new App({
 
 let clients: Record<string, FT> = {};
 
-export type RequestHandler = {
+export interface RequestHandler {
   pg: DatabaseType;
   client: WebClient;
   clients: Record<string, FT>;
   sentryEnabled: boolean;
   Sentry: typeof import("@sentry/bun");
-  prefix: string;
-  callbackId: string;
+  prefix?: string;
+  callbackId?: string;
 };
 
 function loadRequestHandlers(
@@ -122,7 +122,7 @@ function loadRequestHandlers(
               Sentry,
               prefix,
               callbackId: id,
-            });
+            } satisfies RequestHandler);
           };
 
           if (!sentryEnabled) {
@@ -187,7 +187,7 @@ async function loadHandlers() {
           clients,
           sentryEnabled,
           Sentry,
-        });
+        } satisfies RequestHandler);
       } catch (err) {
         if (sentryEnabled) {
           Sentry.setContext("data", {
