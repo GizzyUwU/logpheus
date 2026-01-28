@@ -133,15 +133,11 @@ function loadRequestHandlers(
             }
           } else {
             await Sentry.withScope(async (scope) => {
-              scope.setTag("handler.type", type);
-              scope.setTag("handler.module", mod.name);
               scope.setContext("handler", {
                 type,
                 module: mod.name,
               });
               scope.setContext("slack", {
-                type,
-                kind: args.body.type === "view_submission" ? "view" : "command",
                 user:
                   "user_id" in args.body
                     ? args.body.user_id
@@ -149,17 +145,28 @@ function loadRequestHandlers(
                 channel:
                   "channel_id" in args.body
                     ? args.body.channel_id
-                    : args.body.view?.title?.text,
+                    : args.body.view?.blocks
+                        .find(
+                          (
+                            block,
+                          ): block is {
+                            type: "section";
+                            text: { text: string };
+                          } =>
+                            block.type === "section" &&
+                            block.block_id === "channel_id",
+                        )
+                        ?.text?.text.slice("Channel: ".length),
                 triggerId:
                   "trigger_id" in args.body ? args.body.trigger_id : "",
               });
-            });
 
-            try {
-              run();
-            } catch (err) {
-              Sentry.captureException(err);
-            }
+              try {
+                run();
+              } catch (err) {
+                Sentry.captureException(err);
+              }
+            });
           }
         },
       );
