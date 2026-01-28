@@ -74,7 +74,7 @@ export default {
         .select()
         .from(users)
         .limit(1)
-        .where(eq(users.channel, channelId));
+        .where(eq(users.userId, channelId));
       if (dbData.length === 0)
         return await client.chat.postEphemeral({
           channel: channelId,
@@ -91,7 +91,7 @@ export default {
               userId,
               disabled: false,
             })
-            .where(eq(users.channel, channelId));
+            .where(eq(users.userId, channelId));
         } else {
           await pg
             .update(users)
@@ -99,7 +99,7 @@ export default {
               apiKey,
               disabled: false,
             })
-            .where(eq(users.channel, channelId));
+            .where(eq(users.userId, channelId));
         }
       } else {
         if (!dbData[0]?.userId) {
@@ -109,14 +109,14 @@ export default {
               apiKey,
               userId,
             })
-            .where(eq(users.channel, channelId));
+            .where(eq(users.userId, channelId));
         } else {
           await pg
             .update(users)
             .set({
               apiKey,
             })
-            .where(eq(users.channel, channelId));
+            .where(eq(users.userId, channelId));
         }
       }
 
