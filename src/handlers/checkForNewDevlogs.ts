@@ -109,6 +109,22 @@ async function getNewDevlogs(
       .from(projects)
       .where(eq(projects.id, Number(projectId)));
 
+    if (row.length === 0) {
+      const initialDevlogIds = Array.isArray(project?.devlog_ids)
+        ? project.devlog_ids.map(Number)
+        : [];
+
+      await db.insert(projects).values({
+        id: Number(projectId),
+        devlogIds: initialDevlogIds,
+      });
+
+      return {
+        name: project.title,
+        devlogs: [],
+      };
+    }
+
     let cachedIds: number[] = [];
 
     if (row.length > 0) {
@@ -134,7 +150,7 @@ async function getNewDevlogs(
         if (res) devlogs.push(res);
       }
 
-      if(devlogs.length === 0) {
+      if (devlogs.length === 0) {
         Sentry.setContext("user", {
           project: projectId
         })

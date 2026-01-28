@@ -129,12 +129,12 @@ export default {
       },
       {
         label: "Projects",
-        value: (targetUser.project_ids ?? [])
+        value: (targetUser.project_ids.length > 0 ? targetUser.project_ids
           .map(
             (id: string | number) =>
               `<https://flavortown.hackclub.com/projects/${id}|${id}>`
           )
-          .join(", "),
+          .join(", ") : "No projects"),
       }
     ].map(f => `*${f.label}*: ${f.value}`).join("\n");
     return await client.chat.postEphemeral({

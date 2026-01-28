@@ -18,6 +18,14 @@ export default {
     }: RequestHandler,
   ) => {
     try {
+      const channel = await client.conversations.info({
+        channel: command.channel_id,
+      });
+      if (!channel)
+        return await respond({
+          text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+          response_type: "ephemeral",
+        });
       const userExists = (await pg
         .select({ count: count() })
         .from(users)
