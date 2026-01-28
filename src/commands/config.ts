@@ -39,7 +39,7 @@ export default {
       const res = await pg
         .select()
         .from(users)
-        .where(eq(users.userId, channel.channel.id));
+        .where(eq(users.userId, command.user_id));
       if (res.length === 0)
         return await respond({
           text: "Gng you don't even got an api key set to this channel run /logpheus-add first.",
