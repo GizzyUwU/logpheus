@@ -1,7 +1,5 @@
-import type {
-  SlackCommandMiddlewareArgs,
-} from "@slack/bolt";
-import { eq } from "drizzle-orm";
+import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
+import { eq, inArray } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 import { projects } from "../schema/projects";
@@ -30,13 +28,28 @@ export default {
       const res = await pg
         .select()
         .from(users)
-        .where(eq(users.channel, command.channel_id));
+        .where(eq(users.userId, command.user_id));
       if (res.length === 0)
         return await respond({
           text: `No API key found for this channel.`,
           response_type: "ephemeral",
         });
       const data = res[0];
+
+      if (projectId === "all") {
+        const projectIds = res[0]?.projects;
+
+        if (Array.isArray(projectIds) && projectIds.length > 0) {
+          await pg.delete(projects).where(inArray(projects.id, projectIds));
+        }
+
+        await pg.delete(users).where(eq(users.userId, command.user_id));
+
+        return await respond({
+          text: `Deleted you and all your projects from db`,
+          response_type: "ephemeral",
+        });
+      }
 
       if (projectId.length > 0) {
         if (!Number.isInteger(Number(projectId)))
@@ -72,9 +85,7 @@ export default {
         });
       } else {
         for (const pid of data?.projects!) {
-          await pg
-            .delete(projects)
-            .where(eq(projects.id, Number(pid)));
+          await pg.delete(projects).where(eq(projects.id, Number(pid)));
         }
 
         await pg.delete(users).where(eq(users.channel, command.channel_id));
