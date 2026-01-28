@@ -50,12 +50,6 @@ export default {
           user: userId,
           text: "Flavortown API key is invalid every api key should start with ft_sk_",
         });
-      if (apiKey.length !== 46)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "Flavortown API key is invalid every api key should be 46 characters long",
-        });
       const ftClient = new FT(apiKey);
       await ftClient.user({ id: "me" });
       if (ftClient.lastCode === 401)
