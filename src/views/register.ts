@@ -19,13 +19,17 @@ export default {
     { view }: SlackViewMiddlewareArgs,
     { pg, client, sentryEnabled, Sentry }: RequestHandler,
   ) => {
-    const textBlock = view.blocks.find(
+    const channelBlock = view.blocks.find(
       (block): block is { type: "section"; text: { text: string } } =>
-        block.type === "section" && "text" in block,
+        block.type === "section" && block.block_id === "channel_id",
     );
-    const channelId = textBlock?.text?.text.slice("Channel: ".length);
-    const userId = textBlock?.text?.text.slice("User: ".length);
 
+    const userBlock = view.blocks.find(
+      (block): block is { type: "section"; text: { text: string } } =>
+        block.type === "section" && block.block_id === "user_id",
+    );
+    const channelId = channelBlock?.text?.text.slice("Channel: ".length);
+    const userId = userBlock?.text?.text.slice("User: ".length);
     if (!channelId || !userId) {
       if (sentryEnabled) {
         Sentry.setContext("view", { ...view });
