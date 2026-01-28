@@ -27,7 +27,11 @@ async function migrateAPIKeysToUsers(db: DB) {
         return;
     }
 
-    if ((oldInUse[0]?.count ?? 0) === 0 || (newInUse[0]?.count ?? 0) > 0) return;
+    if ((oldInUse[0]?.count ?? 0) === 0 || (newInUse[0]?.count ?? 0) > 0) {
+        if (oldInUse[0]?.count === 0) await db.execute(`DROP TABLE IF EXISTS api_keys;`);
+        return
+    }
+
     console.log("[Logpheus] Migrating data in apiKeys table to use new users table")
     const migrate = (await db.select().from(apiKeys)).map(row => {
         const projects = Array.isArray(row.projects)
@@ -47,7 +51,6 @@ async function migrateAPIKeysToUsers(db: DB) {
 
     await db.insert(users).values(migrate);
     await db.execute(`DROP TABLE IF EXISTS api_keys;`);
-
 }
 
 async function migrateOldProjectTableToNew(db: DB) {
@@ -66,7 +69,10 @@ async function migrateOldProjectTableToNew(db: DB) {
         return;
     }
 
-    if ((oldInUse[0]?.count ?? 0) === 0 || (newInUse[0]?.count ?? 0) > 0) return;
+    if ((oldInUse[0]?.count ?? 0) === 0 || (newInUse[0]?.count ?? 0) > 0) {
+        if (oldInUse[0]?.count === 0) await db.execute(`DROP TABLE IF EXISTS project;`);
+        return
+    }
     console.log("[Logpheus] Migrating data in project table to use new projects table")
     const migrate = (await db.select().from(projectData)).map(row => {
         const devlogIds = Array.isArray(row.ids)

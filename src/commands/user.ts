@@ -37,9 +37,19 @@ export default {
           callback_id: callbackId,
           title: {
             type: "plain_text",
-            text: command.channel_id,
+            text: /^[a-z]/i.test(prefix!)
+              ? prefix![0]!.toUpperCase() + prefix!.slice(1)
+              : prefix!
           },
           blocks: [
+            {
+              type: "section",
+              block_id: "channel_id",
+              text: {
+                type: "plain_text",
+                text: "Channel: " + command.channel_id,
+              },
+            },
             {
               type: "section",
               block_id: "user_id",

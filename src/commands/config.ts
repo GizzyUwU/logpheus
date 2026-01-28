@@ -7,7 +7,7 @@ export default {
   name: "config",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, client, callbackId, sentryEnabled, Sentry }: RequestHandler,
+    { pg, client, callbackId, sentryEnabled, Sentry, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -52,7 +52,9 @@ export default {
           callback_id: callbackId,
           title: {
             type: "plain_text",
-            text: command.channel_id,
+            text: /^[a-z]/i.test(prefix!)
+              ? prefix![0]!.toUpperCase() + prefix!.slice(1)
+              : prefix!
           },
           blocks: [
             {

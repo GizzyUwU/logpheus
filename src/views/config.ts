@@ -12,12 +12,13 @@ export default {
     { view }: SlackViewMiddlewareArgs,
     { pg, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
-    const userIdBlock = view.blocks.find(
+    const textBlock = view.blocks.find(
       (block): block is { type: "section"; text: { text: string } } =>
         block.type === "section" && "text" in block,
     );
-    const userId = userIdBlock?.text?.text.slice("User: ".length);
-    const channelId = view.title.text;
+    const channelId = textBlock?.text?.text.slice("Channel: ".length);
+    const userId = textBlock?.text?.text.slice("User: ".length);
+
     if (!channelId || !userId) {
       if (sentryEnabled) {
         Sentry.setContext("view", { ...view });
@@ -106,10 +107,10 @@ export default {
       }
     }
 
-    if(!clients[apiKey]) {
+    if (!clients[apiKey]) {
       clients[apiKey] = ftClient
     }
-    
+
     return await client.chat.postEphemeral({
       channel: channelId,
       user: userId,
