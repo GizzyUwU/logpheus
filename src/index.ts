@@ -91,7 +91,7 @@ export interface RequestHandler {
   Sentry: typeof import("@sentry/bun");
   prefix?: string;
   callbackId?: string;
-};
+}
 
 function loadRequestHandlers(
   app: App,
@@ -145,18 +145,9 @@ function loadRequestHandlers(
                 channel:
                   "channel_id" in args.body
                     ? args.body.channel_id
-                    : args.body.view?.blocks
-                        .find(
-                          (
-                            block,
-                          ): block is {
-                            type: "section";
-                            text: { text: string };
-                          } =>
-                            block.type === "section" &&
-                            block.block_id === "channel_id",
-                        )
-                        ?.text?.text.slice("Channel: ".length),
+                    : (args.body.view.private_metadata.length > 0 ? JSON.parse(args.body.view.private_metadata) as {
+                        channel: string;
+                      } : { channel: "" }).channel,
                 triggerId:
                   "trigger_id" in args.body ? args.body.trigger_id : "",
               });

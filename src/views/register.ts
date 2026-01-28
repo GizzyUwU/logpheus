@@ -1,36 +1,19 @@
-import type {
-  AckFn,
-  ViewOutput,
-  RespondArguments,
-  SlackViewMiddlewareArgs,
-} from "@slack/bolt";
-import type { WebClient } from "@slack/web-api";
+import type { SlackViewMiddlewareArgs } from "@slack/bolt";
 import FT from "../lib/ft";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
-import type { PGlite } from "@electric-sql/pglite";
 import { users } from "../schema/users";
-import { projects } from "../schema/projects";
 import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
 
 export default {
   name: "register",
   execute: async (
-    { view }: SlackViewMiddlewareArgs,
+    { view, body }: SlackViewMiddlewareArgs,
     { pg, client, sentryEnabled, Sentry }: RequestHandler,
   ) => {
-    const channelBlock = view.blocks.find(
-      (block): block is { type: "section"; text: { text: string } } =>
-        block.type === "section" && block.block_id === "channel_id",
-    );
+    const channelId = JSON.parse(view.private_metadata).channel;
 
-    const userBlock = view.blocks.find(
-      (block): block is { type: "section"; text: { text: string } } =>
-        block.type === "section" && block.block_id === "user_id",
-    );
+    const userId = body.user.id;
 
-    const channelId = channelBlock?.text?.text.slice("Channel: ".length);
-    const userId = userBlock?.text?.text.slice("User: ".length);
     if (!channelId || !userId) {
       if (sentryEnabled) {
         Sentry.setContext("view", { ...view });
@@ -46,7 +29,11 @@ export default {
           console.error("There is no user id?", view);
         }
       }
-      return;
+      return await client.chat.postEphemeral({
+        channel: channelId,
+        user: userId,
+        text: "An unexpected error occurred!",
+      });
     }
 
     try {

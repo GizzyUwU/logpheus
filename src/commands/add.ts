@@ -36,6 +36,9 @@ export default {
           view: {
             type: "modal",
             callback_id: callbackId,
+            private_metadata: JSON.stringify({
+              channel: command.channel_id
+            }),
             title: {
               type: "plain_text",
               text: /^[a-z]/i.test(prefix!)
@@ -43,22 +46,6 @@ export default {
                 : prefix!
             },
             blocks: [
-              {
-                type: "section",
-                block_id: "channel_id",
-                text: {
-                  type: "plain_text",
-                  text: "Channel: " + command.channel_id,
-                },
-              },
-              {
-                type: "section",
-                block_id: "user_id",
-                text: {
-                  type: "plain_text",
-                  text: "User: " + command.user_id,
-                },
-              },
               {
                 type: "input",
                 block_id: "projId",
@@ -104,23 +91,10 @@ export default {
                 ? prefix![0]!.toUpperCase() + prefix!.slice(1)
                 : prefix!
             },
+                        private_metadata: JSON.stringify({
+              channel: command.channel_id
+            }),
             blocks: [
-              {
-                type: "section",
-                block_id: "channel_id",
-                text: {
-                  type: "plain_text",
-                  text: "Channel: " + command.channel_id,
-                },
-              },
-              {
-                type: "section",
-                block_id: "user_id",
-                text: {
-                  type: "plain_text",
-                  text: "User: " + command.user_id,
-                },
-              },
               {
                 type: "input",
                 block_id: "projId",

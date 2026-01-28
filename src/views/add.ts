@@ -11,21 +11,10 @@ export default {
     { view, body }: SlackViewMiddlewareArgs,
     { pg, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
-    const channelBlock = view.blocks.find(
-      (block): block is { type: "section"; text: { text: string } } =>
-        block.type === "section" && block.block_id === "channel_id",
-    );
-
-    const userBlock = view.blocks.find(
-      (block): block is { type: "section"; text: { text: string } } =>
-        block.type === "section" && block.block_id === "user_id",
-    );
-
-    const channelId = channelBlock?.text?.text.slice("Channel: ".length);
-    const userId = userBlock?.text?.text.slice("User: ".length);
+    const channelId = JSON.parse(view.private_metadata).channel;
+    const userId = body.user.id;
     if (!channelId || !userId) {
       if (sentryEnabled) {
-        Sentry.setContext("view", { ...view });
         if (!channelId) {
           Sentry.captureMessage("There is no channel id for this channel?");
         } else {
@@ -38,7 +27,11 @@ export default {
           console.error("There is no user id?", view);
         }
       }
-      return;
+      return await client.chat.postEphemeral({
+        channel: channelId,
+        user: userId,
+        text: "An unexpected error occurred!",
+      });
     }
 
     try {
@@ -152,7 +145,12 @@ export default {
       }
 
       const freshProject = await ftClient.project({ id: Number(projectId) });
-      if (!freshProject) return;
+      if (!freshProject)
+        return await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "No project exists at this id! Last code:" + " " + ftClient.lastCode,
+        });
 
       const devlogIds = Array.isArray(freshProject.devlog_ids)
         ? freshProject.devlog_ids

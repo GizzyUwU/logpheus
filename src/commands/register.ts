@@ -32,14 +32,17 @@ export default {
         return;
       }
 
-      const res = await pg
+      const res = (await pg
         .select({ count: count() })
         .from(users)
         .limit(1)
-        .where(eq(users.userId, command.user_id)) as { count: number }[];
+        .where(eq(users.userId, command.user_id))) as { count: number }[];
       if (Number(res[0]?.count) !== 0)
         return await respond({
-          text: "You already got an api key setup in db. Run /" + prefix + "-config to change it",
+          text:
+            "You already got an api key setup in db. Run /" +
+            prefix +
+            "-config to change it",
           response_type: "ephemeral",
         });
       await client.views.open({
@@ -51,25 +54,12 @@ export default {
             type: "plain_text",
             text: /^[a-z]/i.test(prefix!)
               ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-              : prefix!
+              : prefix!,
           },
+          private_metadata: JSON.stringify({
+            channel: command.channel_id,
+          }),
           blocks: [
-            {
-              type: "section",
-              block_id: "channel_id",
-              text: {
-                type: "plain_text",
-                text: "Channel: " + command.channel_id,
-              },
-            },
-            {
-              type: "section",
-              block_id: "user_id",
-              text: {
-                type: "plain_text",
-                text: "User: " + command.user_id,
-              },
-            },
             {
               type: "input",
               block_id: "ftApiKey",
