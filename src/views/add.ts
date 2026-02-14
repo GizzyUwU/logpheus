@@ -13,9 +13,9 @@ export default {
   ) => {
     const channelId = JSON.parse(view.private_metadata).channel;
     const userId = body.user.id;
-    if (channelId || !userId) {
+    if (!channelId || !userId) {
       if (sentryEnabled) {
-        if (channelId) {
+        if (!channelId) {
           logger.error("There is no channel id for this channel?");
         } else {
           logger.error("There is no user id for this user?");
