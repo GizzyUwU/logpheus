@@ -7,7 +7,15 @@ export default {
   name: "config",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, client, callbackId, sentryEnabled, Sentry, prefix }: RequestHandler,
+    {
+      pg,
+      logger,
+      client,
+      callbackId,
+      sentryEnabled,
+      Sentry,
+      prefix,
+    }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -25,7 +33,7 @@ export default {
         });
       if (!channel?.channel.id) {
         if (sentryEnabled) {
-          Sentry.captureMessage("There is no channel id for this channel?");
+          logger.error("There is no channel id for this channel?");
         } else {
           console.error("There is no channel id?", channel);
         }
@@ -92,7 +100,7 @@ export default {
         return;
       } else {
         if (sentryEnabled) {
-          Sentry.captureException(error);
+          logger.error({ error });
         } else {
           console.error(error);
         }

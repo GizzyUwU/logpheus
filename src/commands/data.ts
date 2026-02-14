@@ -10,7 +10,7 @@ export default {
   name: "data",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, client, clients, sentryEnabled, Sentry, prefix }: RequestHandler,
+    { pg, logger, client, clients, sentryEnabled, Sentry, prefix }: RequestHandler,
   ) => {
     const userData = (await pg
       .select()

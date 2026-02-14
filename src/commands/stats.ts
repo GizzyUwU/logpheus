@@ -7,7 +7,7 @@ export default {
   name: "stats",
   execute: async (
     { respond }: SlackCommandMiddlewareArgs,
-    { pg, sentryEnabled, Sentry }: RequestHandler,
+    { pg, logger, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     try {
       const result = await pg.select({ count: count() }).from(users);
@@ -29,12 +29,7 @@ export default {
         return;
       } else {
         if (sentryEnabled) {
-          Sentry.captureException(error, {
-            extra: {
-              type: "view",
-              command: "stats",
-            },
-          });
+          logger.error({ error });
         } else {
           console.error(error);
         }

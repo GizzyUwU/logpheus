@@ -23,7 +23,7 @@ export default {
   name: "project",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, client, clients, sentryEnabled, Sentry, prefix }: RequestHandler,
+    { pg, logger, client, clients, sentryEnabled, Sentry, prefix }: RequestHandler,
   ) => {
     const projectId = command.text.trim();
     const userData = (await pg
@@ -41,12 +41,10 @@ export default {
     const apiKey = userData[0]?.apiKey;
     if (!apiKey) {
       if (sentryEnabled) {
-        Sentry.setUser({
+        const ctx = logger.with({ user: {
           id: command.user_id,
-        });
-        Sentry.captureMessage("User exists in db but lacks an api key in it", {
-          level: "error",
-        });
+        }});
+        ctx.error("User exists in db but lacks an api key in it");
       } else {
         console.error(`${command.user_id} exists in db and lacks an api key in it`);
       }

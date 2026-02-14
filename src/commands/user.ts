@@ -11,6 +11,7 @@ export default {
       pg,
       client,
       clients,
+      logger,
       callbackId,
       sentryEnabled,
       Sentry,
@@ -146,7 +147,7 @@ export default {
         return;
       } else {
         if (sentryEnabled) {
-          Sentry.captureException(error);
+          logger.error({ error });
         } else {
           console.error(error);
         }

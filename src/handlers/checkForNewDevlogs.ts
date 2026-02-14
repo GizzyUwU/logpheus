@@ -8,7 +8,7 @@ import { projects } from "../schema/projects";
 import { eq } from "drizzle-orm";
 import { containsMarkdown } from "../lib/parseMarkdown";
 import { parseMarkdownToSlackBlocks } from "../lib/parseMarkdown";
-import type { RequestHandler } from "..";
+import type { logger as LogtapeLogger, RequestHandler } from "..";
 import type FTypes from "../lib/ft.d";
 import FT from "../lib/ft";
 type DB =
@@ -23,6 +23,7 @@ async function getNewDevlogs(
   db: DB,
   sentryEnabled: boolean,
   Sentry: typeof import("@sentry/bun"),
+  logger: typeof LogtapeLogger,
 ): Promise<{
   name: string;
   devlogs: FTypes.Devlog[];
@@ -32,12 +33,12 @@ async function getNewDevlogs(
     const client = clients[apiKey];
     if (!client) {
       if (sentryEnabled) {
-        Sentry.setContext("project", {
-          id: projectId,
+        const ctx = logger.with({
+          project: {
+            id: projectId,
+          },
         });
-        Sentry.captureMessage("No FT Client for the project", {
-          level: "error",
-        });
+        ctx.error("No FT Client for the project");
       } else {
         console.error(`No FT client for project ${projectId}`);
       }
@@ -69,28 +70,28 @@ async function getNewDevlogs(
           });
         } else if (client.lastCode === 404) {
           if (sentryEnabled) {
-            Sentry.setContext("project", {
-              id: projectId,
+            const ctx = logger.with({
+              project: {
+                id: projectId,
+              },
             });
-            Sentry.captureMessage("No project exists at id", {
-              level: "error",
-            });
+            ctx.error("No project exists at id");
           } else {
             console.error("No project exists at id", projectId);
           }
-        } else if (Number(client.lastCode) >= 500 && Number(client.lastCode) < 600) {
+        } else if (
+          Number(client.lastCode) >= 500 &&
+          Number(client.lastCode) < 600
+        ) {
           return;
         } else {
           if (sentryEnabled) {
-            Sentry.setContext("project", {
-              id: projectId,
-            });
-            Sentry.captureMessage(
-              client.lastCode + " " + "Failed to get project",
-              {
-                level: "error",
+            const ctx = logger.with({
+              project: {
+                id: projectId,
               },
-            );
+            });
+            ctx.error(client.lastCode + " " + "Failed to get project");
           } else {
             console.error(client.lastCode, "Failed to get project", projectId);
           }
@@ -151,10 +152,14 @@ async function getNewDevlogs(
       }
 
       if (devlogs.length === 0) {
-        Sentry.setContext("user", {
-          project: projectId
-        })
-        Sentry.captureMessage("There was a new id but yet devlogs array stayed empty this could indicate a bug.", "warning")
+        const ctx = logger.with({
+          project: {
+            id: projectId,
+          },
+        });
+        ctx.error(
+          "There was a new id but yet devlogs array stayed empty this could indicate a bug.",
+        );
         return { name: project.title, devlogs: [] };
       }
 
@@ -169,10 +174,12 @@ async function getNewDevlogs(
     }
   } catch (err) {
     if (sentryEnabled) {
-      Sentry.setContext("project", {
-        id: projectId,
+      const ctx = logger.with({
+        project: {
+          id: projectId,
+        },
       });
-      Sentry.captureException(err);
+      ctx.error({ error: err });
     } else {
       console.error(`Error fetching devlogs for project ${projectId}:`, err);
     }
@@ -186,6 +193,7 @@ export default {
     client,
     clients,
     pg,
+    logger,
     sentryEnabled,
     Sentry,
   }: RequestHandler) => {
@@ -206,6 +214,7 @@ export default {
           pg,
           sentryEnabled,
           Sentry,
+          logger,
         );
         if (!projData) continue;
         if (projData.devlogs.length > 0) {
@@ -304,10 +313,12 @@ export default {
               }
             } catch (err) {
               if (sentryEnabled) {
-                Sentry.setContext("project", {
-                  id: projectId,
+                const ctx = logger.with({
+                  project: {
+                    id: projectId,
+                  },
                 });
-                Sentry.captureException(err);
+                ctx.error({ error: err });
               } else {
                 console.error(
                   `Error posting to Slack for project ${projectId}:`,

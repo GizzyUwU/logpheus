@@ -1,11 +1,13 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "logpheus",
       "dependencies": {
         "@electric-sql/pglite": "^0.3.14",
+        "@logtape/drizzle-orm": "^2.0.2",
+        "@logtape/logtape": "^2.0.2",
+        "@logtape/sentry": "^2.0.2",
         "@sentry/bun": "^10.36.0",
         "@slack/bolt": "^4.6.0",
         "@slack/web-api": "^7.13.0",
@@ -87,6 +89,12 @@
     "@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.25.12", "", { "os": "win32", "cpu": "ia32" }, "sha512-HkqnmmBoCbCwxUKKNPBixiWDGCpQGVsrQfJoVGYLPT41XWF8lHuE5N6WhVia2n4o5QK5M4tYr21827fNhi4byQ=="],
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.12", "", { "os": "win32", "cpu": "x64" }, "sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA=="],
+
+    "@logtape/drizzle-orm": ["@logtape/drizzle-orm@2.0.2", "", { "peerDependencies": { "@logtape/logtape": "^2.0.2" } }, "sha512-tQz/JYlgSfD9VRxAjTBLFSsJwClx4R3wKGwYSyk949UkC/ViMqRmsrxEZ0H1WcIJLLTxpP8NZOOrvd30sS3Kgg=="],
+
+    "@logtape/logtape": ["@logtape/logtape@2.0.2", "", {}, "sha512-cveUBLbCMFkvkLycP/2vNWvywl47JcJbazHIju94/QNGboZ/jyYAgZIm0ZXezAOx3eIz8OG1EOZ5CuQP3+2FQg=="],
+
+    "@logtape/sentry": ["@logtape/sentry@2.0.2", "", { "peerDependencies": { "@logtape/logtape": "^2.0.2", "@sentry/core": ">=8.0.0" } }, "sha512-vo10X0kfFBkgVbteDSg7KMsIkDUWlMmu83fCiwI0rIFYrDBJIrb+TIxBWg66AizjsYXwZWE5Hs2XX1/sL3fAgA=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 

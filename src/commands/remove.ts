@@ -8,7 +8,7 @@ export default {
   name: "remove",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, client, clients, sentryEnabled, Sentry }: RequestHandler,
+    { pg, logger, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -107,7 +107,7 @@ export default {
         return;
       } else {
         if (sentryEnabled) {
-          Sentry.captureException(error);
+          logger.error({ error });
         } else {
           console.error(error);
         }

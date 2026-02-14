@@ -15,6 +15,9 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun";
 import type { WebClient } from "@slack/web-api";
+import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
+import { getSentrySink } from "@logtape/sentry";
+import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
@@ -33,6 +36,22 @@ if (process.env.SENTRY_DSN) {
   sentryEnabled = true;
 }
 
+await configure({
+  sinks: {
+    sentry: getSentrySink({
+      enableBreadcrumbs: true,
+    }),
+    console: getConsoleSink(),
+  },
+  loggers: [
+    { category: ["logtape", "meta"], sinks: ["console"], lowestLevel: "error" },
+    { category: ["drizzle-orm"], sinks: ["sentry"], lowestLevel: "warning" },
+    { category: ["logpheus"], sinks: ["sentry"], lowestLevel: "warning" },
+  ],
+});
+
+export const logger = getLogger(["logpheus"]);
+
 if (process.env.PGLITE === "false") {
   const { drizzle } = await import("drizzle-orm/node-postgres");
   const { migrate } = await import("drizzle-orm/node-postgres/migrator");
@@ -42,6 +61,9 @@ if (process.env.PGLITE === "false") {
   const db = drizzle({
     client: pool,
     casing: "snake_case",
+    logger: getDrizzleLogger({
+      level: "warning",
+    }),
   });
   pg = db;
   await migrate(db, {
@@ -55,6 +77,9 @@ if (process.env.PGLITE === "false") {
   const db = drizzle({
     client: pgClient,
     casing: "snake_case",
+    logger: getDrizzleLogger({
+      level: "warning",
+    }),
   });
   pg = db;
   await migrate(db, {
@@ -84,6 +109,7 @@ const app = new App({
 let clients: Record<string, FT> = {};
 
 export interface RequestHandler {
+  logger: typeof logger;
   pg: DatabaseType;
   client: WebClient;
   clients: Record<string, FT>;
@@ -112,11 +138,12 @@ function loadRequestHandlers(
       (app[type as "view" | "command"] as Function)(
         format,
         async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
-          const run = async () => {
+          const run = async (ctx?: typeof logger) => {
             await args.ack();
             await mod.execute(args, {
               pg,
               client: app.client,
+              logger: ctx ? ctx : logger,
               clients,
               sentryEnabled,
               Sentry,
@@ -132,12 +159,12 @@ function loadRequestHandlers(
               console.error(`Error executing ${type} ${mod.name}:`, err);
             }
           } else {
-            await Sentry.withScope(async (scope) => {
-              scope.setContext("handler", {
+            const ctx = logger.with({
+              handler: {
                 type,
                 module: mod.name,
-              });
-              scope.setContext("slack", {
+              },
+              slack: {
                 user:
                   "user_id" in args.body
                     ? args.body.user_id
@@ -145,19 +172,24 @@ function loadRequestHandlers(
                 channel:
                   "channel_id" in args.body
                     ? args.body.channel_id
-                    : (args.body.view.private_metadata.length > 0 ? JSON.parse(args.body.view.private_metadata) as {
-                        channel: string;
-                      } : { channel: "" }).channel,
+                    : (args.body.view.private_metadata.length > 0
+                        ? (JSON.parse(args.body.view.private_metadata) as {
+                            channel: string;
+                          })
+                        : { channel: "" }
+                      ).channel,
                 triggerId:
                   "trigger_id" in args.body ? args.body.trigger_id : "",
-              });
-
-              try {
-                run();
-              } catch (err) {
-                Sentry.captureException(err);
-              }
+              },
             });
+
+            try {
+              run(ctx);
+            } catch (err) {
+              logger.error({
+                err,
+              });
+            }
           }
         },
       );
@@ -181,6 +213,7 @@ async function loadHandlers() {
       try {
         await mod.execute({
           pg,
+          logger,
           client: app.client,
           clients,
           sentryEnabled,
@@ -188,21 +221,27 @@ async function loadHandlers() {
         } satisfies RequestHandler);
       } catch (err) {
         if (sentryEnabled) {
-          Sentry.setContext("data", {
-            module: mod.name,
-            file,
+          const ctx = logger.with({
+            data: {
+              module: mod.name,
+              file,
+            },
           });
-          Sentry.captureException(err);
+          ctx.error("Failed to execute handler", {
+            error: err,
+          });
         } else {
           console.error(`Failed to run ${mod?.name} handler:`, err);
         }
       }
     } catch (err) {
       if (sentryEnabled) {
-        Sentry.setContext("data", {
-          file,
+        logger.error("Failed to execute handler", {
+          data: {
+            file,
+          },
+          error: err,
         });
-        Sentry.captureException(err);
       } else {
         console.error(`Error running handler ${file}:`, err);
       }
@@ -245,7 +284,7 @@ async function loadHandlers() {
     setInterval(loadHandlers, 60 * 1000);
   } catch (err) {
     if (sentryEnabled) {
-      Sentry.captureException(err);
+      logger.error({ error: err });
     } else {
       console.error("Unable to start app:", err);
     }

@@ -8,7 +8,7 @@ export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, client, sentryEnabled, Sentry }: RequestHandler,
+    { pg, logger, client, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     const channelId = JSON.parse(view.private_metadata).channel;
 
@@ -16,11 +16,13 @@ export default {
 
     if (!channelId || !userId) {
       if (sentryEnabled) {
-        Sentry.setContext("view", { ...view });
+        const ctx = logger.with({
+          view,
+        });
         if (!channelId) {
-          Sentry.captureMessage("There is no channel id for this channel?");
+          ctx.error("There is no channel id for this channel?");
         } else {
-          Sentry.captureMessage("There is no user id for this user?");
+          ctx.error("There is no user id for this user?");
         }
       } else {
         if (!channelId) {

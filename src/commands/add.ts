@@ -7,7 +7,7 @@ export default {
   name: "add",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { callbackId, client, sentryEnabled, Sentry, pg, prefix }: RequestHandler,
+    { callbackId, logger, client, sentryEnabled, Sentry, pg, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -37,13 +37,13 @@ export default {
             type: "modal",
             callback_id: callbackId,
             private_metadata: JSON.stringify({
-              channel: command.channel_id
+              channel: command.channel_id,
             }),
             title: {
               type: "plain_text",
               text: /^[a-z]/i.test(prefix!)
                 ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-                : prefix!
+                : prefix!,
             },
             blocks: [
               {
@@ -89,10 +89,10 @@ export default {
               type: "plain_text",
               text: /^[a-z]/i.test(prefix!)
                 ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-                : prefix!
+                : prefix!,
             },
-                        private_metadata: JSON.stringify({
-              channel: command.channel_id
+            private_metadata: JSON.stringify({
+              channel: command.channel_id,
             }),
             blocks: [
               {
@@ -128,7 +128,7 @@ export default {
         return;
       } else {
         if (sentryEnabled) {
-          Sentry.captureException(error);
+          logger.error({ error });
         } else {
           console.error(error);
         }

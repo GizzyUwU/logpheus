@@ -9,16 +9,16 @@ export default {
   name: "add",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, client, clients, sentryEnabled, Sentry }: RequestHandler,
+    { pg, logger, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     const channelId = JSON.parse(view.private_metadata).channel;
     const userId = body.user.id;
-    if (!channelId || !userId) {
+    if (channelId || !userId) {
       if (sentryEnabled) {
-        if (!channelId) {
-          Sentry.captureMessage("There is no channel id for this channel?");
+        if (channelId) {
+          logger.error("There is no channel id for this channel?");
         } else {
-          Sentry.captureMessage("There is no user id for this user?");
+          logger.error("There is no user id for this user?");
         }
       } else {
         if (!channelId) {

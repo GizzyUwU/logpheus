@@ -19,6 +19,9 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",
+    "@logtape/drizzle-orm": "^2.0.2",
+    "@logtape/logtape": "^2.0.2",
+    "@logtape/sentry": "^2.0.2",
     "@sentry/bun": "^10.36.0",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.13.0",
