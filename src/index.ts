@@ -218,7 +218,7 @@ async function loadHandlers() {
     const self = await app.client.auth.test();
     if (self.user_id === "U0A50Q9SYK1") {
       prefix = "devlpheus";
-    } else if (self.user_id === "U0A5CFG4EAJ") {
+    } else if (self.user_id === "U0AFE7QF849") {
       prefix = "logpheus";
     } else {
       if (!self.user || !self.user_id)
