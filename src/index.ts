@@ -58,6 +58,25 @@ if (process.env.PGLITE === "false") {
   const pool = new Pool({
     connectionString: process.env.DB_URL,
   });
+  
+  try {
+    const client = await pool.connect();
+
+    try {
+      await client.query("SELECT 1");
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    logger.error("Failed Database Connection", {
+      error: err instanceof Error ? err.message : err,
+      stack: err instanceof Error ? err.stack : undefined,
+      dbUrl: process.env.DB_URL?.replace(/:[^:@]+@/, ":****@"),
+    });
+
+    throw err;
+  }
+
   const db = drizzle({
     client: pool,
     casing: "snake_case",
@@ -173,11 +192,11 @@ function loadRequestHandlers(
                   "channel_id" in args.body
                     ? args.body.channel_id
                     : (args.body.view.private_metadata.length > 0
-                        ? (JSON.parse(args.body.view.private_metadata) as {
-                            channel: string;
-                          })
-                        : { channel: "" }
-                      ).channel,
+                      ? (JSON.parse(args.body.view.private_metadata) as {
+                        channel: string;
+                      })
+                      : { channel: "" }
+                    ).channel,
                 triggerId:
                   "trigger_id" in args.body ? args.body.trigger_id : "",
               },
