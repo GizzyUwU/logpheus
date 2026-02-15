@@ -178,6 +178,7 @@ async function getNewDevlogs(
         project: {
           id: projectId,
         },
+        location: "getNewDevlogs,topLevelTryCatch"
       });
       ctx.error({ error: err });
     } else {
@@ -197,141 +198,150 @@ export default {
     sentryEnabled,
     Sentry,
   }: RequestHandler) => {
-    const userRows = await pg.select().from(users);
-    if (!userRows?.length) return;
-    for (const row of userRows) {
-      if (!row || !row.apiKey || !row.channel || !row.projects) continue;
-      if (!clients[row.apiKey]) clients[row.apiKey] = new FT(row.apiKey);
-      const projects = Array.isArray(row.projects)
-        ? row.projects.map(Number)
-        : [];
-      for (const projectId of projects) {
-        const projData = await getNewDevlogs(
-          row.apiKey,
-          projectId,
-          client,
-          clients,
-          pg,
-          sentryEnabled,
-          Sentry,
-          logger,
-        );
-        if (!projData) continue;
-        if (projData.devlogs.length > 0) {
-          for (const devlog of projData.devlogs) {
-            try {
-              const createdAt = new Date(devlog.created_at);
-              const seconds = devlog.duration_seconds;
-              const pad = (n: number) => n.toString().padStart(2, "0");
-              const year = createdAt.getUTCFullYear();
-              const month = pad(createdAt.getUTCMonth() + 1);
-              const day = pad(createdAt.getUTCDate());
-              const hours = pad(createdAt.getUTCHours());
-              const minutes = pad(createdAt.getUTCMinutes());
-              const cs50Timestamp = `${year}${month}${day}T${hours}${minutes}+0000`;
-              const timestamp = createdAt.toLocaleString("en-GB", {
-                dateStyle: "short",
-                timeStyle: "short",
-                timeZone: "UTC",
-              });
+    try {
+      const userRows = await pg.select().from(users);
+      if (!userRows?.length) return;
+      for (const row of userRows) {
+        if (!row || !row.apiKey || !row.channel || !row.projects) continue;
+        if (!clients[row.apiKey]) clients[row.apiKey] = new FT(row.apiKey);
+        const projects = Array.isArray(row.projects)
+          ? row.projects.map(Number)
+          : [];
+        for (const projectId of projects) {
+          const projData = await getNewDevlogs(
+            row.apiKey,
+            projectId,
+            client,
+            clients,
+            pg,
+            sentryEnabled,
+            Sentry,
+            logger,
+          );
+          if (!projData) continue;
+          if (projData.devlogs.length > 0) {
+            for (const devlog of projData.devlogs) {
+              try {
+                const createdAt = new Date(devlog.created_at);
+                const seconds = devlog.duration_seconds;
+                const pad = (n: number) => n.toString().padStart(2, "0");
+                const year = createdAt.getUTCFullYear();
+                const month = pad(createdAt.getUTCMonth() + 1);
+                const day = pad(createdAt.getUTCDate());
+                const hours = pad(createdAt.getUTCHours());
+                const minutes = pad(createdAt.getUTCMinutes());
+                const cs50Timestamp = `${year}${month}${day}T${hours}${minutes}+0000`;
+                const timestamp = createdAt.toLocaleString("en-GB", {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                  timeZone: "UTC",
+                });
 
-              const durationString = ([86400, 3600, 60] as const)
-                .map((sec, i) => {
-                  const val =
-                    Math.floor(seconds / sec) %
-                    (i === 0 ? Infinity : i === 1 ? 24 : 60);
-                  const labels = ["day", "hour", "minute"];
-                  return val > 0
-                    ? `${val} ${labels[i]}${val > 1 ? "s" : ""}`
-                    : null;
-                })
-                .filter(Boolean)
-                .join(" ");
+                const durationString = ([86400, 3600, 60] as const)
+                  .map((sec, i) => {
+                    const val =
+                      Math.floor(seconds / sec) %
+                      (i === 0 ? Infinity : i === 1 ? 24 : 60);
+                    const labels = ["day", "hour", "minute"];
+                    return val > 0
+                      ? `${val} ${labels[i]}${val > 1 ? "s" : ""}`
+                      : null;
+                  })
+                  .filter(Boolean)
+                  .join(" ");
 
-              if (!containsMarkdown(devlog.body)) {
-                await client.chat.postMessage({
-                  channel: row.channel,
-                  unfurl_links: false,
-                  unfurl_media: false,
-                  blocks: [
-                    {
-                      type: "section",
-                      text: {
-                        type: "mrkdwn",
-                        text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
-                      },
-                    },
-                    {
-                      type: "section",
-                      text: {
-                        type: "mrkdwn",
-                        text: `> ${devlog.body}`,
-                      },
-                    },
-                    {
-                      type: "divider",
-                    },
-                    {
-                      type: "context",
-                      elements: [
-                        {
+                if (!containsMarkdown(devlog.body)) {
+                  await client.chat.postMessage({
+                    channel: row.channel,
+                    unfurl_links: false,
+                    unfurl_media: false,
+                    blocks: [
+                      {
+                        type: "section",
+                        text: {
                           type: "mrkdwn",
-                          text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                          text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
                         },
-                      ],
-                    },
-                  ],
-                });
-              } else {
-                await client.chat.postMessage({
-                  channel: row.channel,
-                  unfurl_links: false,
-                  unfurl_media: false,
-                  blocks: [
-                    {
-                      type: "section",
-                      text: {
-                        type: "mrkdwn",
-                        text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
                       },
-                    },
-                    ...parseMarkdownToSlackBlocks(devlog.body),
-                    {
-                      type: "divider",
-                    },
-                    {
-                      type: "context",
-                      elements: [
-                        {
+                      {
+                        type: "section",
+                        text: {
                           type: "mrkdwn",
-                          text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                          text: `> ${devlog.body}`,
                         },
-                      ],
+                      },
+                      {
+                        type: "divider",
+                      },
+                      {
+                        type: "context",
+                        elements: [
+                          {
+                            type: "mrkdwn",
+                            text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                          },
+                        ],
+                      },
+                    ],
+                  });
+                } else {
+                  await client.chat.postMessage({
+                    channel: row.channel,
+                    unfurl_links: false,
+                    unfurl_media: false,
+                    blocks: [
+                      {
+                        type: "section",
+                        text: {
+                          type: "mrkdwn",
+                          text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                        },
+                      },
+                      ...parseMarkdownToSlackBlocks(devlog.body),
+                      {
+                        type: "divider",
+                      },
+                      {
+                        type: "context",
+                        elements: [
+                          {
+                            type: "mrkdwn",
+                            text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                          },
+                        ],
+                      },
+                    ],
+                  });
+                }
+              } catch (err) {
+                if (sentryEnabled) {
+                  const ctx = logger.with({
+                    project: {
+                      id: projectId,
                     },
-                  ],
-                });
-              }
-            } catch (err) {
-              if (sentryEnabled) {
-                const ctx = logger.with({
-                  project: {
-                    id: projectId,
-                  },
-                });
-                ctx.error({ error: err });
-              } else {
-                console.error(
-                  `Error posting to Slack for project ${projectId}:`,
-                  err,
-                );
+                  });
+                  ctx.error({ error: err });
+                } else {
+                  console.error(
+                    `Error posting to Slack for project ${projectId}:`,
+                    err,
+                  );
+                }
               }
             }
           }
-        }
 
-        await new Promise((res) => setTimeout(res, 2000));
-        continue;
+          await new Promise((res) => setTimeout(res, 2000));
+          continue;
+        }
       }
+    } catch (err) {
+      const ctx = logger.with({
+        location: "cHheckForNewDevlogs,topLevelTryCatch"
+      })
+      logger.error({
+        error: err
+      })
     }
   },
 };
