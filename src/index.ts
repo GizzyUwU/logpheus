@@ -7,7 +7,6 @@ import {
 import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
-import checkAllProjects from "./handlers/checkForNewDevlogs";
 import runMigrations from "./migrate";
 import { PGlite } from "@electric-sql/pglite";
 import { Pool } from "pg";
@@ -53,45 +52,44 @@ await configure({
 export const logger = getLogger(["logpheus"]);
 
 if (process.env.PGLITE === "false") {
-  const { drizzle } = await import("drizzle-orm/node-postgres");
-  const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-  const pool = new Pool({
-    connectionString: process.env.DB_URL,
-  });
-  
   try {
-    const client = await pool.connect();
+    const { drizzle } = await import("drizzle-orm/node-postgres");
+    const { migrate } = await import("drizzle-orm/node-postgres/migrator");
+    const pool = new Pool({
+      connectionString: process.env.DB_URL,
+    });
 
+
+    const client = await pool.connect();
     try {
-      await client.query("SELECT 1");
+      await pool.query("SELECT 1");
     } finally {
       client.release();
     }
+
+    const db = drizzle({
+      client: pool,
+      casing: "snake_case",
+      logger: getDrizzleLogger({
+        level: "warning",
+      }),
+    });
+    pg = db;
+    await migrate(db, {
+      migrationsFolder: "./migrations",
+    });
   } catch (err) {
     logger.error("Failed Database Connection", {
       error: err instanceof Error ? err.message : err,
       stack: err instanceof Error ? err.stack : undefined,
       dbUrl: process.env.DB_URL?.replace(/:[^:@]+@/, ":****@"),
     });
-
     throw err;
   }
-
-  const db = drizzle({
-    client: pool,
-    casing: "snake_case",
-    logger: getDrizzleLogger({
-      level: "warning",
-    }),
-  });
-  pg = db;
-  await migrate(db, {
-    migrationsFolder: "./migrations",
-  });
 } else {
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
-
+console.log("wawr")
   const pgClient = new PGlite(path.join(cacheDir, "pg"));
   const db = drizzle({
     client: pgClient,
