@@ -336,12 +336,16 @@ export default {
         }
       }
     } catch (err) {
-      const ctx = logger.with({
-        location: "cHheckForNewDevlogs,topLevelTryCatch"
-      })
-      logger.error({
-        error: err
-      })
+      if (sentryEnabled) {
+        const ctx = logger.with({
+          location: "checkForNewDevlogs,topLevelTryCatch"
+        })
+        ctx.error({
+          error: err
+        })
+      } else {
+        console.error("[checkForDevlogs](topLevelTryCatch)", err)
+      }
     }
   },
 };
