@@ -56,9 +56,6 @@ async function getNewDevlogs(
       project = await client.project({ id: Number(projectId) });
     }
 
-    if (projectId === 8206) {
-      console.log(projectId, project);
-    }
     if (!project) {
       const row = await db
         .select()
@@ -213,7 +210,6 @@ export default {
   }: RequestHandler) => {
     try {
       const userRows = await pg.select().from(users);
-      console.log(userRows.length)
       if (!userRows?.length) return;
       for (const row of userRows) {
         if (!row || !row.apiKey || !row.channel || !row.projects) continue;
@@ -233,11 +229,7 @@ export default {
             logger,
           );
           if (!projData) continue;
-          if (projData.name === "FolderHabor") {
-            console.log("bbb", projData)
-          }
           if (projData.devlogs.length > 0) {
-            console.log("cccc")
             for (const devlog of projData.devlogs) {
               try {
                 const createdAt = new Date(devlog.created_at);
@@ -267,7 +259,6 @@ export default {
                   })
                   .filter(Boolean)
                   .join(" ");
-                console.log("moew")
 
                 if (!containsMarkdown(devlog.body)) {
                   await client.chat.postMessage({
