@@ -30,7 +30,7 @@ async function getNewDevlogs(
   shipped?: "pending" | "submitted";
 } | void> {
   try {
-    const client = clients[apiKey];
+    let client = clients[apiKey];
     if (!client) {
       if (sentryEnabled) {
         const ctx = logger.with({
@@ -39,13 +39,26 @@ async function getNewDevlogs(
           },
         });
         ctx.error("No FT Client for the project");
+        const ftClient = new FT(apiKey)
+        clients[apiKey] = ftClient
+        client = ftClient
       } else {
         console.error(`No FT client for project ${projectId}`);
       }
       return;
     }
 
-    const project = await client.project({ id: Number(projectId) });
+    let project = await client.project({ id: Number(projectId) });
+
+    while (client.lastCode === 429) {
+      const waitMs = 2000 + Math.floor(Math.random() * 1000);
+      await new Promise((res) => setTimeout(res, waitMs));
+      project = await client.project({ id: Number(projectId) });
+    }
+
+    if (projectId === 8206) {
+      console.log(projectId, project);
+    }
     if (!project) {
       const row = await db
         .select()
@@ -200,6 +213,7 @@ export default {
   }: RequestHandler) => {
     try {
       const userRows = await pg.select().from(users);
+      console.log(userRows.length)
       if (!userRows?.length) return;
       for (const row of userRows) {
         if (!row || !row.apiKey || !row.channel || !row.projects) continue;
@@ -219,7 +233,11 @@ export default {
             logger,
           );
           if (!projData) continue;
+          if (projData.name === "FolderHabor") {
+            console.log("bbb", projData)
+          }
           if (projData.devlogs.length > 0) {
+            console.log("cccc")
             for (const devlog of projData.devlogs) {
               try {
                 const createdAt = new Date(devlog.created_at);
@@ -249,6 +267,7 @@ export default {
                   })
                   .filter(Boolean)
                   .join(" ");
+                console.log("moew")
 
                 if (!containsMarkdown(devlog.body)) {
                   await client.chat.postMessage({
