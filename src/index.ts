@@ -147,6 +147,7 @@ function loadRequestHandlers(
     if (!module?.name || typeof module.execute !== "function") return;
     const suffix = type === "view" ? "_" + module.name : "-" + module.name;
     const callbackId = `${prefix}_${module.name}`;
+    console.log(callbackId)
     const format =
       type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
     const registerHandler = (id: string, mod: typeof module) => {
