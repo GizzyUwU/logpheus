@@ -156,7 +156,7 @@ function loadRequestHandlers(
         async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
           await args.ack();
           const run = async (ctx?: typeof logger) => {
-            console.log(format)
+            console.log(format, type)
             await mod.execute(args, {
               pg,
               client: app.client,
