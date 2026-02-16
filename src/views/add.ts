@@ -12,7 +12,7 @@ export default {
     { pg, logger, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     try {
-      console.log("meow")
+      console.log("meow");
       const channelId = JSON.parse(view.private_metadata).channel;
       const userId = body.user.id;
       if (!channelId || !userId) {
@@ -94,8 +94,8 @@ export default {
 
         const projects = Array.isArray(row?.projects)
           ? Array.from(
-            new Set(row.projects.map((p) => Number(p)).filter(Boolean)),
-          )
+              new Set(row.projects.map((p) => Number(p)).filter(Boolean)),
+            )
           : [];
 
         if (projects.includes(Number(projectId))) {
@@ -144,7 +144,10 @@ export default {
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
-          text: "No project exists at this id! Last code:" + " " + ftClient.lastCode,
+          text:
+            "No project exists at this id! Last code:" +
+            " " +
+            ftClient.lastCode,
         });
 
       const devlogIds = Array.isArray(freshProject.devlog_ids)
@@ -190,13 +193,15 @@ export default {
         ],
       });
     } catch (err) {
-      logger.error("Unexpected error occurred", {
-        error: err,
+      const ctx = logger.with({
         data: {
           channel: JSON.parse(view.private_metadata).channel ?? "",
-          user: body.user.id ?? ""
-        }
-      })
+          user: body.user.id ?? "",
+        },
+      });
+      ctx.error("Unexpected error occurred", {
+        error: err,
+      });
       await client.chat.postEphemeral({
         channel: JSON.parse(view.private_metadata).channel ?? "",
         user: body.user.id ?? "",

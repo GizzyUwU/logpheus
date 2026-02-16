@@ -34,33 +34,35 @@ export default {
       prefix,
     }: RequestHandler,
   ) => {
-    const channelId = JSON.parse(view.private_metadata).channel;
-    const userId = body.user.id;
-    if (!channelId || !userId) {
-      if (sentryEnabled) {
-        const ctx = logger.with({
-          view,
-        });
-        if (!channelId) {
-          ctx.error("There is no channel id for this channel?");
-        } else {
-          ctx.error("There is no user id for this user?");
-        }
-      } else {
-        if (!channelId) {
-          console.error("There is no channel id?", view);
-        } else {
-          console.error("There is no user id?", view);
-        }
-      }
-      return await client.chat.postEphemeral({
-        channel: channelId,
-        user: userId,
-        text: "An unexpected error occurred!",
-      });
-    }
-
     try {
+      console.log("MEOWS AT YOU VIOLENTLY");
+      const channelId = JSON.parse(view.private_metadata).channel;
+      const userId = body.user.id;
+      if (!channelId || !userId) {
+        if (sentryEnabled) {
+          const ctx = logger.with({
+            view,
+          });
+          if (!channelId) {
+            ctx.error("There is no channel id for this channel?");
+          } else {
+            ctx.error("There is no user id for this user?");
+          }
+        } else {
+          if (!channelId) {
+            console.error("There is no channel id?", view);
+          } else {
+            console.error("There is no user id?", view);
+          }
+        }
+
+        return await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "An unexpected error occurred!",
+        });
+      }
+
       const { target_user } = view.state.values as {
         target_user: {
           user: {
@@ -194,9 +196,18 @@ export default {
         ],
       });
     } catch (err) {
+      const ctx = logger.with({
+        data: {
+          channel: JSON.parse(view.private_metadata).channel ?? "",
+          user: body.user.id ?? "",
+        },
+      });
+      ctx.error("Unexpected error occurred", {
+        error: err,
+      });
       await client.chat.postEphemeral({
-        channel: channelId,
-        user: userId,
+        channel: JSON.parse(view.private_metadata).channel ?? "",
+        user: body.user.id ?? "",
         text: "An unexpected error occurred!",
       });
     }

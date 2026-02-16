@@ -59,7 +59,6 @@ if (process.env.PGLITE === "false") {
       connectionString: process.env.DB_URL,
     });
 
-
     const client = await pool.connect();
     try {
       await pool.query("SELECT 1");
@@ -89,7 +88,7 @@ if (process.env.PGLITE === "false") {
 } else {
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
-console.log("wawr")
+  console.log("wawr");
   const pgClient = new PGlite(path.join(cacheDir, "pg"));
   const db = drizzle({
     client: pgClient,
@@ -149,16 +148,16 @@ function loadRequestHandlers(
 
     const suffix = type === "view" ? "_" + module.name : "-" + module.name;
     const callbackId = `${prefix}_${module.name}`;
+    console.log("AAAA", module?.name, prefix, suffix)
     const format =
       type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
     const registerHandler = (id: string, mod: typeof module) => {
       (app[type as "view" | "command"] as Function)(
         format,
         async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
-            await args.ack();
-
+          await args.ack();
           const run = async (ctx?: typeof logger) => {
-            console.log("AAAAAAAAAAAAAA")
+            console.log(mod, "RAWR")
             await mod.execute(args, {
               pg,
               client: app.client,
@@ -192,11 +191,11 @@ function loadRequestHandlers(
                   "channel_id" in args.body
                     ? args.body.channel_id
                     : (args.body.view.private_metadata.length > 0
-                      ? (JSON.parse(args.body.view.private_metadata) as {
-                        channel: string;
-                      })
-                      : { channel: "" }
-                    ).channel,
+                        ? (JSON.parse(args.body.view.private_metadata) as {
+                            channel: string;
+                          })
+                        : { channel: "" }
+                      ).channel,
                 triggerId:
                   "trigger_id" in args.body ? args.body.trigger_id : "",
               },
