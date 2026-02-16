@@ -145,10 +145,8 @@ function loadRequestHandlers(
     if (!file.endsWith(".ts") && !file.endsWith(".js")) return;
     const module = require(path.join(folderPath, file)).default;
     if (!module?.name || typeof module.execute !== "function") return;
-
     const suffix = type === "view" ? "_" + module.name : "-" + module.name;
     const callbackId = `${prefix}_${module.name}`;
-    console.log("AAAA", module?.name, prefix, suffix)
     const format =
       type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
     const registerHandler = (id: string, mod: typeof module) => {
@@ -157,7 +155,6 @@ function loadRequestHandlers(
         async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
           await args.ack();
           const run = async (ctx?: typeof logger) => {
-            console.log(mod, "RAWR")
             await mod.execute(args, {
               pg,
               client: app.client,
@@ -172,7 +169,7 @@ function loadRequestHandlers(
 
           if (!sentryEnabled) {
             try {
-              run();
+              await run();
             } catch (err) {
               console.error(`Error executing ${type} ${mod.name}:`, err);
             }
