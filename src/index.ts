@@ -163,7 +163,7 @@ function loadRequestHandlers(
               sentryEnabled,
               Sentry,
               prefix,
-              callbackId: id,
+              callbackId
             } satisfies RequestHandler);
           };
 
