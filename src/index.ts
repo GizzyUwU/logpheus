@@ -88,7 +88,7 @@ if (process.env.PGLITE === "false") {
 } else {
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
-  console.log("wawr");
+  console.log("awr");
   const pgClient = new PGlite(path.join(cacheDir, "pg"));
   const db = drizzle({
     client: pgClient,
@@ -147,7 +147,6 @@ function loadRequestHandlers(
     if (!module?.name || typeof module.execute !== "function") return;
     const suffix = type === "view" ? "_" + module.name : "-" + module.name;
     const callbackId = `${prefix}_${module.name}`;
-    console.log(callbackId)
     const format =
       type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
     const registerHandler = (id: string, mod: typeof module) => {
@@ -156,7 +155,6 @@ function loadRequestHandlers(
         async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
           await args.ack();
           const run = async (ctx?: typeof logger) => {
-            console.log(format, type)
             await mod.execute(args, {
               pg,
               client: app.client,

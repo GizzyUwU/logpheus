@@ -35,7 +35,6 @@ export default {
     }: RequestHandler,
   ) => {
     try {
-      console.log("MEOWS AT YOU VIOLENTLY");
       const channelId = JSON.parse(view.private_metadata).channel;
       const userId = body.user.id;
       if (!channelId || !userId) {

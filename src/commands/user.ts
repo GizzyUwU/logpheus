@@ -39,7 +39,6 @@ export default {
           response_type: "ephemeral",
         });
 
-      console.log("BEEPS AT YOU FUCKING VIOLENTLY BECAUSE YOUR SO FUCKING ANNOYING I SWEAR TO FUCKING GOD JUST FUCKING WORK YOU DUMB BITCH", callbackId)
 
       await client.views.open({
         trigger_id: command.trigger_id,

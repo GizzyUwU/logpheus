@@ -12,7 +12,6 @@ export default {
     { pg, logger, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
     try {
-      console.log("meow");
       const channelId = JSON.parse(view.private_metadata).channel;
       const userId = body.user.id;
       if (!channelId || !userId) {
