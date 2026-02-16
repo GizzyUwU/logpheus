@@ -11,30 +11,31 @@ export default {
     { view, body }: SlackViewMiddlewareArgs,
     { pg, logger, client, clients, sentryEnabled, Sentry }: RequestHandler,
   ) => {
-    const channelId = JSON.parse(view.private_metadata).channel;
-    const userId = body.user.id;
-    if (!channelId || !userId) {
-      if (sentryEnabled) {
-        if (!channelId) {
-          logger.error("There is no channel id for this channel?");
-        } else {
-          logger.error("There is no user id for this user?");
-        }
-      } else {
-        if (!channelId) {
-          console.error("There is no channel id?", view);
-        } else {
-          console.error("There is no user id?", view);
-        }
-      }
-      return await client.chat.postEphemeral({
-        channel: channelId,
-        user: userId,
-        text: "An unexpected error occurred!",
-      });
-    }
-
     try {
+      console.log("meow")
+      const channelId = JSON.parse(view.private_metadata).channel;
+      const userId = body.user.id;
+      if (!channelId || !userId) {
+        if (sentryEnabled) {
+          if (!channelId) {
+            logger.error("There is no channel id for this channel?");
+          } else {
+            logger.error("There is no user id for this user?");
+          }
+        } else {
+          if (!channelId) {
+            console.error("There is no channel id?", view);
+          } else {
+            console.error("There is no user id?", view);
+          }
+        }
+        return await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "An unexpected error occurred!",
+        });
+      }
+
       const values = view.state.values;
       const projectId = values.projId?.proj_input?.value?.trim();
       let apiKey: string;
@@ -93,8 +94,8 @@ export default {
 
         const projects = Array.isArray(row?.projects)
           ? Array.from(
-              new Set(row.projects.map((p) => Number(p)).filter(Boolean)),
-            )
+            new Set(row.projects.map((p) => Number(p)).filter(Boolean)),
+          )
           : [];
 
         if (projects.includes(Number(projectId))) {
@@ -189,9 +190,16 @@ export default {
         ],
       });
     } catch (err) {
+      logger.error("Unexpected error occurred", {
+        error: err,
+        data: {
+          channel: JSON.parse(view.private_metadata).channel ?? "",
+          user: body.user.id ?? ""
+        }
+      })
       await client.chat.postEphemeral({
-        channel: channelId,
-        user: userId,
+        channel: JSON.parse(view.private_metadata).channel ?? "",
+        user: body.user.id ?? "",
         text: "An unexpected error occurred!",
       });
     }
