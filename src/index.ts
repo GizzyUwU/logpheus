@@ -156,6 +156,7 @@ function loadRequestHandlers(
         async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
           await args.ack();
           const run = async (ctx?: typeof logger) => {
+            console.log(format)
             await mod.execute(args, {
               pg,
               client: app.client,
@@ -271,8 +272,8 @@ async function loadHandlers() {
     app.logger.setName("[Logpheus]");
     app.logger.setLevel("error" as LogLevel);
     const self = await app.client.auth.test();
-    if (self.user_id === "U0A50Q9SYK1") {
-      prefix = "devlpheus";
+    if (self.user_id === "U0AF4V5V04V") {
+      prefix = "devpheus";
     } else if (self.user_id === "U0AFE7QF849") {
       prefix = "logpheus";
     } else {
