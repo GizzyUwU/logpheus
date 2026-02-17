@@ -41,6 +41,7 @@ The project-id parameter isn't needed for it to run but if it is provided it wil
 If you don't want to give your api key to me then self host it yourself! This project provides a Dockerfile and compose.yaml for you so you can easily self host it yourself with docker.
 
 The environment variables needed for it to run are:
+
 ```env
 APP_TOKEN= # String
 BOT_TOKEN= # String
@@ -95,21 +96,24 @@ as an example of a command using this might be (this is from someone's self host
 For a more detailed look of how it's generated here's the exact code
 
 ```ts
-if (self.user_id === "U0A50Q9SYK1") {
-  prefix = "devlpheus";
-  console.log("[Logpheus] My prefix is", prefix);
-} else if (self.user_id === "U0A5CFG4EAJ") {
+const self = await app.client.auth.test();
+if (self.user_id === "U0AF4V5V04V") {
+  prefix = "devpheus";
+} else if (self.user_id === "U0AFE7QF849") {
   prefix = "logpheus";
-  console.log("[Logpheus] My prefix is", prefix);
 } else {
   if (!self.user || !self.user_id)
     throw new Error("No username or user id for prefix");
   prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
-  console.log("[Logpheus] My prefix is", prefix);
 }
+console.log(
+  "[Logpheus] My prefix is",
+  Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
+);
 ```
 
 The current set out commands for the bot that need to be added manually when using webhook mode is
+
 - (prefix)-add
 - (prefix)-config
 - (prefix)-remove
