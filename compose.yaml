@@ -4,7 +4,7 @@ services:
       context: .
     env_file: .env
     extra_hosts:
-      - 'host.docker.internal:host-gateway'
+      - "host.docker.internal:host-gateway"
     restart: always
     ports:
       - 53814:3000
@@ -12,10 +12,10 @@ services:
       - cache:/usr/src/app/cache
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      interval: 2s
+      timeout: 2s
+      retries: 5
+      start_period: 4s
 
 volumes:
   cache:

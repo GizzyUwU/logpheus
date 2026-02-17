@@ -305,3 +305,8 @@ async function loadHandlers() {
     }
   }
 })();
+
+process.on("SIGTERM", async () => {
+  await app.stop();
+  process.exit(0);
+});
