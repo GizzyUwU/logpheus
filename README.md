@@ -41,7 +41,6 @@ The project-id parameter isn't needed for it to run but if it is provided it wil
 If you don't want to give your api key to me then self host it yourself! This project provides a Dockerfile and compose.yaml for you so you can easily self host it yourself with docker.
 
 The environment variables needed for it to run are:
-
 ```env
 APP_TOKEN= # String
 BOT_TOKEN= # String
@@ -70,6 +69,14 @@ groups:write
 im:read
 mpim:read
 ```
+
+### Self Hosted - Docker
+
+If you use docker I recommend using alpine linux on host since you get the benefit of apk cache in the Dockerfile but if you don't want to use it then you can use the MP.Dockerfile/mp-compose.yaml which removes the flag for APK cache.
+
+It also makes use of bunjs cache so on the user docker is running under you should have bunjs installed and have used bun install before (just installing bunjs doesn't make that folder) or atleast have .bun/install/cache in the users home folder so both Dockerfile's work and the deploy should work sucessfully. You may not need to do this I haven't tested if it would build the dockerfile if these don't exist so I just recommend you do this to ensure it does work. I use coolify which uses root so I installed bunjs on root and just ran bun install on a random project to get the .bun/install/cache to generate.
+
+MP in MP.Dockerfile and mp-compose.yaml stands for Multi Platform
 
 ### Self Hosted - Slash Commands
 
