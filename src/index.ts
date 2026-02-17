@@ -88,7 +88,6 @@ if (process.env.PGLITE === "false") {
 } else {
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
-  console.log("awr");
   const pgClient = new PGlite(path.join(cacheDir, "pg"));
   const db = drizzle({
     client: pgClient,
