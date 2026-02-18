@@ -44,7 +44,11 @@ await configure({
   },
   loggers: [
     { category: ["logtape", "meta"], sinks: ["console"], lowestLevel: "error" },
-    { category: ["drizzle-orm"], sinks: [sentryEnabled ? "sentry" : "console"], lowestLevel: "warning" },
+    {
+      category: ["drizzle-orm"],
+      sinks: [sentryEnabled ? "sentry" : "console"],
+      lowestLevel: "warning",
+    },
     {
       category: ["logpheus"],
       sinks: [sentryEnabled ? "sentry" : "console"],
