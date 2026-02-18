@@ -21,8 +21,6 @@ async function getNewDevlogs(
   app: WebClient,
   clients: Record<string, FT>,
   db: DB,
-  sentryEnabled: boolean,
-  Sentry: typeof import("@sentry/bun"),
   logger: typeof LogtapeLogger,
 ): Promise<{
   name: string;
@@ -32,20 +30,15 @@ async function getNewDevlogs(
   try {
     let client = clients[apiKey];
     if (!client) {
-      if (sentryEnabled) {
-        const ctx = logger.with({
-          project: {
-            id: projectId,
-          },
-        });
-        ctx.error("No FT Client for the project");
-        const ftClient = new FT(apiKey)
-        clients[apiKey] = ftClient
-        client = ftClient
-      } else {
-        console.error(`No FT client for project ${projectId}`);
-      }
-      return;
+      const ctx = logger.with({
+        project: {
+          id: projectId,
+        },
+      });
+      ctx.error("No FT Client for the project");
+      const ftClient = new FT(apiKey);
+      clients[apiKey] = ftClient;
+      client = ftClient;
     }
 
     let project = await client.project({ id: Number(projectId) });
@@ -79,32 +72,24 @@ async function getNewDevlogs(
             text: "Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /logpheus-config to get it re-enabled.",
           });
         } else if (client.lastCode === 404) {
-          if (sentryEnabled) {
-            const ctx = logger.with({
-              project: {
-                id: projectId,
-              },
-            });
-            ctx.error("No project exists at id");
-          } else {
-            console.error("No project exists at id", projectId);
-          }
+          const ctx = logger.with({
+            project: {
+              id: projectId,
+            },
+          });
+          ctx.error("No project exists at id");
         } else if (
           Number(client.lastCode) >= 500 &&
           Number(client.lastCode) < 600
         ) {
           return;
         } else {
-          if (sentryEnabled) {
-            const ctx = logger.with({
-              project: {
-                id: projectId,
-              },
-            });
-            ctx.error(client.lastCode + " " + "Failed to get project");
-          } else {
-            console.error(client.lastCode, "Failed to get project", projectId);
-          }
+          const ctx = logger.with({
+            project: {
+              id: projectId,
+            },
+          });
+          ctx.error(client.lastCode + " " + "Failed to get project");
         }
       }
 
@@ -183,17 +168,13 @@ async function getNewDevlogs(
       return { name: project.title, devlogs };
     }
   } catch (err) {
-    if (sentryEnabled) {
-      const ctx = logger.with({
-        project: {
-          id: projectId,
-        },
-        location: "getNewDevlogs,topLevelTryCatch"
-      });
-      ctx.error({ error: err });
-    } else {
-      console.error(`Error fetching devlogs for project ${projectId}:`, err);
-    }
+    const ctx = logger.with({
+      project: {
+        id: projectId,
+      },
+      location: "getNewDevlogs,topLevelTryCatch",
+    });
+    ctx.error({ error: err });
     return;
   }
 }
@@ -205,8 +186,6 @@ export default {
     clients,
     pg,
     logger,
-    sentryEnabled,
-    Sentry,
   }: RequestHandler) => {
     try {
       const userRows = await pg.select().from(users);
@@ -224,8 +203,6 @@ export default {
             client,
             clients,
             pg,
-            sentryEnabled,
-            Sentry,
             logger,
           );
           if (!projData) continue;
@@ -324,19 +301,12 @@ export default {
                   });
                 }
               } catch (err) {
-                if (sentryEnabled) {
                   const ctx = logger.with({
                     project: {
                       id: projectId,
                     },
                   });
                   ctx.error({ error: err });
-                } else {
-                  console.error(
-                    `Error posting to Slack for project ${projectId}:`,
-                    err,
-                  );
-                }
               }
             }
           }
@@ -346,16 +316,12 @@ export default {
         }
       }
     } catch (err) {
-      if (sentryEnabled) {
         const ctx = logger.with({
-          location: "checkForNewDevlogs,topLevelTryCatch"
-        })
+          location: "checkForNewDevlogs,topLevelTryCatch",
+        });
         ctx.error({
-          error: err
-        })
-      } else {
-        console.error("[checkForDevlogs](topLevelTryCatch)", err)
-      }
+          error: err,
+        });
     }
   },
 };

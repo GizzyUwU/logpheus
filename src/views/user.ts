@@ -24,35 +24,19 @@ export default {
   name: "user",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    {
-      pg,
-      logger,
-      client,
-      clients,
-      sentryEnabled,
-      Sentry,
-      prefix,
-    }: RequestHandler,
+    { pg, logger, client, clients, prefix }: RequestHandler,
   ) => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
       const userId = body.user.id;
       if (!channelId || !userId) {
-        if (sentryEnabled) {
-          const ctx = logger.with({
-            view,
-          });
-          if (!channelId) {
-            ctx.error("There is no channel id for this channel?");
-          } else {
-            ctx.error("There is no user id for this user?");
-          }
+        const ctx = logger.with({
+          view,
+        });
+        if (!channelId) {
+          ctx.error("There is no channel id for this channel?");
         } else {
-          if (!channelId) {
-            console.error("There is no channel id?", view);
-          } else {
-            console.error("There is no user id?", view);
-          }
+          ctx.error("There is no user id for this user?");
         }
 
         return await client.chat.postEphemeral({
@@ -87,17 +71,13 @@ export default {
 
       const apiKey = userData[0]?.apiKey;
       if (!apiKey) {
-        if (sentryEnabled) {
-          const ctx = logger.with({
-            user: {
-              id: userId,
-              channel: channelId,
-            },
-          });
-          ctx.error("User exists in db but lacks an api key in it");
-        } else {
-          console.error(`${userId} exists in db and lacks an api key in it`);
-        }
+        const ctx = logger.with({
+          user: {
+            id: userId,
+            channel: channelId,
+          },
+        });
+        ctx.error("User exists in db but lacks an api key in it");
         return;
       }
 

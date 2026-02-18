@@ -8,29 +8,22 @@ export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, sentryEnabled, Sentry }: RequestHandler,
+    { pg, logger, client }: RequestHandler,
   ) => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
       const userId = body.user.id;
 
       if (!channelId || !userId) {
-        if (sentryEnabled) {
-          const ctx = logger.with({
-            view,
-          });
-          if (!channelId) {
-            ctx.error("There is no channel id for this channel?");
-          } else {
-            ctx.error("There is no user id for this user?");
-          }
+        const ctx = logger.with({
+          view,
+        });
+        if (!channelId) {
+          ctx.error("There is no channel id for this channel?");
         } else {
-          if (!channelId) {
-            console.error("There is no channel id?", view);
-          } else {
-            console.error("There is no user id?", view);
-          }
+          ctx.error("There is no user id for this user?");
         }
+
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,

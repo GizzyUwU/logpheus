@@ -12,8 +12,6 @@ export default {
       logger,
       client,
       callbackId,
-      sentryEnabled,
-      Sentry,
       prefix,
     }: RequestHandler,
   ) => {
@@ -32,11 +30,7 @@ export default {
           response_type: "ephemeral",
         });
       if (!channel?.channel.id) {
-        if (sentryEnabled) {
           logger.error("There is no channel id for this channel?");
-        } else {
-          console.error("There is no channel id?", channel);
-        }
         return;
       }
       if (command.user_id !== channel.channel?.creator)
@@ -99,11 +93,7 @@ export default {
         });
         return;
       } else {
-        if (sentryEnabled) {
           logger.error({ error });
-        } else {
-          console.error(error);
-        }
 
         await respond({
           text: "An unexpected error occurred!",

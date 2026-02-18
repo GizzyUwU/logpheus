@@ -7,16 +7,7 @@ export default {
   name: "user",
   execute: async (
     { command, body, respond, payload }: SlackCommandMiddlewareArgs,
-    {
-      pg,
-      client,
-      clients,
-      logger,
-      callbackId,
-      sentryEnabled,
-      Sentry,
-      prefix,
-    }: RequestHandler,
+    { pg, client, logger, callbackId, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -38,7 +29,6 @@ export default {
           text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix}-register`,
           response_type: "ephemeral",
         });
-
 
       await client.views.open({
         trigger_id: command.trigger_id,
@@ -147,11 +137,7 @@ export default {
         });
         return;
       } else {
-        if (sentryEnabled) {
-          logger.error({ error });
-        } else {
-          console.error(error);
-        }
+        logger.error({ error });
 
         await respond({
           text: "An unexpected error occurred!",

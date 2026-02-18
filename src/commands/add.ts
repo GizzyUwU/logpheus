@@ -7,7 +7,13 @@ export default {
   name: "add",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { callbackId, logger, client, sentryEnabled, Sentry, pg, prefix }: RequestHandler,
+    {
+      callbackId,
+      logger,
+      client,
+      pg,
+      prefix,
+    }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -127,12 +133,7 @@ export default {
         });
         return;
       } else {
-        if (sentryEnabled) {
-          logger.error({ error });
-        } else {
-          console.error(error);
-        }
-
+        logger.error({ error });
         await respond({
           text: "An unexpected error occurred!",
           response_type: "ephemeral",

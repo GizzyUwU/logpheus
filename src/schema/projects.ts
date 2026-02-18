@@ -1,4 +1,4 @@
-import { pgTable, integer, json, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, integer, timestamp } from "drizzle-orm/pg-core";
 export const projects = pgTable("projects", {
   id: integer().notNull().primaryKey(),
   devlogIds: integer().array().notNull(),

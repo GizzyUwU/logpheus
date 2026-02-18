@@ -1,6 +1,4 @@
-import type {
-  SlackCommandMiddlewareArgs,
-} from "@slack/bolt";
+import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import FT from "../lib/ft";
 import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
@@ -12,25 +10,24 @@ const formatDate = (iso: string) => {
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${String(
-    d.getUTCFullYear()
+    d.getUTCFullYear(),
   ).slice(-2)} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(
-    d.getUTCSeconds()
+    d.getUTCSeconds(),
   )}`;
 };
-
 
 export default {
   name: "project",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, clients, sentryEnabled, Sentry, prefix }: RequestHandler,
+    { pg, logger, clients, prefix }: RequestHandler,
   ) => {
     const projectId = command.text.trim();
-    const userData = (await pg
+    const userData = await pg
       .select()
       .from(users)
       .where(eq(users.userId, command.user_id))
-      .limit(1));
+      .limit(1);
 
     if (userData.length === 0)
       return respond({
@@ -40,14 +37,12 @@ export default {
 
     const apiKey = userData[0]?.apiKey;
     if (!apiKey) {
-      if (sentryEnabled) {
-        const ctx = logger.with({ user: {
+      const ctx = logger.with({
+        user: {
           id: command.user_id,
-        }});
-        ctx.error("User exists in db but lacks an api key in it");
-      } else {
-        console.error(`${command.user_id} exists in db and lacks an api key in it`);
-      }
+        },
+      });
+      ctx.error("User exists in db but lacks an api key in it");
       return respond({
         text: `Hey! Basically you exist in db and lack an api key try fix it using /${prefix}-config`,
         response_type: "ephemeral",
@@ -60,13 +55,14 @@ export default {
     }
 
     const project = await ftClient.project({
-      id: projectId
-    })
-
-    if (ftClient.lastCode === 404 || !project) return respond({
-      text: `This project doesn't exist!`,
-      response_type: "ephemeral",
+      id: projectId,
     });
+
+    if (ftClient.lastCode === 404 || !project)
+      return respond({
+        text: `This project doesn't exist!`,
+        response_type: "ephemeral",
+      });
 
     const userText = [
       { label: "Project ID", value: project.id },
@@ -85,11 +81,13 @@ export default {
         value: (project.devlog_ids ?? [])
           .map(
             (id: string | number) =>
-              `<https://flavortown.hackclub.com/projects/${project.id}|${id}>`
+              `<https://flavortown.hackclub.com/projects/${project.id}|${id}>`,
           )
           .join(", "),
-      }
-    ].map(f => `*${f.label}*: ${f.value}`).join("\n");
+      },
+    ]
+      .map((f) => `*${f.label}*: ${f.value}`)
+      .join("\n");
     return respond({
       blocks: [
         {
@@ -122,5 +120,5 @@ export default {
       ],
       response_type: "ephemeral",
     });
-  }
-}
+  },
+};

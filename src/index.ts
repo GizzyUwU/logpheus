@@ -44,13 +44,16 @@ await configure({
   },
   loggers: [
     { category: ["logtape", "meta"], sinks: ["console"], lowestLevel: "error" },
-    { category: ["drizzle-orm"], sinks: ["sentry"], lowestLevel: "warning" },
-    { category: ["logpheus"], sinks: ["sentry"], lowestLevel: "warning" },
+    { category: ["drizzle-orm"], sinks: [sentryEnabled ? "sentry" : "console"], lowestLevel: "warning" },
+    {
+      category: ["logpheus"],
+      sinks: [sentryEnabled ? "sentry" : "console"],
+      lowestLevel: "warning",
+    },
   ],
 });
 
 export const logger = getLogger(["logpheus"]);
-
 if (process.env.PGLITE === "false") {
   try {
     const { drizzle } = await import("drizzle-orm/node-postgres");
@@ -128,7 +131,6 @@ export interface RequestHandler {
   pg: DatabaseType;
   client: WebClient;
   clients: Record<string, FT>;
-  sentryEnabled: boolean;
   Sentry: typeof import("@sentry/bun");
   prefix?: string;
   callbackId?: string;
@@ -159,51 +161,39 @@ function loadRequestHandlers(
               client: app.client,
               logger: ctx ? ctx : logger,
               clients,
-              sentryEnabled,
               Sentry,
               prefix,
-              callbackId
+              callbackId,
             } satisfies RequestHandler);
           };
 
-          if (!sentryEnabled) {
-            try {
-              await run();
-            } catch (err) {
-              console.error(`Error executing ${type} ${mod.name}:`, err);
-            }
-          } else {
-            const ctx = logger.with({
-              handler: {
-                type,
-                module: mod.name,
-              },
-              slack: {
-                user:
-                  "user_id" in args.body
-                    ? args.body.user_id
-                    : args.body.user?.id,
-                channel:
-                  "channel_id" in args.body
-                    ? args.body.channel_id
-                    : (args.body.view.private_metadata.length > 0
-                        ? (JSON.parse(args.body.view.private_metadata) as {
-                            channel: string;
-                          })
-                        : { channel: "" }
-                      ).channel,
-                triggerId:
-                  "trigger_id" in args.body ? args.body.trigger_id : "",
-              },
-            });
+          const ctx = logger.with({
+            handler: {
+              type,
+              module: mod.name,
+            },
+            slack: {
+              user:
+                "user_id" in args.body ? args.body.user_id : args.body.user?.id,
+              channel:
+                "channel_id" in args.body
+                  ? args.body.channel_id
+                  : (args.body.view.private_metadata.length > 0
+                      ? (JSON.parse(args.body.view.private_metadata) as {
+                          channel: string;
+                        })
+                      : { channel: "" }
+                    ).channel,
+              triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
+            },
+          });
 
-            try {
-              run(ctx);
-            } catch (err) {
-              logger.error({
-                err,
-              });
-            }
+          try {
+            run(ctx);
+          } catch (err) {
+            logger.error({
+              err,
+            });
           }
         },
       );
@@ -230,35 +220,26 @@ async function loadHandlers() {
           logger,
           client: app.client,
           clients,
-          sentryEnabled,
           Sentry,
         } satisfies RequestHandler);
       } catch (err) {
-        if (sentryEnabled) {
-          const ctx = logger.with({
-            data: {
-              module: mod.name,
-              file,
-            },
-          });
-          ctx.error("Failed to execute handler", {
-            error: err,
-          });
-        } else {
-          console.error(`Failed to run ${mod?.name} handler:`, err);
-        }
-      }
-    } catch (err) {
-      if (sentryEnabled) {
-        logger.error("Failed to execute handler", {
+        const ctx = logger.with({
           data: {
+            module: mod.name,
             file,
           },
+        });
+        ctx.error("Failed to execute handler", {
           error: err,
         });
-      } else {
-        console.error(`Error running handler ${file}:`, err);
       }
+    } catch (err) {
+      logger.error("Failed to execute handler", {
+        data: {
+          file,
+        },
+        error: err,
+      });
     }
   }
 }
@@ -297,11 +278,7 @@ async function loadHandlers() {
     loadHandlers();
     setInterval(loadHandlers, 60 * 1000);
   } catch (err) {
-    if (sentryEnabled) {
-      logger.error({ error: err });
-    } else {
-      console.error("Unable to start app:", err);
-    }
+    logger.error({ error: err });
   }
 })();
 

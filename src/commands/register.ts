@@ -7,7 +7,7 @@ export default {
   name: "register",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, callbackId, sentryEnabled, Sentry, prefix }: RequestHandler,
+    { pg, logger, client, callbackId, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -24,11 +24,7 @@ export default {
           response_type: "ephemeral",
         });
       if (!channel?.channel.id) {
-        if (sentryEnabled) {
-          logger.error("There is no channel id for this channel?");
-        } else {
-          console.error("There is no channel id?", channel);
-        }
+        logger.error("There is no channel id for this channel?");
         return;
       }
 
@@ -91,12 +87,7 @@ export default {
         });
         return;
       } else {
-        if (sentryEnabled) {
-          logger.error({ error });
-        } else {
-          console.error(error);
-        }
-
+        logger.error({ error });
         await respond({
           text: "An unexpected error occurred!",
           response_type: "ephemeral",

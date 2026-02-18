@@ -7,7 +7,7 @@ export default {
   name: "stats",
   execute: async (
     { respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, sentryEnabled, Sentry }: RequestHandler,
+    { pg, logger }: RequestHandler,
   ) => {
     try {
       const result = await pg.select({ count: count() }).from(users);
@@ -28,11 +28,7 @@ export default {
         });
         return;
       } else {
-        if (sentryEnabled) {
           logger.error({ error });
-        } else {
-          console.error(error);
-        }
         await respond({
           text: "An unexpected error occurred. Check logs.",
           response_type: "ephemeral",

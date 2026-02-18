@@ -8,7 +8,7 @@ export default {
   name: "remove",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, clients, sentryEnabled, Sentry }: RequestHandler,
+    { pg, logger, client, clients }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -106,11 +106,7 @@ export default {
         });
         return;
       } else {
-        if (sentryEnabled) {
-          logger.error({ error });
-        } else {
-          console.error(error);
-        }
+        logger.error({ error });
 
         await respond({
           text: "An unexpected error occurred!",
