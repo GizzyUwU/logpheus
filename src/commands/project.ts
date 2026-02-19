@@ -51,7 +51,7 @@ export default {
 
     let ftClient: FT = clients[apiKey]!;
     if (!ftClient) {
-      ftClient = new FT(apiKey);
+      ftClient = new FT(apiKey, logger);
     }
 
     const project = await ftClient.project({

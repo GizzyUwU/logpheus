@@ -68,7 +68,7 @@ export type Project = {
   demo_url: string;
   readme_url: string;
   ai_declaration: string;
-  ship_status: "draft" | "pending" | "submitted";
+  ship_status: "draft" | "submitted";
   devlog_ids: number[];
   created_at: string;
   updated_at: string;

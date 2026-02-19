@@ -146,9 +146,10 @@ function loadRequestHandlers(
   type: "command" | "view",
 ) {
   const folderPath = path.join(__dirname, folder);
-  fs.readdirSync(folderPath).forEach((file) => {
+  fs.readdirSync(folderPath).forEach(async (file) => {
     if (!file.endsWith(".ts") && !file.endsWith(".js")) return;
-    const module = require(path.join(folderPath, file)).default;
+    const importFile = await import(path.join(folderPath, file));
+    const module = importFile.default ?? importFile;
     if (!module?.name || typeof module.execute !== "function") return;
     const suffix = type === "view" ? "_" + module.name : "-" + module.name;
     const callbackId = `${prefix}_${module.name}`;
@@ -216,7 +217,8 @@ async function loadHandlers() {
 
   for (const file of files) {
     try {
-      const mod = require(path.join(handlerDir, file)).default;
+      const importFile = await import(path.join(handlerDir, file));
+      const mod = importFile.default ?? importFile;
       if (!mod?.name || typeof mod.execute !== "function") return;
       try {
         await mod.execute({

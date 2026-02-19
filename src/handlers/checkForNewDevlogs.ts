@@ -36,7 +36,7 @@ async function getNewDevlogs(
         },
       });
       ctx.error("No FT Client for the project");
-      const ftClient = new FT(apiKey);
+      const ftClient = new FT(apiKey, logger);
       clients[apiKey] = ftClient;
       client = ftClient;
     }
@@ -192,7 +192,7 @@ export default {
       if (!userRows?.length) return;
       for (const row of userRows) {
         if (!row || !row.apiKey || !row.channel || !row.projects) continue;
-        if (!clients[row.apiKey]) clients[row.apiKey] = new FT(row.apiKey);
+        if (!clients[row.apiKey]) clients[row.apiKey] = new FT(row.apiKey, logger);
         const projects = Array.isArray(row.projects)
           ? row.projects.map(Number)
           : [];

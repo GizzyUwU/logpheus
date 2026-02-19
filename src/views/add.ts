@@ -61,7 +61,7 @@ export default {
           user: userId,
           text: "Flavortown API key is invalid every api key should start with ft_sk_",
         });
-      const ftClient = new FT(apiKey);
+      const ftClient = new FT(apiKey, logger);
       await ftClient.user({ id: "me" });
       if (ftClient.lastCode === 401)
         return await client.chat.postEphemeral({

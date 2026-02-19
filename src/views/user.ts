@@ -68,7 +68,6 @@ export default {
           user: userId,
           text: `You don't exist in the db! Run /${prefix}-register`,
         });
-
       const apiKey = userData[0]?.apiKey;
       if (!apiKey) {
         const ctx = logger.with({
@@ -83,7 +82,7 @@ export default {
 
       let ftClient: FT = clients[apiKey]!;
       if (!ftClient) {
-        ftClient = new FT(apiKey);
+        ftClient = new FT(apiKey, logger);
       }
 
       const queryWithTarget = await ftClient.users({
