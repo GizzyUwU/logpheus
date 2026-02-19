@@ -21,49 +21,49 @@ export default class FT {
         "X-Flavortown-Ext-1865": true,
       },
     });
-    this.fetch.interceptors.request.use(
-      (config) => {
-        this.logger
-          .with({
-            method: config.method?.toUpperCase(),
-            url: config.url,
-            data: config.data,
-          })
-          .debug("Request");
+    // this.fetch.interceptors.request.use(
+    //   (config) => {
+    //     this.logger
+    //       .with({
+    //         method: config.method?.toUpperCase(),
+    //         url: config.url,
+    //         data: config.data,
+    //       })
+    //       .debug("Request");
 
-        return config;
-      },
-      (error) => {
-        this.logger.error("Request error", { error });
-        return Promise.reject(error);
-      },
-    );
+    //     return config;
+    //   },
+    //   (error) => {
+    //     this.logger.error("Request error", { error });
+    //     return Promise.reject(error);
+    //   },
+    // );
 
-    this.fetch.interceptors.response.use(
-      (response) => {
-        logger
-          .with({
-            method: response.config.method?.toUpperCase(),
-            url: response.config.url,
-            status: response.status,
-          })
-          .debug("Response");
+    // this.fetch.interceptors.response.use(
+    //   (response) => {
+    //     logger
+    //       .with({
+    //         method: response.config.method?.toUpperCase(),
+    //         url: response.config.url,
+    //         status: response.status,
+    //       })
+    //       .debug("Response");
 
-        return response;
-      },
-      (error) => {
-        this.logger
-          .with({
-            method: error.config?.method?.toUpperCase(),
-            url: error.config?.url,
-            status: error.response?.status,
-            data: error.response?.data,
-          })
-          .error("Bad response", { error });
+    //     return response;
+    //   },
+    //   (error) => {
+    //     this.logger
+    //       .with({
+    //         method: error.config?.method?.toUpperCase(),
+    //         url: error.config?.url,
+    //         status: error.response?.status,
+    //         data: error.response?.data,
+    //       })
+    //       .error("Bad response", { error });
 
-        return Promise.reject(error);
-      },
-    );
+    //     return Promise.reject(error);
+    //   },
+    // );
     this.ready = Promise.resolve();
   }
 
@@ -111,7 +111,11 @@ export default class FT {
       })
       .catch(async (err) => {
         await this.handleError(err);
-        return err;
+        if (axios.isAxiosError(err)) {
+          return err.config?.data;
+        } else {
+          return err;
+        }
       });
   }
 

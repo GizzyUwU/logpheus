@@ -58,7 +58,8 @@ async function getNewDevlogs(
 
       const disabled = row[0]?.disabled;
       if (disabled !== true) {
-        if (client.lastCode === 401) {
+        if (Number(client.lastCode) === 401) {
+          delete clients[apiKey];
           await db
             .update(users)
             .set({
@@ -66,9 +67,9 @@ async function getNewDevlogs(
             })
             .where(eq(users.apiKey, apiKey));
 
-          delete clients[apiKey];
+          if (!row[0]?.channel) return;
           await app.chat.postMessage({
-            channel: String(row[0]?.channel),
+            channel: row[0]?.channel,
             text: "Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /logpheus-config to get it re-enabled.",
           });
         } else if (client.lastCode === 404) {
@@ -181,18 +182,14 @@ async function getNewDevlogs(
 
 export default {
   name: "checkForNewDevlogs",
-  execute: async ({
-    client,
-    clients,
-    pg,
-    logger,
-  }: RequestHandler) => {
+  execute: async ({ client, clients, pg, logger }: RequestHandler) => {
     try {
       const userRows = await pg.select().from(users);
       if (!userRows?.length) return;
       for (const row of userRows) {
         if (!row || !row.apiKey || !row.channel || !row.projects) continue;
-        if (!clients[row.apiKey]) clients[row.apiKey] = new FT(row.apiKey, logger);
+        if (!clients[row.apiKey])
+          clients[row.apiKey] = new FT(row.apiKey, logger);
         const projects = Array.isArray(row.projects)
           ? row.projects.map(Number)
           : [];
@@ -301,12 +298,12 @@ export default {
                   });
                 }
               } catch (err) {
-                  const ctx = logger.with({
-                    project: {
-                      id: projectId,
-                    },
-                  });
-                  ctx.error({ error: err });
+                const ctx = logger.with({
+                  project: {
+                    id: projectId,
+                  },
+                });
+                ctx.error({ error: err });
               }
             }
           }
@@ -316,12 +313,12 @@ export default {
         }
       }
     } catch (err) {
-        const ctx = logger.with({
-          location: "checkForNewDevlogs,topLevelTryCatch",
-        });
-        ctx.error({
-          error: err,
-        });
+      const ctx = logger.with({
+        location: "checkForNewDevlogs,topLevelTryCatch",
+      });
+      ctx.error({
+        error: err,
+      });
     }
   },
 };
