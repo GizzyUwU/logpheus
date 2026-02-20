@@ -4,13 +4,15 @@ import { users } from "../schema/users";
 import { projects } from "../schema/projects";
 import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
+import type { ChatPostEphemeralResponse } from "@slack/web-api";
+import checkAPIKey from "../lib/apiKeyCheck";
 
 export default {
   name: "add",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
     { pg, logger, client, clients }: RequestHandler,
-  ) => {
+  ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
       const userId = body.user.id;
@@ -28,7 +30,7 @@ export default {
       }
 
       const values = view.state.values;
-      const projectId = values.projId?.proj_input?.value?.trim();
+      const projectId = values["projId"]?.["proj_input"]?.value?.trim();
       let apiKey: string;
 
       const userData = await pg
@@ -38,7 +40,7 @@ export default {
         .where(eq(users.userId, userId));
 
       if (userData.length === 0) {
-        apiKey = String(values.ftApiKey?.api_input?.value?.trim());
+        apiKey = String(values["ftApiKey"]?.["api_input"]?.value?.trim());
       } else {
         apiKey = String(userData[0]?.apiKey);
       }
@@ -61,14 +63,16 @@ export default {
           user: userId,
           text: "Flavortown API key is invalid every api key should start with ft_sk_",
         });
-      const ftClient = new FT(apiKey, logger);
-      await ftClient.user({ id: "me" });
-      if (ftClient.lastCode === 401)
+      const working = await checkAPIKey(pg, apiKey, logger);
+      if (!working)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: "Flavortown API Key is invalid, provide a valid one.",
         });
+
+      const ftClient = new FT(apiKey, logger);
+
       const exists = await pg
         .select()
         .from(users)
@@ -131,7 +135,11 @@ export default {
       }
 
       const freshProject = await ftClient.project({ id: Number(projectId) });
-      if (!freshProject)
+      if (
+        !freshProject ||
+        !freshProject.status ||
+        (freshProject.ok && !freshProject.data)
+      )
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
@@ -140,9 +148,15 @@ export default {
             " " +
             ftClient.lastCode,
         });
+      else if (!freshProject.ok)
+        return client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: `Unexpected error has occurred.`,
+        });
 
-      const devlogIds = Array.isArray(freshProject.devlog_ids)
-        ? freshProject.devlog_ids
+      const devlogIds = Array.isArray(freshProject.data.devlog_ids)
+        ? freshProject.data.devlog_ids
         : [];
 
       await pg
@@ -171,14 +185,14 @@ export default {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `:woah-dino: <https://flavortown.hackclub.com/projects/${projectId}|${freshProject.title}'s> devlogs just got subscribed to the channel. :yay:`,
+              text: `:woah-dino: <https://flavortown.hackclub.com/projects/${projectId}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
             },
           },
           {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `> ${freshProject.description}`,
+              text: `> ${freshProject.data.description}`,
             },
           },
         ],

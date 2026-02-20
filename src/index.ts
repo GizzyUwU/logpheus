@@ -23,11 +23,13 @@ type DatabaseType =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 const cacheDir = path.join(__dirname, "../cache");
+const registeredRequestModules = new Set<string>();
+const registeredInitModules = new Set<string>();
 let pg: DatabaseType;
-if (process.env['SENTRY_DSN']) {
+if (process.env["SENTRY_DSN"]) {
   Sentry.init({
-    dsn: process.env['SENTRY_DSN'],
-    release: process.env['SENTRY_NAME'] || "logpheus",
+    dsn: process.env["SENTRY_DSN"],
+    release: process.env["SENTRY_NAME"] || "logpheus",
     integrations: [],
     tracesSampleRate: 0,
     sendDefaultPii: true,
@@ -58,12 +60,12 @@ await configure({
 });
 
 export const logger = getLogger(["logpheus"]);
-if (process.env['PGLITE'] === "false") {
+if (process.env["PGLITE"] === "false") {
   try {
     const { drizzle } = await import("drizzle-orm/node-postgres");
     const { migrate } = await import("drizzle-orm/node-postgres/migrator");
     const pool = new Pool({
-      connectionString: process.env['DB_URL'],
+      connectionString: process.env["DB_URL"],
     });
 
     const client = await pool.connect();
@@ -88,7 +90,7 @@ if (process.env['PGLITE'] === "false") {
     logger.error("Failed Database Connection", {
       error: err instanceof Error ? err.message : err,
       stack: err instanceof Error ? err.stack : undefined,
-      dbUrl: process.env['DB_URL']?.replace(/:[^:@]+@/, ":****@"),
+      dbUrl: process.env["DB_URL"]?.replace(/:[^:@]+@/, ":****@"),
     });
     throw err;
   }
@@ -118,11 +120,11 @@ function required(name: string): string {
 }
 
 const app = new App({
-  signingSecret: required('SIGNING_SECRET'),
-  token: required('BOT_TOKEN'),
-  appToken: required('APP_TOKEN'),
-  socketMode: process.env['APP_TOKEN']
-    ? process.env['SOCKET_MODE'] === "true"
+  signingSecret: required("SIGNING_SECRET"),
+  token: required("BOT_TOKEN"),
+  appToken: required("APP_TOKEN"),
+  socketMode: process.env["APP_TOKEN"]
+    ? process.env["SOCKET_MODE"] === "true"
     : false,
   customRoutes: [
     {
@@ -159,6 +161,13 @@ function loadRequestHandlers(
     const importFile = await import(path.join(folderPath, file));
     const module = importFile.default ?? importFile;
     if (!module?.name || typeof module.execute !== "function") return;
+    const key = `${type}:${module.name}`;
+    if (registeredRequestModules.has(key)) {
+      throw new Error(
+        `[Logpheus] Duplicate ${type} handler name "${module.name}" in ${file}`,
+      );
+    }
+    registeredRequestModules.add(key);
     const suffix = type === "view" ? "_" + module.name : "-" + module.name;
     const callbackId = `${prefix}_${module.name}`;
     const format =
@@ -228,6 +237,12 @@ async function loadHandlers() {
       const importFile = await import(path.join(handlerDir, file));
       const mod = importFile.default ?? importFile;
       if (!mod?.name || typeof mod.execute !== "function") return;
+      if (registeredInitModules.has(mod.name)) {
+        throw new Error(
+          `[Logpheus] Duplicate init handler name "${mod.name}" in ${file}`,
+        );
+      }
+      registeredInitModules.add(mod.name);
       try {
         await mod.execute({
           pg,
@@ -273,11 +288,11 @@ async function loadHandlers() {
         throw new Error("No username or user id for prefix");
       prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
     }
-    if (process.env['SOCKET_MODE'] === "true" && process.env['APP_TOKEN']) {
+    if (process.env["SOCKET_MODE"] === "true" && process.env["APP_TOKEN"]) {
       await app.start();
       console.info("[Logpheus] Running as Socket Mode");
     } else {
-      const port = process.env['PORT'] ? parseInt(process.env['PORT']) : 3000;
+      const port = process.env["PORT"] ? parseInt(process.env["PORT"]) : 3000;
       await app.start(port);
       console.info("[Logpheus] Running on port:", port);
     }

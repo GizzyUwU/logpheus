@@ -33,7 +33,8 @@ export default {
 
       const working = await checkAPIKey(
         pg,
-        String(userExists[0]?.apiKey)
+        String(userExists[0]?.apiKey),
+        logger
       );
       if (!working)
         return respond({

@@ -42,7 +42,7 @@ export default {
       });
     }
 
-    const working = await checkAPIKey(pg, apiKey);
+    const working = await checkAPIKey(pg, apiKey, logger);
     if (!working)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
@@ -51,34 +51,29 @@ export default {
 
     let ftClient: FT = clients[apiKey]!;
     if (!ftClient) {
-      ftClient = new FT(apiKey);
+      ftClient = new FT(apiKey, logger);
     }
 
     const actualQuery =
-      typeof query === "string" && query.length > 0 && query !== "page"
+      typeof query === "string" && query.length > 0
         ? query
         : typeof projectQuery === "string" && projectQuery.length > 0
           ? projectQuery
           : undefined;
 
-    const actualPage =
-      query === "page" && pageNum != null ? Number(pageNum) : undefined;
+    const actualPage = pageNum != null ? Number(pageNum) : undefined;
+    console.log("actualQuery:", actualQuery, "actualPage:", actualPage);
+    const projects = await ftClient.projects({
+      ...(actualQuery !== undefined ? { query: actualQuery } : {}),
+      ...(actualPage !== undefined ? { page: actualPage } : {}),
+    });
 
-    const params =
-      actualQuery !== undefined || actualPage !== undefined
-        ? {
-            ...(actualQuery !== undefined && { query: actualQuery }),
-            ...(actualPage !== undefined && { page: actualPage }),
-          }
-        : undefined;
-
-    const projects = await ftClient.projects(params);
     if (
-      ftClient.lastCode === 404 ||
-      !projects ||
-      (projects.projects ?? []).length === 0
+      projects.status === 404 ||
+      projects.ok && !projects.data ||
+      (projects.ok ? projects.data.projects : []).length === 0
     ) {
-      if (String(query).length > 0 || String(projectQuery).length > 0) {
+      if (String(actualQuery).length > 0) {
         return respond({
           text: `No projects with this search query exist.`,
           response_type: "ephemeral",
@@ -89,9 +84,14 @@ export default {
           response_type: "ephemeral",
         });
       }
+    } else if (!projects.ok) {
+      return respond({
+        text: `Unexpected error has occurred.`,
+        response_type: "ephemeral",
+      });
     }
 
-    const projectRows: RichTextBlock[][] = (projects.projects ?? [])
+    const projectRows: RichTextBlock[][] = (projects.data.projects ?? [])
       .slice(0, 99)
       .flatMap((project) => [
         [

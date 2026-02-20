@@ -1,7 +1,6 @@
 import type {
   SlackCommandMiddlewareArgs,
 } from "@slack/bolt";
-import FT from "../lib/ft";
 import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";

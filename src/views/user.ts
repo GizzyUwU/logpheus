@@ -83,49 +83,68 @@ export default {
 
       let ftClient: FT = clients[apiKey]!;
       if (!ftClient) {
-        ftClient = new FT(apiKey);
+        ftClient = new FT(apiKey, logger);
       }
 
       const queryWithTarget = await ftClient.users({
         query: targetId,
       });
 
-      if (!queryWithTarget || queryWithTarget.users.length === 0)
+      if (
+        !queryWithTarget ||
+        !queryWithTarget.status ||
+        (queryWithTarget.ok && queryWithTarget.data.users.length === 0)
+      )
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: "User doesn't have an FT account.",
         });
-
+      else if (!queryWithTarget.ok)
+        return client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: `Unexpected error has occurred.`,
+        });
       const targetUser = await ftClient.user({
-        id: queryWithTarget.users[0]?.id!,
+        id: queryWithTarget.data.users[0]?.id!,
       });
 
-      if (!targetUser)
+      if (
+        !targetUser ||
+        !targetUser.status ||
+        (targetUser.ok && !targetUser.data)
+      )
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: "User doesn't have an FT account.",
+        });
+      else if (!targetUser.ok)
+        return client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: `Unexpected error has occurred.`,
         });
 
       const userText = [
-        { label: "Account ID", value: targetUser.id },
-        { label: "Cookies", value: targetUser.cookies ?? "Disabled" },
-        { label: "Votes Count", value: targetUser.vote_count },
-        { label: "Like Count", value: targetUser.like_count },
+        { label: "Account ID", value: targetUser.data.id },
+        { label: "Cookies", value: targetUser.data.cookies ?? "Disabled" },
+        { label: "Votes Count", value: targetUser.data.vote_count },
+        { label: "Like Count", value: targetUser.data.like_count },
         {
           label: "Time today",
-          value: formatDuration(targetUser.devlog_seconds_today),
+          value: formatDuration(targetUser.data.devlog_seconds_today),
         },
         {
           label: "Total Time",
-          value: formatDuration(targetUser.devlog_seconds_total),
+          value: formatDuration(targetUser.data.devlog_seconds_total),
         },
         {
           label: "Projects",
           value:
-            targetUser.project_ids.length > 0
-              ? targetUser.project_ids
+            targetUser.data.project_ids.length > 0
+              ? targetUser.data.project_ids
                   .map(
                     (id: string | number) =>
                       `<https://flavortown.hackclub.com/projects/${id}|${id}>`,
@@ -144,7 +163,7 @@ export default {
             type: "header",
             text: {
               type: "plain_text",
-              text: targetUser.display_name,
+              text: targetUser.data.display_name,
               emoji: true,
             },
           },
@@ -156,8 +175,8 @@ export default {
             },
             accessory: {
               type: "image",
-              image_url: targetUser.avatar,
-              alt_text: targetUser.display_name + "'s avatar",
+              image_url: targetUser.data.avatar,
+              alt_text: targetUser.data.display_name + "'s avatar",
             },
           },
           {
@@ -168,7 +187,7 @@ export default {
             elements: [
               {
                 type: "mrkdwn",
-                text: "https://flavortown.hackclub.com/users/" + targetUser.id,
+                text: "https://flavortown.hackclub.com/users/" + targetUser.data.id,
               },
             ],
           },

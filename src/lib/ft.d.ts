@@ -132,6 +132,10 @@ export type StoreItem = {
   };
 };
 export type Store = StoreItem[];
+export type StoreItemParams = {
+  id: string | number
+};
+
 
 export type User = {
   id: number;

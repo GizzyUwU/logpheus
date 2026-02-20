@@ -36,17 +36,49 @@ async function getNewDevlogs(
         },
       });
       ctx.error("No FT Client for the project");
-      const ftClient = new FT(apiKey);
+      const ftClient = new FT(apiKey, logger);
       clients[apiKey] = ftClient;
       client = ftClient;
     }
 
     let project = await client.project({ id: Number(projectId) });
-
-    while (client.lastCode === 429) {
+    while (project.status === 429) {
       const waitMs = 2000 + Math.floor(Math.random() * 1000);
       await new Promise((res) => setTimeout(res, waitMs));
       project = await client.project({ id: Number(projectId) });
+    }
+
+    if (!project || !project.status || (project.ok && !project.data)) {
+      console.log(project)
+      const ctx = logger.with({
+        project: {
+          id: projectId,
+        },
+        output: {
+          ok: project.ok,
+          status: project.status,
+          data: project.ok && project.data ? project.data : undefined,
+        },
+      });
+      ctx.error(
+        "Unexpected error where project api call returned unexpected values",
+      );
+      return;
+
+    } else if (!project.ok) {
+      const ctx = logger.with({
+        project: {
+          id: projectId,
+        },
+        output: {
+          ok: project.ok,
+          status: project.status,
+        },
+      });
+      ctx.error(
+        "Unexpected error where project api call returned unexpected values",
+      );
+      return;
     }
 
     if (!project) {
@@ -97,8 +129,8 @@ async function getNewDevlogs(
       return;
     }
 
-    const devlogIds = Array.isArray(project?.devlog_ids)
-      ? project.devlog_ids
+    const devlogIds = Array.isArray(project?.data.devlog_ids)
+      ? project.data.devlog_ids
       : [];
 
     const row = await db
@@ -107,8 +139,8 @@ async function getNewDevlogs(
       .where(eq(projects.id, Number(projectId)));
 
     if (row.length === 0) {
-      const initialDevlogIds = Array.isArray(project?.devlog_ids)
-        ? project.devlog_ids.map(Number)
+      const initialDevlogIds = Array.isArray(project?.data.devlog_ids)
+        ? project.data.devlog_ids.map(Number)
         : [];
 
       await db.insert(projects).values({
@@ -117,7 +149,7 @@ async function getNewDevlogs(
       });
 
       return {
-        name: project.title,
+        name: project.data.title,
         devlogs: [],
       };
     }
@@ -136,7 +168,7 @@ async function getNewDevlogs(
     const newIds = devlogIds.filter((id) => !cachedSet.has(Number(id)));
 
     if (newIds.length === 0) {
-      return { name: project.title, devlogs: [] };
+      return { name: project.data.title, devlogs: [] };
     } else {
       const devlogs: FTypes.Devlog[] = [];
       for (const id of newIds) {
@@ -144,7 +176,7 @@ async function getNewDevlogs(
           projectId: projectId,
           devlogId: id,
         });
-        if (res) devlogs.push(res);
+        if (res && res.ok) devlogs.push(res.data);
       }
 
       if (devlogs.length === 0) {
@@ -156,7 +188,7 @@ async function getNewDevlogs(
         ctx.error(
           "There was a new id but yet devlogs array stayed empty this could indicate a bug.",
         );
-        return { name: project.title, devlogs: [] };
+        return { name: project.data.title, devlogs: [] };
       }
 
       await db
@@ -166,7 +198,7 @@ async function getNewDevlogs(
         })
         .where(eq(projects.id, Number(projectId)));
 
-      return { name: project.title, devlogs };
+      return { name: project.data.title, devlogs };
     }
   } catch (err) {
     const ctx = logger.with({
@@ -188,8 +220,7 @@ export default {
       if (!userRows?.length) return;
       for (const row of userRows) {
         if (!row || !row.apiKey || !row.channel || !row.projects) continue;
-        if (!clients[row.apiKey])
-          clients[row.apiKey] = new FT(row.apiKey);
+        if (!clients[row.apiKey]) clients[row.apiKey] = new FT(row.apiKey, logger);
         const projects = Array.isArray(row.projects)
           ? row.projects.map(Number)
           : [];

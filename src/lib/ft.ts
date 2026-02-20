@@ -1,194 +1,105 @@
-import axios, { type AxiosInstance } from "axios";
+import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
 import type * as FTypes from "./ft.d";
+import type { logger as LogType } from "..";
 
 export default class FT {
   lastCode: number | null = null;
-  private apiToken: string;
   private fetch: AxiosInstance;
   private ready: Promise<void>;
+  private logger: typeof LogType;
 
-  constructor(apiToken: string) {
-    if (apiToken.length === 0)
-      throw new Error("Flavortown API Key is required");
-    this.apiToken = apiToken;
+  constructor(apiKey: string, logtape: typeof LogType) {
+    if (!apiKey) throw new Error("FT API Key is required");
     this.fetch = axios.create({
       baseURL: "https://flavortown.hackclub.com/api/v1",
       headers: {
-        Authorization: `Bearer ${this.apiToken}`,
+        Authorization: `Bearer ${apiKey}`,
         "X-Flavortown-Ext-1865": true,
       },
     });
-    // this.fetch.interceptors.request.use(
-    //   (config) => {
-    //     this.logger
-    //       .with({
-    //         method: config.method?.toUpperCase(),
-    //         url: config.url,
-    //         data: config.data,
-    //       })
-    //       .debug("Request");
-
-    //     return config;
-    //   },
-    //   (error) => {
-    //     this.logger.error("Request error", { error });
-    //     return Promise.reject(error);
-    //   },
-    // );
-
-    // this.fetch.interceptors.response.use(
-    //   (response) => {
-    //     logger
-    //       .with({
-    //         method: response.config.method?.toUpperCase(),
-    //         url: response.config.url,
-    //         status: response.status,
-    //       })
-    //       .debug("Response");
-
-    //     return response;
-    //   },
-    //   (error) => {
-    //     this.logger
-    //       .with({
-    //         method: error.config?.method?.toUpperCase(),
-    //         url: error.config?.url,
-    //         status: error.response?.status,
-    //         data: error.response?.data,
-    //       })
-    //       .error("Bad response", { error });
-
-    //     return Promise.reject(error);
-    //   },
-    // );
+    this.logger = logtape;
     this.ready = Promise.resolve();
   }
 
-  private async handleError(err: unknown): Promise<void> {
-    if (axios.isAxiosError(err)) {
-      this.lastCode = err?.response?.status ?? err?.status ?? null;
-      return;
-    } else {
-      console.error("Unexpected error:", err);
-      return;
-    }
-  }
-
-  async projects(
-    query?: FTypes.ProjectsQuery,
-  ): Promise<FTypes.Projects | void> {
+  private async request<T>(config: AxiosRequestConfig): Promise<
+    | {
+        ok: true;
+        status: number;
+        data: T;
+      }
+    | {
+        ok: false;
+        status: number | null;
+        msg: string;
+      }
+  > {
     await this.ready;
     try {
-      const hasParams =
-        query &&
-        Object.values(query).some((v) => v !== undefined && v !== null);
-      const res = await this.fetch.get(
-        "/projects",
-        hasParams ? { params: query } : undefined,
-      );
-
+      const res = await this.fetch.request<T>(config);
       this.lastCode = res.status;
-      console.log("WORK", res.status, res.data)
-      return res.data;
+      return { ok: true, status: res.status, data: res.data };
     } catch (err) {
-      console.error(err)
-      await this.handleError(err);
-      return undefined;
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status ?? err.status ?? null;
+        this.lastCode = status;
+        return {
+          ok: false,
+          status,
+          msg: err.message,
+        };
+      } else {
+        this.logger.error("Unexpected Error occurred", {
+          error: err,
+        });
+      }
+      return {
+        ok: false,
+        status: null,
+        msg: "Unexpected error occurred",
+      };
     }
   }
 
-  async project(param: FTypes.ProjectParam): Promise<FTypes.Project | void> {
-    await this.ready;
-    return this.fetch
-      .get("/projects/" + Number(param.id))
-      .then((res) => {
-        this.lastCode = res.status;
-        return res.data;
-      })
-      .catch(async (err) => {
-        await this.handleError(err);
-        if (axios.isAxiosError(err)) {
-          return err.config?.data;
-        } else {
-          return err;
-        }
-      });
+  private get<T>(url: string, params?: unknown) {
+    return this.request<T>({
+      method: "GET",
+      url,
+      params,
+    });
   }
 
-  async devlogs(
-    param: FTypes.ProjectParam,
-    query?: FTypes.DevlogsQuery,
-  ): Promise<FTypes.Devlogs | void> {
-    await this.ready;
-    const queryString = new URLSearchParams();
-    if (query) {
-      Object.entries(query).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryString.append(key, String(value));
-        }
-      });
-    }
-
-    return this.fetch
-      .get("/projects/" + Number(param.id) + "/devlogs" + String(queryString))
-      .then((res) => {
-        this.lastCode = res.status;
-        return res.data;
-      })
-      .catch(async (err) => {
-        await this.handleError(err);
-        return err;
-      });
+  projects(query?: FTypes.ProjectsQuery) {
+    return this.get<FTypes.Projects>("/projects", query);
   }
 
-  async devlog(param: FTypes.DevlogParam): Promise<FTypes.Devlog | void> {
-    await this.ready;
-    return this.fetch
-      .get("/devlogs/" + param.devlogId)
-      .then((res) => {
-        this.lastCode = res.status;
-        return res.data;
-      })
-      .catch(async (err) => {
-        await this.handleError(err);
-        return err;
-      });
+  project(param: FTypes.ProjectParam) {
+    return this.get<FTypes.Project>("/projects/" + Number(param.id));
   }
 
-  async users(query: FTypes.UsersQuery): Promise<FTypes.Users | void> {
-    await this.ready;
-    const queryString = new URLSearchParams();
-    if (query) {
-      Object.entries(query).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryString.append(key, String(value));
-        }
-      });
-    }
-
-    return this.fetch
-      .get("/users?" + String(queryString))
-      .then((res) => {
-        this.lastCode = res.status;
-        return res.data;
-      })
-      .catch(async (err) => {
-        await this.handleError(err);
-        return err;
-      });
+  devlogs(param: FTypes.ProjectParam, query: FTypes.DevlogsQuery) {
+    return this.get<FTypes.Devlogs>(
+      "/projects/" + Number(param.id) + "/devlogs",
+      query,
+    );
   }
 
-  async user(param: FTypes.UserParams): Promise<FTypes.User | void> {
-    await this.ready;
-    return this.fetch
-      .get("/users/" + param.id)
-      .then((res) => {
-        this.lastCode = res.status;
-        return res.data;
-      })
-      .catch(async (err) => {
-        await this.handleError(err);
-        return {} as FTypes.User;
-      });
+  devlog(param: FTypes.DevlogParam) {
+    return this.get<FTypes.Devlog>("/devlogs/" + Number(param.devlogId));
+  }
+
+  users(query?: FTypes.UsersQuery) {
+    return this.get<FTypes.Users>("/users", query);
+  }
+
+  user(param: FTypes.UserParams) {
+    return this.get<FTypes.User>("/users/" + param.id);
+  }
+
+  shop() {
+    return this.get<FTypes.Store>("/store");
+  }
+
+  item(param: FTypes.StoreItemParams) {
+    return this.get<FTypes.StoreItem>("/store/" + Number(param.id));
   }
 }

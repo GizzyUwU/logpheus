@@ -50,7 +50,7 @@ export default {
       });
     }
 
-    const working = await checkAPIKey(pg, apiKey);
+    const working = await checkAPIKey(pg, apiKey, logger);
     if (!working)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
@@ -59,37 +59,42 @@ export default {
 
     let ftClient: FT = clients[apiKey]!;
     if (!ftClient) {
-      ftClient = new FT(apiKey);
+      ftClient = new FT(apiKey, logger);
     }
 
     const project = await ftClient.project({
       id: projectId,
     });
 
-    if (ftClient.lastCode === 404 || !project)
+    if (project.status === 404 || project.ok && !project.data)
       return respond({
         text: `This project doesn't exist!`,
         response_type: "ephemeral",
       });
+    else if (!project.ok)
+      return respond({
+        text: `Unexpected error has occurred.`,
+        response_type: "ephemeral",
+      });
 
     const userText = [
-      { label: "Project ID", value: project.id },
-      { label: "Description", value: project.description },
-      { label: "Created at", value: formatDate(project.created_at) },
-      { label: "Last Updated at", value: formatDate(project.updated_at) },
+      { label: "Project ID", value: project.data.id },
+      { label: "Description", value: project.data.description },
+      { label: "Created at", value: formatDate(project.data.created_at) },
+      { label: "Last Updated at", value: formatDate(project.data.updated_at) },
       {
         label: "Ship Status",
-        value: project.ship_status,
+        value: project.data.ship_status,
       },
-      ...(project.ai_declaration
-        ? [{ label: "Used AI", value: project.ai_declaration }]
+      ...(project.data.ai_declaration
+        ? [{ label: "Used AI", value: project.data.ai_declaration }]
         : []),
       {
         label: "Devlog",
-        value: (project.devlog_ids ?? [])
+        value: (project.data.devlog_ids ?? [])
           .map(
             (id: string | number) =>
-              `<https://flavortown.hackclub.com/projects/${project.id}|${id}>`,
+              `<https://flavortown.hackclub.com/projects/${project.data.id}|${id}>`,
           )
           .join(", "),
       },
@@ -102,7 +107,7 @@ export default {
           type: "header",
           text: {
             type: "plain_text",
-            text: project.title,
+            text: project.data.title,
             emoji: true,
           },
         },
@@ -121,7 +126,7 @@ export default {
           elements: [
             {
               type: "mrkdwn",
-              text: `${project.repo_url ? "<" + project.repo_url + "|Repo>" : ""} ${project.readme_url ? "<" + project.readme_url + "|Read me>" : ""} ${project.demo_url ? "<" + project.demo_url + "|Demo>" : ""}`,
+              text: `${project.data.repo_url ? "<" + project.data.repo_url + "|Repo>" : ""} ${project.data.readme_url ? "<" + project.data.readme_url + "|Read me>" : ""} ${project.data.demo_url ? "<" + project.data.demo_url + "|Demo>" : ""}`,
             },
           ],
         },
