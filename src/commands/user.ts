@@ -2,6 +2,7 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { eq, count } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
+import checkAPIKey from "../lib/apiKeyCheck";
 
 export default {
   name: "user",
@@ -18,15 +19,26 @@ export default {
           text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
           response_type: "ephemeral",
         });
-      const userExists = (await pg
-        .select({ count: count() })
+      const userExists = await pg
+        .select()
         .from(users)
         .where(eq(users.userId, command.user_id))
-        .limit(1)) as { count: number }[];
+        .limit(1);
 
-      if (userExists[0]?.count === 0)
+      if (userExists.length === 0)
         return respond({
           text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix}-register`,
+          response_type: "ephemeral",
+        });
+
+      const working = await checkAPIKey(
+        pg,
+        String(userExists[0]?.apiKey),
+        logger,
+      );
+      if (!working)
+        return respond({
+          text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
           response_type: "ephemeral",
         });
 

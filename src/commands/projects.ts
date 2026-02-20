@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 import type { RichTextBlock } from "@slack/web-api";
+import checkAPIKey from "../lib/apiKeyCheck";
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
@@ -53,24 +54,38 @@ export default {
       });
     }
 
+    const working = await checkAPIKey(pg, apiKey, logger);
+    if (!working)
+      return respond({
+        text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
+        response_type: "ephemeral",
+      });
+
     let ftClient: FT = clients[apiKey]!;
     if (!ftClient) {
       ftClient = new FT(apiKey, logger);
     }
 
-    const actualQuery = String(query).length > 0 ? query : projectQuery;
+    const actualQuery =
+      typeof query === "string" && query.length > 0 && query !== "page"
+        ? query
+        : typeof projectQuery === "string" && projectQuery.length > 0
+          ? projectQuery
+          : undefined;
 
-    const actualPage = query === "page" && pageNum ? pageNum : undefined;
+    const actualPage =
+      query === "page" && pageNum != null ? Number(pageNum) : undefined;
 
-    const projects = await ftClient.projects(
-      actualQuery!.length > 0 || actualPage !== undefined
+    const params =
+      actualQuery !== undefined || actualPage !== undefined
         ? {
-            query: actualQuery!.length > 0 && actualQuery !== "page" ? actualQuery : projectQuery!.length > 0 ? projectQuery : undefined,
-            page: Number(actualPage),
+            ...(actualQuery !== undefined && { query: actualQuery }),
+            ...(actualPage !== undefined && { page: actualPage }),
           }
-        : undefined,
-    );
+        : undefined;
 
+    const projects = await ftClient.projects(params);
+    console.log(projects);
     if (
       ftClient.lastCode === 404 ||
       !projects ||

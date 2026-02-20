@@ -85,17 +85,19 @@ export default class FT {
   ): Promise<FTypes.Projects | void> {
     await this.ready;
     try {
-      return this.fetch
-        .get("/projects", { params: query ?? undefined })
-        .then((res) => {
-          this.lastCode = res.status;
-          return res.data;
-        })
-        .catch(async (err) => {
-          await this.handleError(err);
-          return undefined;
-        });
+      const hasParams =
+        query &&
+        Object.values(query).some((v) => v !== undefined && v !== null);
+      const res = await this.fetch.get(
+        "/projects",
+        hasParams ? { params: query } : undefined,
+      );
+
+      this.lastCode = res.status;
+      console.log("WORK", res.status, res.data)
+      return res.data;
     } catch (err) {
+      console.error(err)
       await this.handleError(err);
       return undefined;
     }
@@ -185,7 +187,7 @@ export default class FT {
   async user(param: FTypes.UserParams): Promise<FTypes.User | void> {
     await this.ready;
     return this.fetch
-      .get("/users/" + Number(param.id))
+      .get("/users/" + param.id)
       .then((res) => {
         this.lastCode = res.status;
         return res.data;

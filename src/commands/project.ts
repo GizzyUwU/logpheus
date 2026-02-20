@@ -3,6 +3,7 @@ import FT from "../lib/ft";
 import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
+import checkAPIKey from "../lib/apiKeyCheck";
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
@@ -48,6 +49,13 @@ export default {
         response_type: "ephemeral",
       });
     }
+
+    const working = await checkAPIKey(pg, apiKey, logger);
+    if (!working)
+      return respond({
+        text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
+        response_type: "ephemeral",
+      });
 
     let ftClient: FT = clients[apiKey]!;
     if (!ftClient) {
