@@ -85,7 +85,6 @@ export default {
         : undefined;
 
     const projects = await ftClient.projects(params);
-    console.log(projects);
     if (
       ftClient.lastCode === 404 ||
       !projects ||
