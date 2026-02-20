@@ -3,13 +3,14 @@ import { eq } from "drizzle-orm";
 import FT from "../lib/ft";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
+import type { ChatPostEphemeralResponse } from "@slack/web-api";
 
 export default {
   name: "config",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
     { pg, logger, client, clients }: RequestHandler,
-  ) => {
+  ):  Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
       const userId = body.user.id;
@@ -31,7 +32,7 @@ export default {
       }
 
       const values = view.state.values;
-      const apiKey = values.ftApiKey?.api_input?.value?.trim();
+      const apiKey = values['ftApiKey']?.['api_input']?.value?.trim();
       if (!apiKey)
         return await client.chat.postEphemeral({
           channel: channelId,
@@ -44,7 +45,7 @@ export default {
           user: userId,
           text: "Flavortown API key is invalid every api key should start with ft_sk_",
         });
-      const ftClient = new FT(apiKey, logger);
+      const ftClient = new FT(apiKey);
       await ftClient.user({ id: "me" });
       if (ftClient.lastCode === 401)
         return await client.chat.postEphemeral({

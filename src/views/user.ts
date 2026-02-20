@@ -3,6 +3,7 @@ import FT from "../lib/ft";
 import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
+import type { ChatPostEphemeralResponse } from "@slack/web-api";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -25,7 +26,7 @@ export default {
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
     { pg, logger, client, clients, prefix }: RequestHandler,
-  ) => {
+  ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
       const userId = body.user.id;
@@ -82,7 +83,7 @@ export default {
 
       let ftClient: FT = clients[apiKey]!;
       if (!ftClient) {
-        ftClient = new FT(apiKey, logger);
+        ftClient = new FT(apiKey);
       }
 
       const queryWithTarget = await ftClient.users({

@@ -51,7 +51,7 @@ export default {
         trigger_id: command.trigger_id,
         view: {
           type: "modal",
-          callback_id: callbackId,
+          callback_id: callbackId!,
           title: {
             type: "plain_text",
             text: /^[a-z]/i.test(prefix!)

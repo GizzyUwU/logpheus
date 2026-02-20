@@ -76,7 +76,7 @@ export type Project = {
 
 export type ProjectParam = {
   id: number | string;
-};param
+};
 
 export type Projects = {
   projects: Project[];

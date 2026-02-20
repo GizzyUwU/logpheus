@@ -24,10 +24,10 @@ type DatabaseType =
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 const cacheDir = path.join(__dirname, "../cache");
 let pg: DatabaseType;
-if (process.env.SENTRY_DSN) {
+if (process.env['SENTRY_DSN']) {
   Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    release: process.env.SENTRY_NAME || "logpheus",
+    dsn: process.env['SENTRY_DSN'],
+    release: process.env['SENTRY_NAME'] || "logpheus",
     integrations: [],
     tracesSampleRate: 0,
     sendDefaultPii: true,
@@ -58,12 +58,12 @@ await configure({
 });
 
 export const logger = getLogger(["logpheus"]);
-if (process.env.PGLITE === "false") {
+if (process.env['PGLITE'] === "false") {
   try {
     const { drizzle } = await import("drizzle-orm/node-postgres");
     const { migrate } = await import("drizzle-orm/node-postgres/migrator");
     const pool = new Pool({
-      connectionString: process.env.DB_URL,
+      connectionString: process.env['DB_URL'],
     });
 
     const client = await pool.connect();
@@ -88,7 +88,7 @@ if (process.env.PGLITE === "false") {
     logger.error("Failed Database Connection", {
       error: err instanceof Error ? err.message : err,
       stack: err instanceof Error ? err.stack : undefined,
-      dbUrl: process.env.DB_URL?.replace(/:[^:@]+@/, ":****@"),
+      dbUrl: process.env['DB_URL']?.replace(/:[^:@]+@/, ":****@"),
     });
     throw err;
   }
@@ -109,18 +109,26 @@ if (process.env.PGLITE === "false") {
   });
 }
 
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing environment variable: ${name}`);
+  }
+  return value;
+}
+
 const app = new App({
-  signingSecret: process.env.SIGNING_SECRET,
-  token: process.env.BOT_TOKEN,
-  appToken: process.env.APP_TOKEN,
-  socketMode: process.env.APP_TOKEN
-    ? process.env.SOCKET_MODE === "true"
+  signingSecret: required('SIGNING_SECRET'),
+  token: required('BOT_TOKEN'),
+  appToken: required('APP_TOKEN'),
+  socketMode: process.env['APP_TOKEN']
+    ? process.env['SOCKET_MODE'] === "true"
     : false,
   customRoutes: [
     {
       path: "/healthcheck",
       method: ["GET"],
-      handler: (req, res) => {
+      handler: (_, res) => {
         res.writeHead(200);
         res.end("I'm okay!");
       },
@@ -155,7 +163,7 @@ function loadRequestHandlers(
     const callbackId = `${prefix}_${module.name}`;
     const format =
       type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
-    const registerHandler = (id: string, mod: typeof module) => {
+    const registerHandler = (mod: typeof module) => {
       (app[type as "view" | "command"] as Function)(
         format,
         async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
@@ -204,7 +212,7 @@ function loadRequestHandlers(
       );
     };
 
-    registerHandler(callbackId, module);
+    registerHandler(module);
     console.log(`[Logpheus] Registered ${type}: ${module.name}`);
   });
 }
@@ -265,11 +273,11 @@ async function loadHandlers() {
         throw new Error("No username or user id for prefix");
       prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
     }
-    if (process.env.SOCKET_MODE === "true" && process.env.APP_TOKEN) {
+    if (process.env['SOCKET_MODE'] === "true" && process.env['APP_TOKEN']) {
       await app.start();
       console.info("[Logpheus] Running as Socket Mode");
     } else {
-      const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+      const port = process.env['PORT'] ? parseInt(process.env['PORT']) : 3000;
       await app.start(port);
       console.info("[Logpheus] Running on port:", port);
     }

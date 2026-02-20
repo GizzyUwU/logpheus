@@ -1,5 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { eq, count } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 import checkAPIKey from "../lib/apiKeyCheck";
@@ -7,7 +7,7 @@ import checkAPIKey from "../lib/apiKeyCheck";
 export default {
   name: "user",
   execute: async (
-    { command, body, respond, payload }: SlackCommandMiddlewareArgs,
+    { command, respond }: SlackCommandMiddlewareArgs,
     { pg, client, logger, callbackId, prefix }: RequestHandler,
   ) => {
     try {
@@ -33,8 +33,7 @@ export default {
 
       const working = await checkAPIKey(
         pg,
-        String(userExists[0]?.apiKey),
-        logger,
+        String(userExists[0]?.apiKey)
       );
       if (!working)
         return respond({
@@ -46,7 +45,7 @@ export default {
         trigger_id: command.trigger_id,
         view: {
           type: "modal",
-          callback_id: callbackId,
+          callback_id: callbackId!,
           title: {
             type: "plain_text",
             text: /^[a-z]/i.test(prefix!)

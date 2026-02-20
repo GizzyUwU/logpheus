@@ -5,12 +5,11 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
 import FT from "./ft";
-import { logger } from "..";
 type DB =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 
-export default async function checkAPIKey(db: DB, apiKey: string, logtape: typeof logger) {
+export default async function checkAPIKey(db: DB, apiKey: string) {
   const row = await db
     .select()
     .from(users)
@@ -19,7 +18,7 @@ export default async function checkAPIKey(db: DB, apiKey: string, logtape: typeo
 
     if(row.length === 0) return false;
     if(row[0]?.disabled === true) return false;
-    const client = new FT(apiKey, logger);
+    const client = new FT(apiKey);
     await client.user({
         id: "me"
     });

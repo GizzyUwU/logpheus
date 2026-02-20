@@ -1,19 +1,16 @@
 import axios, { type AxiosInstance } from "axios";
 import type * as FTypes from "./ft.d";
-import { logger } from "..";
 
 export default class FT {
   lastCode: number | null = null;
   private apiToken: string;
   private fetch: AxiosInstance;
   private ready: Promise<void>;
-  private logger: typeof logger;
 
-  constructor(apiToken: string, logtape: typeof logger) {
+  constructor(apiToken: string) {
     if (apiToken.length === 0)
       throw new Error("Flavortown API Key is required");
     this.apiToken = apiToken;
-    this.logger = logtape;
     this.fetch = axios.create({
       baseURL: "https://flavortown.hackclub.com/api/v1",
       headers: {
@@ -67,12 +64,9 @@ export default class FT {
     this.ready = Promise.resolve();
   }
 
-  private async handleError(err: unknown, projectId?: string): Promise<void> {
+  private async handleError(err: unknown): Promise<void> {
     if (axios.isAxiosError(err)) {
       this.lastCode = err?.response?.status ?? err?.status ?? null;
-      this.logger.error({
-        error: err,
-      });
       return;
     } else {
       console.error("Unexpected error:", err);
@@ -193,7 +187,7 @@ export default class FT {
         return res.data;
       })
       .catch(async (err) => {
-        await this.handleError(err, String(param.id));
+        await this.handleError(err);
         return {} as FTypes.User;
       });
   }

@@ -6,18 +6,6 @@ import type { RequestHandler } from "..";
 import type { RichTextBlock } from "@slack/web-api";
 import checkAPIKey from "../lib/apiKeyCheck";
 
-const formatDate = (iso: string) => {
-  const d = new Date(iso);
-
-  const pad = (n: number) => String(n).padStart(2, "0");
-
-  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${String(
-    d.getUTCFullYear(),
-  ).slice(-2)} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(
-    d.getUTCSeconds(),
-  )}`;
-};
-
 export default {
   name: "projects",
   execute: async (
@@ -54,7 +42,7 @@ export default {
       });
     }
 
-    const working = await checkAPIKey(pg, apiKey, logger);
+    const working = await checkAPIKey(pg, apiKey);
     if (!working)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
@@ -63,7 +51,7 @@ export default {
 
     let ftClient: FT = clients[apiKey]!;
     if (!ftClient) {
-      ftClient = new FT(apiKey, logger);
+      ftClient = new FT(apiKey);
     }
 
     const actualQuery =
