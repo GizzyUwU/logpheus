@@ -36,9 +36,7 @@ async function getNewDevlogs(
         },
       });
       ctx.error("No FT Client for the project");
-      const ftClient = new FT(apiKey, logger);
-      clients[apiKey] = ftClient;
-      client = ftClient;
+      return;
     }
 
     let project = await client.project({ id: Number(projectId) });
@@ -49,7 +47,6 @@ async function getNewDevlogs(
     }
 
     if (!project || !project.status || (project.ok && !project.data)) {
-      console.log(project)
       const ctx = logger.with({
         project: {
           id: projectId,
@@ -219,7 +216,7 @@ export default {
       const userRows = await pg.select().from(users);
       if (!userRows?.length) return;
       for (const row of userRows) {
-        if (!row || !row.apiKey || !row.channel || !row.projects) continue;
+        if (!row || !row.apiKey || !row.channel || !row.projects || row.disabled) continue;
         if (!clients[row.apiKey]) clients[row.apiKey] = new FT(row.apiKey, logger);
         const projects = Array.isArray(row.projects)
           ? row.projects.map(Number)

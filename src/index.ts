@@ -14,9 +14,17 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun";
 import type { WebClient } from "@slack/web-api";
-import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
+import {
+  configure,
+  getConsoleSink,
+  getLogger,
+} from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
+import {
+  DEFAULT_REDACT_FIELDS,
+  redactByField,
+} from "@logtape/redaction";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
@@ -26,6 +34,30 @@ const cacheDir = path.join(__dirname, "../cache");
 const registeredRequestModules = new Set<string>();
 const registeredInitModules = new Set<string>();
 let pg: DatabaseType;
+const sentryAdapter = redactByField(
+  getSentrySink({
+    enableBreadcrumbs: true,
+  }),
+  {
+    fieldPatterns: [
+      /api[-_]?key/i,
+      /ft_sk_[A-Za-z0-9_-]*'/gi,
+      /api_key"\s*=\s*'[^']*'/gi,
+      ...DEFAULT_REDACT_FIELDS,
+    ],
+    action: () => "[REDACTED]",
+  },
+);
+const consoleAdapter = redactByField(getConsoleSink(), {
+  fieldPatterns: [
+    /api[-_]?key/i,
+    /ft_sk_[A-Za-z0-9_-]*'/gi,
+    /api_key"\s*=\s*'[^']*'/gi,
+    ...DEFAULT_REDACT_FIELDS,
+  ],
+  action: () => "[REDACTED]",
+});
+
 if (process.env["SENTRY_DSN"]) {
   Sentry.init({
     dsn: process.env["SENTRY_DSN"],
@@ -39,10 +71,8 @@ if (process.env["SENTRY_DSN"]) {
 
 await configure({
   sinks: {
-    sentry: getSentrySink({
-      enableBreadcrumbs: true,
-    }),
-    console: getConsoleSink(),
+    sentry: sentryAdapter,
+    console: consoleAdapter,
   },
   loggers: [
     { category: ["logtape", "meta"], sinks: ["console"], lowestLevel: "error" },

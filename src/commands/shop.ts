@@ -7,7 +7,7 @@ import type { RichTextBlock } from "@slack/web-api";
 import checkAPIKey from "../lib/apiKeyCheck";
 
 export default {
-  name: "projects",
+  name: "shop",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,

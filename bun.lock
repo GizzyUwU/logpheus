@@ -8,6 +8,7 @@
         "@electric-sql/pglite": "^0.3.14",
         "@logtape/drizzle-orm": "^2.0.2",
         "@logtape/logtape": "^2.0.2",
+        "@logtape/redaction": "^2.0.2",
         "@logtape/sentry": "^2.0.2",
         "@sentry/bun": "^10.36.0",
         "@slack/bolt": "^4.6.0",
@@ -94,6 +95,8 @@
     "@logtape/drizzle-orm": ["@logtape/drizzle-orm@2.0.2", "", { "peerDependencies": { "@logtape/logtape": "^2.0.2" } }, "sha512-tQz/JYlgSfD9VRxAjTBLFSsJwClx4R3wKGwYSyk949UkC/ViMqRmsrxEZ0H1WcIJLLTxpP8NZOOrvd30sS3Kgg=="],
 
     "@logtape/logtape": ["@logtape/logtape@2.0.2", "", {}, "sha512-cveUBLbCMFkvkLycP/2vNWvywl47JcJbazHIju94/QNGboZ/jyYAgZIm0ZXezAOx3eIz8OG1EOZ5CuQP3+2FQg=="],
+
+    "@logtape/redaction": ["@logtape/redaction@2.0.2", "", { "peerDependencies": { "@logtape/logtape": "^2.0.2" } }, "sha512-NSURYmPLk2E3H1VgxSqG1P65qScVWXntChS3pvXthku6v2E2bHWp+BvDYksoA15SNT7KtTXYgfsV2O3LCMJQrw=="],
 
     "@logtape/sentry": ["@logtape/sentry@2.0.2", "", { "peerDependencies": { "@logtape/logtape": "^2.0.2", "@sentry/core": ">=8.0.0" } }, "sha512-vo10X0kfFBkgVbteDSg7KMsIkDUWlMmu83fCiwI0rIFYrDBJIrb+TIxBWg66AizjsYXwZWE5Hs2XX1/sL3fAgA=="],
 
