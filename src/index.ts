@@ -274,6 +274,7 @@ function loadRequestHandlers(
 }
 
 async function loadHandlers() {
+  registeredInitModules.clear();
   const handlerDir = path.resolve(__dirname, "./handlers");
   const files = fs
     .readdirSync(handlerDir)
