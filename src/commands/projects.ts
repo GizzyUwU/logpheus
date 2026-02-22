@@ -62,7 +62,6 @@ export default {
           : undefined;
 
     const actualPage = pageNum != null ? Number(pageNum) : undefined;
-    console.log("actualQuery:", actualQuery, "actualPage:", actualPage);
     const projects = await ftClient.projects({
       ...(actualQuery !== undefined ? { query: actualQuery } : {}),
       ...(actualPage !== undefined ? { page: actualPage } : {}),

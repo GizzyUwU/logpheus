@@ -14,17 +14,10 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun";
 import type { WebClient } from "@slack/web-api";
-import {
-  configure,
-  getConsoleSink,
-  getLogger,
-} from "@logtape/logtape";
+import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
-import {
-  DEFAULT_REDACT_FIELDS,
-  redactByField,
-} from "@logtape/redaction";
+import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
@@ -37,6 +30,25 @@ let pg: DatabaseType;
 const sentryAdapter = redactByField(
   getSentrySink({
     enableBreadcrumbs: true,
+    beforeSend(record) {
+      if (
+        typeof record.rawMessage === "string" &&
+        record.rawMessage.includes("Request failed with status code 500")
+      ) {
+        return null;
+      }
+      
+      const err = record.properties?.['error'] as any;
+      if (
+        err?.name === "AxiosError" &&
+        typeof err?.status === "number" &&
+        err.status >= 500
+      ) {
+        return null;
+      }
+
+      return record;
+    },
   }),
   {
     fieldPatterns: [

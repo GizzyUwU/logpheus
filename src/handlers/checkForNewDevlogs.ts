@@ -46,7 +46,7 @@ async function getNewDevlogs(
       project = await client.project({ id: Number(projectId) });
     }
 
-    if (!project || !project.status || (project.ok && !project.data)) {
+    if (!project || !project.status) {
       const ctx = logger.with({
         project: {
           id: projectId,
@@ -63,18 +63,6 @@ async function getNewDevlogs(
       return;
 
     } else if (!project.ok) {
-      const ctx = logger.with({
-        project: {
-          id: projectId,
-        },
-        output: {
-          ok: project.ok,
-          status: project.status,
-        },
-      });
-      ctx.error(
-        "Unexpected error where project api call returned unexpected values",
-      );
       return;
     }
 
