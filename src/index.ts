@@ -37,8 +37,8 @@ const sentryAdapter = redactByField(
       ) {
         return null;
       }
-      
-      const err = record.properties?.['error'] as any;
+
+      const err = record.properties?.["error"] as any;
       if (
         err?.name === "AxiosError" &&
         typeof err?.status === "number" &&
@@ -153,18 +153,23 @@ if (process.env["PGLITE"] === "false") {
   });
 }
 
-function required(name: string): string {
+function checkEnvs(name: string, optional: boolean): string {
   const value = process.env[name];
-  if (!value) {
+  if (!value && !optional) {
     throw new Error(`Missing environment variable: ${name}`);
+  } else if (!value && optional) {
+    return "";
+  } else if (value) {
+    return value;
+  } else {
+    return "";
   }
-  return value;
 }
 
 const app = new App({
-  signingSecret: required("SIGNING_SECRET"),
-  token: required("BOT_TOKEN"),
-  appToken: required("APP_TOKEN"),
+  signingSecret: checkEnvs("SIGNING_SECRET", false),
+  token: checkEnvs("BOT_TOKEN", false),
+  appToken: checkEnvs("APP_TOKEN", true),
   socketMode: process.env["APP_TOKEN"]
     ? process.env["SOCKET_MODE"] === "true"
     : false,
