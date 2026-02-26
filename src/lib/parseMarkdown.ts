@@ -38,57 +38,57 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
 
       const group = match.groups!;
       switch (true) {
-        case !!group.emoji:
+        case !!group['emoji']:
           elements.push({
             type: "emoji",
-            name: group.emojiName!,
+            name: group['emojiName']! ,
           });
           break;
 
-        case !!group.underline:
+        case !!group['underline']:
           elements.push({
             type: "text",
-            text: group.underlineText!,
+            text: group['underlineText']!,
             style: { underline: true },
           });
           break;
 
-        case !!group.bold:
+        case !!group['bold']:
           elements.push({
             type: "text",
-            text: group.boldText!,
+            text: group['boldText']!,
             style: { bold: true },
           });
           break;
 
-        case !!group.italic:
+        case !!group['italic']:
           elements.push({
             type: "text",
-            text: group.italicText!,
+            text: group['italicText']!,
             style: { italic: true },
           });
           break;
 
-        case !!group.strike:
+        case !!group['strike']:
           elements.push({
             type: "text",
-            text: group.strikeText!,
+            text: group['strikeText']!,
             style: { strike: true },
           });
           break;
 
-        case !!group.link:
+        case !!group['link']:
           elements.push({
             type: "link",
-            url: group.linkUrl!,
-            text: group.linkText!,
+            url: group['linkUrl']!,
+            text: group['linkText']!,
           });
           break;
 
-        case !!group.code:
+        case !!group['code']:
           elements.push({
             type: "text",
-            text: group.codeText!,
+            text: group['codeText']!,
             style: { code: true },
           });
           break;
