@@ -220,56 +220,60 @@ function loadRequestHandlers(
     const format =
       type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
     const registerHandler = (mod: typeof module) => {
-      (app[type as "view" | "command"] as Function)(
-        format,
-        async (args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs) => {
-          await args.ack();
-          const run = async (ctx?: typeof logger) => {
-            await mod.execute(args, {
-              pg,
-              client: app.client,
-              logger: ctx ? ctx : logger,
-              clients,
-              Sentry,
-              prefix,
-              callbackId,
-            } satisfies RequestHandler);
-          };
+      const handler = async (
+        args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs
+      ) => {
+        await args.ack();
+        const run = async (ctx?: typeof logger) => {
+          await mod.execute(args, {
+            pg,
+            client: app.client,
+            logger: ctx ? ctx : logger,
+            clients,
+            Sentry,
+            prefix,
+            callbackId,
+          } satisfies RequestHandler);
+        };
 
-          const ctx = logger.with({
-            handler: {
-              type,
-              module: mod.name,
-            },
-            slack: {
-              user:
-                "user_id" in args.body ? args.body.user_id : args.body.user?.id,
-              channel:
-                "channel_id" in args.body
-                  ? args.body.channel_id
-                  : (args.body.view.private_metadata.length > 0
-                      ? (JSON.parse(args.body.view.private_metadata) as {
-                          channel: string;
-                        })
-                      : { channel: "" }
-                    ).channel,
-              triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
-            },
+        const ctx = logger.with({
+          handler: {
+            type,
+            module: mod.name,
+          },
+          slack: {
+            user:
+              "user_id" in args.body ? args.body.user_id : args.body.user?.id,
+            channel:
+              "channel_id" in args.body
+                ? args.body.channel_id
+                : (args.body.view.private_metadata.length > 0
+                  ? (JSON.parse(args.body.view.private_metadata) as {
+                    channel: string;
+                  })
+                  : { channel: "" }
+                ).channel,
+            triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
+          },
+        });
+
+        try {
+          run(ctx);
+        } catch (err) {
+          logger.error({
+            err,
           });
-
-          try {
-            run(ctx);
-          } catch (err) {
-            logger.error({
-              err,
-            });
-          }
-        },
-      );
-    };
+        }
+      }
+      if (type === "command") {
+        app.command(format, handler);
+      } else {
+        app.view(format, handler);
+      }
+    }
 
     registerHandler(module);
-    console.log(`[Logpheus] Registered ${type}: ${module.name}`);
+    console.log(`[Logpheus] Registered ${type}: ${module.name}, ${format}`);
   });
 }
 
@@ -336,6 +340,10 @@ async function loadHandlers() {
         throw new Error("No username or user id for prefix");
       prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
     }
+
+    loadRequestHandlers(app, "commands", "command");
+    loadRequestHandlers(app, "views", "view");
+
     if (process.env["SOCKET_MODE"] === "true" && process.env["APP_TOKEN"]) {
       await app.start();
       console.info("[Logpheus] Running as Socket Mode");
@@ -345,8 +353,6 @@ async function loadHandlers() {
       console.info("[Logpheus] Running on port:", port);
     }
 
-    loadRequestHandlers(app, "commands", "command");
-    loadRequestHandlers(app, "views", "view");
     console.log(
       "[Logpheus] My prefix is",
       Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
