@@ -61,7 +61,6 @@ async function getNewDevlogs(
         "Unexpected error where project api call returned unexpected values",
       );
       return;
-
     } else if (!project.ok) {
       return;
     }
@@ -204,8 +203,16 @@ export default {
       const userRows = await pg.select().from(users);
       if (!userRows?.length) return;
       for (const row of userRows) {
-        if (!row || !row.apiKey || !row.channel || !row.projects || row.disabled) continue;
-        if (!clients[row.apiKey]) clients[row.apiKey] = new FT(row.apiKey, logger);
+        if (
+          !row ||
+          !row.apiKey ||
+          !row.channel ||
+          !row.projects ||
+          row.disabled
+        )
+          continue;
+        if (!clients[row.apiKey])
+          clients[row.apiKey] = new FT(row.apiKey, logger);
         const projects = Array.isArray(row.projects)
           ? row.projects.map(Number)
           : [];
@@ -250,11 +257,17 @@ export default {
                   .filter(Boolean)
                   .join(" ");
 
+                const imageBlocks = (devlog.media || []).map((m, i) => ({
+                  type: "image",
+                  image_url: "https://flavortown.hackclub.com" + m.url,
+                  alt_text: String(i + 1),
+                }));
+
                 if (!containsMarkdown(devlog.body)) {
                   await client.chat.postMessage({
                     channel: row.channel,
-                    unfurl_links: false,
-                    unfurl_media: false,
+                    unfurl_links: true,
+                    unfurl_media: true,
                     blocks: [
                       {
                         type: "section",
@@ -278,10 +291,11 @@ export default {
                         elements: [
                           {
                             type: "mrkdwn",
-                            text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                            text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}`,
                           },
                         ],
                       },
+                      ...imageBlocks,
                     ],
                   });
                 } else {
@@ -310,6 +324,7 @@ export default {
                           },
                         ],
                       },
+                      ...imageBlocks,
                     ],
                   });
                 }
