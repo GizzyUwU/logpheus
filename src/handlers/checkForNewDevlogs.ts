@@ -257,11 +257,26 @@ export default {
                   .filter(Boolean)
                   .join(" ");
 
-                const imageBlocks = (devlog.media || []).map((m, i) => ({
-                  type: "image",
-                  image_url: "https://flavortown.hackclub.com" + m.url,
-                  alt_text: String(i + 1),
-                }));
+                type Block =
+                  | { type: "image"; image_url: string; alt_text: string }
+                  | { type: "video"; video_url: string; alt_text: string };
+
+                const mediaBlocks: Block[] = (devlog.media || [])
+                  .map((m, i): Block | null => {
+                    const url = "https://flavortown.hackclub.com" + m.url;
+                    const alt = String(i + 1);
+
+                    if (m.content_type.startsWith("video")) {
+                      return { type: "video", video_url: url, alt_text: alt };
+                    }
+
+                    if (m.content_type.startsWith("image")) {
+                      return { type: "image", image_url: url, alt_text: alt };
+                    }
+
+                    return null;
+                  })
+                  .filter((b): b is Block => b !== null);
 
                 if (!containsMarkdown(devlog.body)) {
                   await client.chat.postMessage({
@@ -295,7 +310,7 @@ export default {
                           },
                         ],
                       },
-                      ...imageBlocks,
+                      ...mediaBlocks,
                     ],
                   });
                 } else {
@@ -324,7 +339,7 @@ export default {
                           },
                         ],
                       },
-                      ...imageBlocks,
+                      ...mediaBlocks,
                     ],
                   });
                 }
