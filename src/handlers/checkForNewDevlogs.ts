@@ -40,7 +40,7 @@ async function getNewDevlogs(
     }
 
     let project = await client.project({ id: Number(projectId) });
-    while (project.status === 429) {
+    while (project.status && project.status === 429) {
       const waitMs = 2000 + Math.floor(Math.random() * 1000);
       await new Promise((res) => setTimeout(res, waitMs));
       project = await client.project({ id: Number(projectId) });

@@ -30,7 +30,7 @@ export default class FT {
     | {
         ok: false;
         status: number | null;
-        msg: string;
+        msg: string | unknown;
       }
   > {
     await this.ready;
@@ -48,15 +48,16 @@ export default class FT {
           msg: err.message,
         };
       } else {
-        this.logger.error("Unexpected Error occurred", {
-          error: err,
-        });
+        const ctx = this.logger.with({
+          error: err
+        })
+        ctx.error("Unexpected Error occurred");
+        return {
+          ok: false,
+          status: null,
+          msg: err,
+        };
       }
-      return {
-        ok: false,
-        status: null,
-        msg: "Unexpected error occurred",
-      };
     }
   }
 
