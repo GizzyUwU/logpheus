@@ -31,11 +31,11 @@ export default {
           response_type: "ephemeral",
         });
 
-      const working = await checkAPIKey(
-        pg,
-        String(userExists[0]?.apiKey),
-        logger
-      );
+      const working = await checkAPIKey({
+        db: pg,
+        apiKey: String(userExists[0]?.apiKey),
+        logger,
+      });
       if (!working)
         return respond({
           text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,

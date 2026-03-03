@@ -50,7 +50,12 @@ export default {
       });
     }
 
-    const working = await checkAPIKey(pg, apiKey, logger);
+    const working = await checkAPIKey({
+      db: pg,
+      apiKey,
+      logger,
+    });
+    
     if (!working)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
@@ -66,7 +71,7 @@ export default {
       id: projectId,
     });
 
-    if (project.status === 404 || project.ok && !project.data)
+    if (project.status === 404 || (project.ok && !project.data))
       return respond({
         text: `This project doesn't exist!`,
         response_type: "ephemeral",

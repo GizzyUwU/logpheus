@@ -42,7 +42,11 @@ export default {
       });
     }
 
-    const working = await checkAPIKey(pg, apiKey, logger);
+    const working = await checkAPIKey({
+      db: pg,
+      apiKey,
+      logger,
+    });
     if (!working)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
@@ -69,7 +73,7 @@ export default {
 
     if (
       projects.status === 404 ||
-      projects.ok && !projects.data ||
+      (projects.ok && !projects.data) ||
       (projects.ok ? projects.data.projects : []).length === 0
     ) {
       if (String(actualQuery).length > 0) {
