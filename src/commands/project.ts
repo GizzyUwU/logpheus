@@ -23,7 +23,15 @@ export default {
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,
   ) => {
-    const projectId = command.text.trim();
+    const projectIdRaw = command.text.trim();
+    const projectId = Number(projectIdRaw);
+
+    if (!projectIdRaw || !Number.isInteger(projectId) || projectId <= 0)
+      return respond({
+        text: "Project ID must be a positive whole number.",
+        response_type: "ephemeral",
+      });
+
     const userData = await pg
       .select()
       .from(users)
@@ -55,7 +63,7 @@ export default {
       apiKey,
       logger,
     });
-    
+
     if (!working)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
@@ -71,22 +79,48 @@ export default {
       id: projectId,
     });
 
-    if (project.status === 404 || (project.ok && !project.data))
+    if (!project || !project.status) {
       return respond({
-        text: `This project doesn't exist!`,
+        text: "Unexpected error has occurred.",
         response_type: "ephemeral",
       });
-    else if (!project.ok)
-      return respond({
-        text: `Unexpected error has occurred.`,
-        response_type: "ephemeral",
-      });
+    }
+
+    if (!project.ok || !Object.keys(project.data)?.length) {
+      switch (project.status) {
+        case 404:
+          return respond({
+            text: "Project doesn't exist.",
+            response_type: "ephemeral",
+          });
+        case 401:
+          return respond({
+            text: "Bad API Key! Run /" + prefix + "-config to fix!",
+            response_type: "ephemeral",
+          });
+        default:
+          return respond({
+            text: "Unexpected error!",
+            response_type: "ephemeral",
+          });
+      }
+    }
 
     const userText = [
       { label: "Project ID", value: project.data.id },
       { label: "Description", value: project.data.description },
-      { label: "Created at", value: formatDate(project.data.created_at) },
-      { label: "Last Updated at", value: formatDate(project.data.updated_at) },
+      {
+        label: "Created at",
+        value: project.data.created_at
+          ? formatDate(project.data.created_at)
+          : "You are hallucinating this project never was created",
+      },
+      {
+        label: "Last Updated at",
+        value: project.data.updated_at
+          ? formatDate(project.data.updated_at)
+          : "Never",
+      },
       {
         label: "Ship Status",
         value: project.data.ship_status,
@@ -112,7 +146,7 @@ export default {
           type: "header",
           text: {
             type: "plain_text",
-            text: project.data.title,
+            text: project.data.title ?? "Unknown",
             emoji: true,
           },
         },

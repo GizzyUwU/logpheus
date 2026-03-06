@@ -9,8 +9,9 @@ import { eq } from "drizzle-orm";
 import { containsMarkdown } from "../lib/parseMarkdown";
 import { parseMarkdownToSlackBlocks } from "../lib/parseMarkdown";
 import type { logger as LogtapeLogger, RequestHandler } from "..";
-import type FTypes from "../lib/ft.d";
 import FT from "../lib/ft";
+import { z } from "zod";
+import type { GetDevlogParams, GetDevlogResponse } from "../lib/ft.zod";
 type DB =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
@@ -24,7 +25,7 @@ async function getNewDevlogs(
   logger: typeof LogtapeLogger,
 ): Promise<{
   name: string;
-  devlogs: FTypes.Devlog[];
+  devlogs: z.infer<typeof GetDevlogResponse>[];
   shipped?: "pending" | "submitted";
 } | void> {
   try {
@@ -46,7 +47,7 @@ async function getNewDevlogs(
       project = await client.project({ id: Number(projectId) });
     }
 
-    if (!project || !project.status) {
+    if (project && !project.status) {
       const ctx = logger.with({
         project: {
           id: projectId,
@@ -133,7 +134,7 @@ async function getNewDevlogs(
       });
 
       return {
-        name: project.data.title,
+        name: project.data.title ?? "Unknown",
         devlogs: [],
       };
     }
@@ -152,15 +153,14 @@ async function getNewDevlogs(
     const newIds = devlogIds.filter((id) => !cachedSet.has(Number(id)));
 
     if (newIds.length === 0) {
-      return { name: project.data.title, devlogs: [] };
+      return { name: project.data.title ?? "Unknown", devlogs: [] };
     } else {
-      const devlogs: FTypes.Devlog[] = [];
+      const devlogs: z.infer<typeof GetDevlogResponse>[] = [];
       for (const id of newIds) {
         const res = await client.devlog({
-          projectId: projectId,
-          devlogId: id,
-        });
-        if (res && res.ok) devlogs.push(res.data);
+          id,
+        } as z.infer<typeof GetDevlogParams>);
+        if (res && res.ok) devlogs.push(res.data || []);
       }
 
       if (devlogs.length === 0) {
@@ -172,7 +172,7 @@ async function getNewDevlogs(
         ctx.error(
           "There was a new id but yet devlogs array stayed empty this could indicate a bug.",
         );
-        return { name: project.data.title, devlogs: [] };
+        return { name: project.data.title ?? "Unknown", devlogs: [] };
       }
 
       await db
@@ -182,7 +182,7 @@ async function getNewDevlogs(
         })
         .where(eq(projects.id, Number(projectId)));
 
-      return { name: project.data.title, devlogs };
+      return { name: project.data.title ?? "Unknown", devlogs };
     }
   } catch (err) {
     const ctx = logger.with({
@@ -229,7 +229,7 @@ export default {
           if (projData.devlogs.length > 0) {
             for (const devlog of projData.devlogs) {
               try {
-                const createdAt = new Date(devlog.created_at);
+                const createdAt = devlog.created_at ? new Date(devlog.created_at) : new Date();
                 const seconds = devlog.duration_seconds;
                 const pad = (n: number) => n.toString().padStart(2, "0");
                 const year = createdAt.getUTCFullYear();
@@ -247,7 +247,7 @@ export default {
                 const durationString = ([86400, 3600, 60] as const)
                   .map((sec, i) => {
                     const val =
-                      Math.floor(seconds / sec) %
+                      Math.floor(seconds || 0 / sec) %
                       (i === 0 ? Infinity : i === 1 ? 24 : 60);
                     const labels = ["day", "hour", "minute"];
                     return val > 0
@@ -266,11 +266,11 @@ export default {
                     const url = "https://flavortown.hackclub.com" + m.url;
                     const alt = String(i + 1);
 
-                    if (m.content_type.startsWith("video")) {
+                    if (m.content_type && m.content_type.startsWith("video")) {
                       return { type: "video", video_url: url, alt_text: alt };
                     }
 
-                    if (m.content_type.startsWith("image")) {
+                    if (m.content_type && m.content_type.startsWith("image")) {
                       return { type: "image", image_url: url, alt_text: alt };
                     }
 
@@ -278,7 +278,7 @@ export default {
                   })
                   .filter((b): b is Block => b !== null);
 
-                if (!containsMarkdown(devlog.body)) {
+                if (devlog.body && !containsMarkdown(devlog.body)) {
                   await client.chat.postMessage({
                     channel: row.channel,
                     unfurl_links: true,
@@ -326,7 +326,7 @@ export default {
                           text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
                         },
                       },
-                      ...parseMarkdownToSlackBlocks(devlog.body),
+                     ...(devlog.body ? parseMarkdownToSlackBlocks(devlog.body) : []),
                       {
                         type: "divider",
                       },

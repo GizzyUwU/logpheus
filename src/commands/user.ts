@@ -31,9 +31,16 @@ export default {
           response_type: "ephemeral",
         });
 
+      const apiKey = userExists[0]?.apiKey;
+      if (!apiKey)
+        return respond({
+          text: `Hey! Basically you exist in db and lack an api key try fix it using /${prefix}-config`,
+          response_type: "ephemeral",
+        });
+
       const working = await checkAPIKey({
         db: pg,
-        apiKey: String(userExists[0]?.apiKey),
+        apiKey,
         logger,
       });
       if (!working)

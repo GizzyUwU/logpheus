@@ -12,10 +12,27 @@ export default {
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,
   ) => {
-    const [query, pageNum, projectQuery] = command.text
-      .trim()
-      .split(" ")
-      .filter(Boolean);
+    const parts = command.text.trim().split(" ").filter(Boolean);
+
+    let actualQuery: string | undefined;
+    let actualPage: number | undefined;
+
+    if (parts.length > 0) {
+      if (parts.length >= 2) {
+        const maybePage = Number(parts[1]);
+        if (Number.isInteger(maybePage) && maybePage > 0) {
+          actualPage = maybePage;
+          actualQuery = [parts[0], ...parts.slice(2)].join(" ").trim();
+          if (actualQuery.length === 0) {
+            actualQuery = parts[0];
+          }
+        } else {
+          actualQuery = parts.join(" ");
+        }
+      } else {
+        actualQuery = parts[0];
+      }
+    }
     const userData = await pg
       .select()
       .from(users)
@@ -58,38 +75,21 @@ export default {
       ftClient = new FT(apiKey, logger);
     }
 
-    const actualQuery =
-      typeof query === "string" && query.length > 0
-        ? query
-        : typeof projectQuery === "string" && projectQuery.length > 0
-          ? projectQuery
-          : undefined;
-
-    const actualPage = pageNum != null ? Number(pageNum) : undefined;
     const projects = await ftClient.projects({
       ...(actualQuery !== undefined ? { query: actualQuery } : {}),
       ...(actualPage !== undefined ? { page: actualPage } : {}),
     });
 
-    if (
-      projects.status === 404 ||
-      (projects.ok && !projects.data) ||
-      (projects.ok ? projects.data.projects : []).length === 0
-    ) {
-      if (String(actualQuery).length > 0) {
-        return respond({
-          text: `No projects with this search query exist.`,
-          response_type: "ephemeral",
-        });
-      } else {
-        return respond({
-          text: `No projects exist?`,
-          response_type: "ephemeral",
-        });
-      }
-    } else if (!projects.ok) {
+    if (!projects || !projects.status) {
       return respond({
-        text: `Unexpected error has occurred.`,
+        text: "Unexpected error has occurred.",
+        response_type: "ephemeral",
+      });
+    }
+
+    if (!projects.ok || !projects.data.projects?.length) {
+      return respond({
+        text: "User doesn't have an FT account.",
         response_type: "ephemeral",
       });
     }

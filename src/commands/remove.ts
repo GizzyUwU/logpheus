@@ -35,6 +35,9 @@ export default {
           response_type: "ephemeral",
         });
       const data = res[0];
+      const subscribedProjects = Array.isArray(data?.projects)
+        ? data.projects
+        : [];
 
       if (projectId === "all") {
         const projectIds = res[0]?.projects;
@@ -52,20 +55,22 @@ export default {
       }
 
       if (projectId.length > 0) {
-        if (!Number.isInteger(Number(projectId)))
+        if (!/^\d+$/.test(projectId))
           return await respond({
             text: "Project ID must be a valid number.",
             response_type: "ephemeral",
           });
 
-        if (!data?.projects?.includes(Number(projectId)))
+        const numericProjectId = Number(projectId);
+
+        if (!subscribedProjects.includes(numericProjectId))
           return await respond({
             text: "This project id isn't subscribed to this channel.",
             response_type: "ephemeral",
           });
 
-        const updatedProjects = data.projects.filter(
-          (p) => p !== Number(projectId),
+        const updatedProjects = subscribedProjects.filter(
+          (p) => p !== numericProjectId,
         );
         if (updatedProjects.length > 0) {
           await pg
@@ -78,18 +83,18 @@ export default {
           await pg.delete(users).where(eq(users.channel, command.channel_id));
         }
 
-        if (clients[data.apiKey]) delete clients[data.apiKey];
+        if (data?.apiKey && clients[data.apiKey]) delete clients[data.apiKey];
         return await respond({
           text: `Project ${projectId} has been disconnected from this channel.`,
           response_type: "ephemeral",
         });
       } else {
-        for (const pid of data?.projects!) {
-          await pg.delete(projects).where(eq(projects.id, Number(pid)));
+        for (const pid of subscribedProjects) {
+          await pg.delete(projects).where(eq(projects.id, pid));
         }
 
         await pg.delete(users).where(eq(users.channel, command.channel_id));
-        if (clients[data!.apiKey]) delete clients[data!.apiKey];
+        if (data?.apiKey && clients[data.apiKey]) delete clients[data.apiKey];
         return await respond({
           text: "All projects previously connected to this channel have been disconnected.",
           response_type: "ephemeral",

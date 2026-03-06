@@ -11,7 +11,7 @@ export default {
   name: "add",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, clients }: RequestHandler,
+    { pg, logger, client, clients, prefix }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
@@ -30,7 +30,8 @@ export default {
       }
 
       const values = view.state.values;
-      const projectId = values["projId"]?.["proj_input"]?.value?.trim();
+      const projectIdRaw = values["projId"]?.["proj_input"]?.value?.trim();
+      const numericProjectId = Number(projectIdRaw);
       let apiKey: string;
 
       const userData = await pg
@@ -45,11 +46,17 @@ export default {
         apiKey = String(userData[0]?.apiKey);
       }
 
-      if (!projectId)
+      if (!projectIdRaw)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: "Project ID is required",
+        });
+      if (!Number.isInteger(numericProjectId) || numericProjectId <= 0)
+        return await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "Project ID must be a positive whole number",
         });
       if (!apiKey)
         return await client.chat.postEphemeral({
@@ -93,11 +100,15 @@ export default {
 
         const projects = Array.isArray(row?.projects)
           ? Array.from(
-              new Set(row.projects.map((p) => Number(p)).filter(Boolean)),
+              new Set(
+                row.projects.filter(
+                  (p): p is number => Number.isInteger(p) && p > 0,
+                ),
+              ),
             )
           : [];
 
-        if (projects.includes(Number(projectId))) {
+        if (projects.includes(numericProjectId)) {
           return await client.chat.postEphemeral({
             channel: channelId,
             user: userId,
@@ -105,7 +116,7 @@ export default {
           });
         }
 
-        projects.push(Number(projectId));
+        projects.push(numericProjectId);
 
         if (!row?.userId) {
           await pg
@@ -134,11 +145,11 @@ export default {
           userId: userId,
           channel: channelId,
           disabled: false,
-          projects: [Number(projectId)],
+          projects: [numericProjectId],
         });
       }
 
-      const freshProject = await ftClient.project({ id: Number(projectId) });
+      const freshProject = await ftClient.project({ id: numericProjectId });
       if (
         !freshProject ||
         !freshProject.status ||
@@ -159,6 +170,37 @@ export default {
           text: `Unexpected error has occurred.`,
         });
 
+      if (!freshProject || !freshProject.status) {
+        return client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "Unexpected error has occurred.",
+        });
+      }
+
+      if (!freshProject.ok || !Object.keys(freshProject.data)?.length) {
+        switch (freshProject.status) {
+          case 404:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "Project doesn't exist.",
+            });
+          case 401:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "Bad API Key! Run /" + prefix + "-config to fix!",
+            });
+          default:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "Unexpected error!",
+            });
+        }
+      }
+
       const devlogIds = Array.isArray(freshProject.data.devlog_ids)
         ? freshProject.data.devlog_ids
         : [];
@@ -166,7 +208,7 @@ export default {
       await pg
         .insert(projects)
         .values({
-          id: Number(projectId),
+          id: numericProjectId,
           devlogIds,
         })
         .onConflictDoUpdate({
@@ -189,7 +231,7 @@ export default {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `:woah-dino: <https://flavortown.hackclub.com/projects/${projectId}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
+              text: `:woah-dino: <https://flavortown.hackclub.com/projects/${numericProjectId}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
             },
           },
           {

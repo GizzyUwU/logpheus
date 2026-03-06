@@ -90,42 +90,41 @@ export default {
         query: targetId,
       });
 
-      if (
-        !queryWithTarget ||
-        !queryWithTarget.status ||
-        (queryWithTarget.ok && queryWithTarget.data.users.length === 0)
-      )
-        return await client.chat.postEphemeral({
+      if (!queryWithTarget || !queryWithTarget.status) {
+        return client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "Unexpected error has occurred.",
+        });
+      }
+
+      if (!queryWithTarget.ok || !queryWithTarget.data.users?.length) {
+        return client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: "User doesn't have an FT account.",
         });
-      else if (!queryWithTarget.ok)
-        return client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: `Unexpected error has occurred.`,
-        });
+      }
+
       const targetUser = await ftClient.user({
         id: queryWithTarget.data.users[0]?.id!,
       });
 
-      if (
-        !targetUser ||
-        !targetUser.status ||
-        (targetUser.ok && !targetUser.data)
-      )
-        return await client.chat.postEphemeral({
+      if (!targetUser || !targetUser.status) {
+        return client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "Unexpected error has occurred.",
+        });
+      }
+
+      if (!targetUser.ok || !Object.keys(targetUser.data)?.length) {
+        return client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: "User doesn't have an FT account.",
         });
-      else if (!targetUser.ok)
-        return client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: `Unexpected error has occurred.`,
-        });
+      }
 
       const userText = [
         { label: "Account ID", value: targetUser.data.id },
@@ -134,15 +133,20 @@ export default {
         { label: "Like Count", value: targetUser.data.like_count },
         {
           label: "Time today",
-          value: formatDuration(targetUser.data.devlog_seconds_today),
+          value: targetUser.data.devlog_seconds_today
+            ? formatDuration(targetUser.data.devlog_seconds_today)
+            : "0s",
         },
         {
           label: "Total Time",
-          value: formatDuration(targetUser.data.devlog_seconds_total),
+          value: targetUser.data.devlog_seconds_total
+            ? formatDuration(targetUser.data.devlog_seconds_total)
+            : "0s",
         },
         {
           label: "Projects",
           value:
+            targetUser.data.project_ids &&
             targetUser.data.project_ids.length > 0
               ? targetUser.data.project_ids
                   .map(
@@ -163,7 +167,7 @@ export default {
             type: "header",
             text: {
               type: "plain_text",
-              text: targetUser.data.display_name,
+              text: targetUser.data.display_name ?? "Unknown",
               emoji: true,
             },
           },
@@ -175,8 +179,11 @@ export default {
             },
             accessory: {
               type: "image",
-              image_url: targetUser.data.avatar,
-              alt_text: targetUser.data.display_name + "'s avatar",
+              image_url:
+                targetUser.data.avatar ??
+                "https://avatars.slack-edge.com/2026-02-16/10546676907328_5d442ad696e294c5feb7_512.png",
+              alt_text:
+                (targetUser.data.display_name ?? "Unknown") + "'s avatar",
             },
           },
           {
@@ -187,7 +194,8 @@ export default {
             elements: [
               {
                 type: "mrkdwn",
-                text: "https://flavortown.hackclub.com/users/" + targetUser.data.id,
+                text:
+                  "https://flavortown.hackclub.com/users/" + targetUser.data.id,
               },
             ],
           },

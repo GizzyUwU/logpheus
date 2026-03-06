@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
-import type * as FTypes from "./ft.d";
+import type { ZodType, z } from "zod";
 import type { logger as LogType } from "..";
+import * as ZTypes from "./ft.zod";
 
 export default class FT {
   lastCode: number | null = null;
@@ -21,86 +22,157 @@ export default class FT {
     this.ready = Promise.resolve();
   }
 
-  private async request<T>(config: AxiosRequestConfig): Promise<
-    | {
-        ok: true;
-        status: number;
-        data: T;
-      }
-    | {
-        ok: false;
-        status: number | null;
-        msg: string | unknown;
-      }
+  private async request<S extends ZodType<any, any, any>>(
+    config: AxiosRequestConfig,
+    schema: S,
+  ): Promise<
+    | { ok: true; status: number; data: z.infer<S> }
+    | { ok: false; status: number | null; msg: string | unknown }
   > {
     await this.ready;
+
     try {
-      const res = await this.fetch.request<T>(config);
+      const res = await this.fetch.request(config);
       this.lastCode = res.status;
-      return { ok: true, status: res.status, data: res.data };
+
+      return {
+        ok: true,
+        status: res.status,
+        data: schema.parse(res.data),
+      };
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const status = err.response?.status ?? err.status ?? null;
         this.lastCode = status;
-        return {
-          ok: false,
-          status,
-          msg: err.message,
-        };
-      } else {
-        const ctx = this.logger.with({
-          error: err
-        })
-        ctx.error("Unexpected Error occurred");
-        return {
-          ok: false,
-          status: null,
-          msg: err,
-        };
+        return { ok: false, status, msg: err.message };
       }
+
+      return { ok: false, status: null, msg: err };
     }
   }
 
-  private get<T>(url: string, params?: unknown) {
-    return this.request<T>({
-      method: "GET",
-      url,
-      params,
-    });
-  }
+  projects(query?: unknown) {
+    const parsedQuery = query
+      ? ZTypes.ListProjectsQueryParams.parse(query)
+      : undefined;
 
-  projects(query?: FTypes.ProjectsQuery) {
-    return this.get<FTypes.Projects>("/projects", query);
-  }
-
-  project(param: FTypes.ProjectParam) {
-    return this.get<FTypes.Project>("/projects/" + Number(param.id));
-  }
-
-  devlogs(param: FTypes.ProjectParam, query: FTypes.DevlogsQuery) {
-    return this.get<FTypes.Devlogs>(
-      "/projects/" + Number(param.id) + "/devlogs",
-      query,
+    return this.request(
+      {
+        method: "GET",
+        url: "/projects",
+        params: parsedQuery,
+      },
+      ZTypes.ListProjectsResponse,
     );
   }
 
-  devlog(param: FTypes.DevlogParam) {
-    return this.get<FTypes.Devlog>("/devlogs/" + Number(param.devlogId));
+  project(param: unknown) {
+    const parsedParam = param
+      ? ZTypes.GetProjectParams.parse(param)
+      : undefined;
+
+    if (!parsedParam) throw new Error("Missing Params");
+    return this.request(
+      {
+        method: "GET",
+        url: "/projects/" + parsedParam.id,
+      },
+      ZTypes.GetProjectResponse,
+    );
   }
 
-  users(query?: FTypes.UsersQuery) {
-    return this.get<FTypes.Users>("/users", query);
+  devlogs(param: unknown, query?: unknown) {
+    const parsedParam = param
+      ? ZTypes.ListProjectDevlogsParams.parse(param)
+      : undefined;
+    const parsedQuery = param
+      ? ZTypes.ListDevlogsQueryParams.parse(query)
+      : undefined;
+
+    if (!parsedParam) throw new Error("Missing Params");
+
+    return this.request(
+      {
+        method: "GET",
+        url:
+          "/projects" + parsedParam.project_id + "/devlogs" + parsedQuery?.page
+            ? "?page=" + parsedQuery?.page
+            : "",
+      },
+      ZTypes.ListDevlogsResponse,
+    );
   }
 
-  user(param: FTypes.UserParams) {
-    return this.get<FTypes.User>("/users/" + param.id);
+  devlog(param: unknown) {
+    const parsedParam = param ? ZTypes.GetDevlogParams.parse(param) : undefined;
+
+    if (!parsedParam) throw new Error("Missing Params");
+    return this.request(
+      {
+        method: "GET",
+        url: "/devlogs/" + parsedParam.id,
+      },
+      ZTypes.GetDevlogResponse,
+    );
+  }
+
+  users(query?: unknown) {
+    const parsedQuery = query
+      ? ZTypes.ListUsersQueryParams.parse(query)
+      : undefined;
+
+    const params = new URLSearchParams();
+
+    if (parsedQuery?.query) {
+      params.append("query", parsedQuery.query);
+    }
+
+    if (parsedQuery?.page) {
+      params.append("page", String(parsedQuery.page));
+    }
+
+    return this.request(
+      {
+        method: "GET",
+        url: "/users" + (params.toString() ? `?${params.toString()}` : ""),
+      },
+      ZTypes.ListUsersResponse,
+    );
+  }
+
+  user(param: unknown) {
+    const parsedParam = param ? ZTypes.GetUserParams.parse(param) : undefined;
+    if (!parsedParam) throw new Error("Missing Params");
+    return this.request(
+      {
+        method: "GET",
+        url: "/users/" + parsedParam.id,
+      },
+      ZTypes.GetUserResponse,
+    );
   }
 
   shop() {
-    return this.get<FTypes.Store>("/store");
+    return this.request(
+      {
+        method: "GET",
+        url: "/store",
+      },
+      ZTypes.ListStoreItemsResponse,
+    );
   }
 
-  item(param: FTypes.StoreItemParams) {
-    return this.get<FTypes.StoreItem>("/store/" + Number(param.id));
+  item(param: unknown) {
+    const parsedParam = param
+      ? ZTypes.GetStoreItemParams.parse(param)
+      : undefined;
+    if (!parsedParam) throw new Error("Missing Params");
+    return this.request(
+      {
+        method: "GET",
+        url: "/store/" + parsedParam.id,
+      },
+      ZTypes.GetStoreItemResponse,
+    );
   }
 }
