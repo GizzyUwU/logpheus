@@ -116,7 +116,7 @@ export default {
       }
 
       const targetUser = await ftClient.user({
-        id: queryWithTarget.data.users[0]?.id!,
+        id: String(queryWithTarget.data.users[0]?.id),
       });
 
       if (!targetUser || !targetUser.status) {
