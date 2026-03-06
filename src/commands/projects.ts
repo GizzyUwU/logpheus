@@ -88,10 +88,18 @@ export default {
     }
 
     if (!projects.ok || !projects.data.projects?.length) {
-      return respond({
-        text: "User doesn't have an FT account.",
-        response_type: "ephemeral",
-      });
+      switch (projects.status) {
+        case 401:
+          return respond({
+            text: "Bad API Key! Run /" + prefix + "-config to fix!",
+            response_type: "ephemeral",
+          });
+        default:
+          return respond({
+            text: "User doesn't have an FT account.",
+            response_type: "ephemeral",
+          });
+      }
     }
 
     const projectRows: RichTextBlock[][] = (projects.data.projects ?? [])

@@ -99,11 +99,20 @@ export default {
       }
 
       if (!queryWithTarget.ok || !queryWithTarget.data.users?.length) {
-        return client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "User doesn't have an FT account.",
-        });
+        switch (queryWithTarget.status) {
+          case 401:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "Bad API Key! Run /" + prefix + "-config to fix!",
+            });
+          default:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "User doesn't have an FT account.",
+            });
+        }
       }
 
       const targetUser = await ftClient.user({
@@ -119,11 +128,20 @@ export default {
       }
 
       if (!targetUser.ok || !Object.keys(targetUser.data)?.length) {
-        return client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "User doesn't have an FT account.",
-        });
+        switch (targetUser.status) {
+          case 401:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "Bad API Key! Run /" + prefix + "-config to fix!",
+            });
+          default:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "User doesn't have an FT account.",
+            });
+        }
       }
 
       const userText = [

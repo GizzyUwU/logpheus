@@ -47,6 +47,8 @@ async function getNewDevlogs(
       project = await client.project({ id: Number(projectId) });
     }
 
+    if(!project) return;
+
     if (project && !project.status) {
       const ctx = logger.with({
         project: {
@@ -66,7 +68,7 @@ async function getNewDevlogs(
       return;
     }
 
-    if (!project) {
+    if (!project.data || !Object.keys(project).length) {
       const row = await db
         .select()
         .from(users)
@@ -75,7 +77,7 @@ async function getNewDevlogs(
 
       const disabled = row[0]?.disabled;
       if (disabled !== true) {
-        if (Number(client.lastCode) === 401) {
+        if (project.status === 401) {
           delete clients[apiKey];
           await db
             .update(users)
@@ -89,7 +91,7 @@ async function getNewDevlogs(
             channel: row[0]?.channel,
             text: "Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /logpheus-config to get it re-enabled.",
           });
-        } else if (client.lastCode === 404) {
+        } else if (project.status === 404) {
           const ctx = logger.with({
             project: {
               id: projectId,
@@ -97,8 +99,8 @@ async function getNewDevlogs(
           });
           ctx.error("No project exists at id");
         } else if (
-          Number(client.lastCode) >= 500 &&
-          Number(client.lastCode) < 600
+          project.status >= 500 &&
+          project.status < 600
         ) {
           return;
         } else {
