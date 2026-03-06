@@ -63,7 +63,6 @@ export default {
       const items = await ftClient.shop();
 
       if (!items || !items.status) {
-        console.log(items, "a");
         return respond({
           text: "Unexpected error has occurred.",
           response_type: "ephemeral",
@@ -84,16 +83,6 @@ export default {
             });
         }
       }
-
-      (items.data ?? [])
-        .filter(
-          (item) =>
-            item.type !== "ShopItem::Accessory" &&
-            !item.attached_shop_item_ids?.some((id) => id != null),
-        )
-        .forEach((item) => {
-          console.log(item);
-        });
 
       const text = (items.data ?? [])
         .filter(
