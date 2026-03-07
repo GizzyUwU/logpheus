@@ -5,5 +5,6 @@ export const users = pgTable("users", {
   channel: text().unique(),
   projects: integer().array(),
   disabled: boolean().default(false),
-  optOuts: text().array()
+  optOuts: text().array(),
+  meta: text().array()
 });

@@ -48,7 +48,7 @@ export default {
       apiKey,
       logger,
     });
-    if (!working)
+    if (!working.works)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
@@ -83,18 +83,43 @@ export default {
             });
         }
       }
+      const region = working.row![0]?.meta?.[0]?.split("Region::")[1] ?? null;
+
+      (items.data ?? [])
+        .filter(
+          (item) =>
+            item.type !== "ShopItem::Accessory" &&
+            !item.attached_shop_item_ids?.some((id) => id != null) &&
+            (region && region.length > 0
+              ? item.enabled?.[`enabled_${region}` as keyof typeof item.enabled]
+              : true),
+        )
+        .forEach((item) => {
+          console.log(item);
+        });
 
       const text = (items.data ?? [])
         .filter(
           (item) =>
             item.type !== "ShopItem::Accessory" &&
-            !item.attached_shop_item_ids?.some((id) => id != null),
+            !item.attached_shop_item_ids?.some((id) => id != null) &&
+            (region && region.length > 0
+              ? item.enabled?.[`enabled_${region}` as keyof typeof item.enabled]
+              : true),
         )
         .slice(0, 40)
-        .map(
-          (item) =>
-            `• ${item.id || 0} - *${item.name ?? "Untitled"}* - ${item.ticket_cost ? item.ticket_cost.base_cost : 0} - ${item.description}`,
-        )
+        .map((item) => {
+          const cost =
+            region && region.length > 0
+              ? ((item.ticket_cost as Record<string, number | undefined>)[
+                  region
+                ] ??
+                item.ticket_cost?.base_cost ??
+                0)
+              : (item.ticket_cost?.base_cost ?? 0);
+
+          return `• ${item.id || 0} - *${item.name ?? "Untitled"}* - ${cost} - ${item.description ?? ""}`;
+        })
         .join("\n");
 
       return respond({
@@ -103,7 +128,9 @@ export default {
             type: "header",
             text: {
               type: "plain_text",
-              text: "Flavortown Store",
+              text: region?.length
+                ? "Flavortown Store with " + region.toUpperCase() + "'s Prices"
+                : "Flavortown Store",
             },
           },
           {
@@ -118,7 +145,7 @@ export default {
             elements: [
               {
                 type: "plain_text",
-                text: "Formatted as \"Identifier - Name - Cost - Description\"",
+                text: 'Formatted as "Identifier - Name - Cost - Description"',
               },
             ],
           },

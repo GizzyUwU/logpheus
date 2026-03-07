@@ -7,13 +7,7 @@ export default {
   name: "config",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    {
-      pg,
-      logger,
-      client,
-      callbackId,
-      prefix,
-    }: RequestHandler,
+    { pg, logger, client, callbackId, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -30,7 +24,7 @@ export default {
           response_type: "ephemeral",
         });
       if (!channel?.channel.id) {
-          logger.error("There is no channel id for this channel?");
+        logger.error("There is no channel id for this channel?");
         return;
       }
       if (command.user_id !== channel.channel?.creator)
@@ -67,13 +61,42 @@ export default {
               block_id: "ftApiKey",
               label: {
                 type: "plain_text",
-                text: "What is the new flavortown api key?",
+                text: "Need to change your flavortown api key?",
               },
               element: {
                 type: "plain_text_input",
                 action_id: "api_input",
                 multiline: false,
               },
+              optional: true
+            },
+            // {
+            //   type: "input",
+            //   block_id: "optOuts",
+            //   label: {
+            //     type: "plain_text",
+            //     text: "Want to opt out of something?",
+            //   },
+            //   element: {
+            //     type: "plain_text_input",
+            //     action_id: "opt_out",
+            //     multiline: false,
+            //   },
+            // },
+            {
+              type: "input",
+              block_id: "meta",
+              label: {
+                type: "plain_text",
+                text: "Whats your region? (Used for shop prices)",
+              },
+              element: {
+                type: "plain_text_input",
+                action_id: "region",
+                multiline: false,
+                initial_value: res[0]?.meta?.[0]?.split("Region::")[1] ?? ""
+              },
+              optional: true
             },
           ],
           submit: {
@@ -93,7 +116,7 @@ export default {
         });
         return;
       } else {
-          logger.error({ error });
+        logger.error({ error });
 
         await respond({
           text: "An unexpected error occurred!",

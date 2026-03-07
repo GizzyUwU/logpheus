@@ -75,7 +75,7 @@ export default {
         apiKey,
         logger,
       });
-      if (!working)
+      if (!working.works)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,

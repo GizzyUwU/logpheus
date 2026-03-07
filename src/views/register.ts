@@ -48,7 +48,7 @@ export default {
           text: "Flavortown API key is invalid every api key should start with ft_sk_",
         });
       const working = await checkAPIKey({ db: pg, apiKey, logger, register: true });
-      if (!working)
+      if (!working.works)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,

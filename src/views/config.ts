@@ -34,88 +34,77 @@ export default {
 
       const values = view.state.values;
       const apiKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
-      if (!apiKey)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "Flavortown API key is required",
-        });
-      if (apiKey.startsWith("ft_sk_") === false)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "Flavortown API key is invalid every api key should start with ft_sk_",
-        });
+      // const optOuts = values["optOuts"]?.["opt_out"]?.value?.trim().split(",");
+      const metaRegion = values["meta"]?.["region"]?.value?.trim();
+      type UserRow = typeof users._.inferSelect;
 
-      const working = await checkAPIKey({ db: pg, apiKey, logger, allowTheDisabled: true, userId });
-      if (!working)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "Flavortown API Key is invalid, provide a valid one.",
+      const updateFields: Partial<UserRow> = {};
+      if (apiKey) {
+        if (apiKey.startsWith("ft_sk_") === false)
+          return await client.chat.postEphemeral({
+            channel: channelId,
+            user: userId,
+            text: "Flavortown API key is invalid every api key should start with ft_sk_",
+          });
+
+        const working = await checkAPIKey({
+          db: pg,
+          apiKey,
+          logger,
+          allowTheDisabled: true,
+          userId,
         });
+        if (!working.works)
+          return await client.chat.postEphemeral({
+            channel: channelId,
+            user: userId,
+            text: "Flavortown API Key is invalid, provide a valid one.",
+          });
 
-      const ftClient = new FT(apiKey, logger);
+        const ftClient = new FT(apiKey, logger);
 
-      const dbData = await pg
-        .select()
-        .from(users)
-        .limit(1)
-        .where(eq(users.userId, userId));
-      if (dbData.length === 0)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "No entry found for you in DB",
-        });
+        const dbData = await pg
+          .select()
+          .from(users)
+          .limit(1)
+          .where(eq(users.userId, userId));
+        if (dbData.length === 0)
+          return await client.chat.postEphemeral({
+            channel: channelId,
+            user: userId,
+            text: "No entry found for you in DB",
+          });
 
-      if (dbData[0]?.disabled) {
-        if (!dbData[0]?.userId) {
-          await pg
-            .update(users)
-            .set({
-              apiKey,
-              userId,
-              disabled: false,
-            })
-            .where(eq(users.userId, userId));
-        } else {
-          await pg
-            .update(users)
-            .set({
-              apiKey,
-              disabled: false,
-            })
-            .where(eq(users.userId, userId));
+        updateFields.apiKey = apiKey;
+        if (dbData[0]?.disabled) updateFields.disabled = false;
+
+        if (!clients[apiKey]) {
+          clients[apiKey] = ftClient;
         }
+      }
+
+      if (metaRegion) {
+        updateFields.meta = ["Region::" + metaRegion];
+      }
+
+      if (Object.keys(updateFields).length > 0) {
+        await pg
+          .update(users)
+          .set(updateFields)
+          .where(eq(users.userId, userId));
+
+        await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "Updated successfully!",
+        });
       } else {
-        if (!dbData[0]?.userId) {
-          await pg
-            .update(users)
-            .set({
-              apiKey,
-              userId,
-            })
-            .where(eq(users.userId, userId));
-        } else {
-          await pg
-            .update(users)
-            .set({
-              apiKey,
-            })
-            .where(eq(users.userId, userId));
-        }
+        await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "Nothing to do as nothing changed.",
+        });
       }
-
-      if (!clients[apiKey]) {
-        clients[apiKey] = ftClient;
-      }
-
-      return await client.chat.postEphemeral({
-        channel: channelId,
-        user: userId,
-        text: "API key has been updated",
-      });
     } catch (err) {
       const ctx = logger.with({
         data: {

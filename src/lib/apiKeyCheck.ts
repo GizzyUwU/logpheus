@@ -18,7 +18,7 @@ export default async function checkAPIKey(data: {
   userId?: string;
   register?: boolean;
 }) {
-  if (!data.apiKey) return false;
+  if (!data.apiKey) return { works: false };
 
   const allowDisabledByUser =
     data.allowTheDisabled === true &&
@@ -38,11 +38,11 @@ export default async function checkAPIKey(data: {
         .limit(1);
 
   if (row.length === 0) {
-    return data.register === true && !allowDisabledByUser;
+    return { works: data.register === true && !allowDisabledByUser };
   }
 
   if (!allowDisabledByUser && row[0]?.disabled === true) {
-    return false;
+    return { works: false };
   }
 
   const client = new FT(data.apiKey, data.logger);
@@ -50,5 +50,5 @@ export default async function checkAPIKey(data: {
     id: "me",
   });
 
-  return typeof res.status === "number" && res.status >= 200 && res.status < 300;
+  return { works: typeof res.status === "number" && res.status >= 200 && res.status < 300, row };
 }

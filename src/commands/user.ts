@@ -43,7 +43,7 @@ export default {
         apiKey,
         logger,
       });
-      if (!working)
+      if (!working.works)
         return respond({
           text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
           response_type: "ephemeral",
