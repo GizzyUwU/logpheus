@@ -78,7 +78,7 @@ export default {
             });
           default:
             return respond({
-              text: "User doesn't have an FT account.",
+              text: "Unexpected error has occurred",
               response_type: "ephemeral",
             });
         }

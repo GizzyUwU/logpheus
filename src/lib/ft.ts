@@ -1,7 +1,8 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
-import type { ZodType, z } from "zod";
+import type { ZodType } from "zod";
 import type { logger as LogType } from "..";
 import * as ZTypes from "./ft.zod";
+import { z } from "zod";
 
 export default class FT {
   lastCode: number | null = null;
@@ -34,12 +35,25 @@ export default class FT {
     try {
       const res = await this.fetch.request(config);
       this.lastCode = res.status;
-
-      return {
-        ok: true,
-        status: res.status,
-        data: schema.parse(res.data),
-      };
+      try {
+        return {
+          ok: true,
+          status: res.status,
+          data: schema.parse(res.data),
+        };
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          this.logger.error("Zod validation failed", {
+            error: error.issues,
+          });
+          return { ok: false, status: res.status, msg: error.issues };
+        } else {
+          this.logger.error("Unknown parsing error", {
+            error,
+          });
+          return { ok: false, status: res.status, msg: error };
+        }
+      }
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const status = err.response?.status ?? err.status ?? null;
