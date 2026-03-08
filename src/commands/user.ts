@@ -111,7 +111,6 @@ export default {
           });
 
         const mentionId = match[1];
-        console.log(mentionId);
 
         let ftClient: FT = clients[apiKey]!;
         if (!ftClient) {

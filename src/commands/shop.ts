@@ -35,7 +35,7 @@ export default {
       apiKey: checkKey,
       logger,
     });
-    
+
     if (!working.works)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
@@ -73,19 +73,6 @@ export default {
         }
       }
       const region = working.row![0]?.meta?.[0]?.split("Region::")[1] ?? null;
-
-      (items.data ?? [])
-        .filter(
-          (item) =>
-            item.type !== "ShopItem::Accessory" &&
-            !item.attached_shop_item_ids?.some((id) => id != null) &&
-            (region && region.length > 0
-              ? item.enabled?.[`enabled_${region}` as keyof typeof item.enabled]
-              : true),
-        )
-        .forEach((item) => {
-          console.log(item);
-        });
 
       const text = (items.data ?? [])
         .filter(
