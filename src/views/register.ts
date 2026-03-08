@@ -64,17 +64,17 @@ export default {
           text: "This API key is already bound to a user.",
         });
 
-      const updateFields: UserInsert = {
+      const insertFields: UserInsert = {
         apiKey,
         userId,
         disabled: false,
       };
 
       if (metaRegion) {
-        updateFields.meta = ["Region::" + metaRegion];
+        insertFields.meta = ["Region::" + metaRegion];
       }
 
-      await pg.insert(users).values(updateFields);
+      await pg.insert(users).values(insertFields);
 
       await client.chat.postEphemeral({
         channel: channelId,
