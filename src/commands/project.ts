@@ -44,23 +44,11 @@ export default {
         response_type: "ephemeral",
       });
 
-    const apiKey = userData[0]?.apiKey;
-    if (!apiKey) {
-      const ctx = logger.with({
-        user: {
-          id: command.user_id,
-        },
-      });
-      ctx.error("User exists in db but lacks an api key in it");
-      return respond({
-        text: `Hey! Basically you exist in db and lack an api key try fix it using /${prefix}-config`,
-        response_type: "ephemeral",
-      });
-    }
+    const checkKey = userData[0]?.apiKey;
 
     const working = await checkAPIKey({
       db: pg,
-      apiKey,
+      apiKey: checkKey,
       logger,
     });
 
@@ -69,7 +57,8 @@ export default {
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
       });
-
+    const apiKey = checkKey!;
+    
     let ftClient: FT = clients[apiKey]!;
     if (!ftClient) {
       ftClient = new FT(apiKey, logger);

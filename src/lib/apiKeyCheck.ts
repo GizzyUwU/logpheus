@@ -11,21 +11,21 @@ type DB =
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 
 export default async function checkAPIKey(data: {
-  db: DB;
-  apiKey: string;
+  db?: DB;
+  apiKey: string | undefined;
   logger: typeof LogTape;
   allowTheDisabled?: boolean;
   userId?: string;
   register?: boolean;
 }) {
   if (!data.apiKey) return { works: false };
-
+  if(!data.apiKey.startsWith("ft_sk_")) return { works: false };
   const allowDisabledByUser =
     data.allowTheDisabled === true &&
     typeof data.userId === "string" &&
     data.userId.length > 0;
 
-  const row = allowDisabledByUser
+  const row = data.db ? allowDisabledByUser
     ? await data.db
         .select()
         .from(users)
@@ -35,15 +35,11 @@ export default async function checkAPIKey(data: {
         .select()
         .from(users)
         .where(eq(users.apiKey, data.apiKey))
-        .limit(1);
+        .limit(1)
+    : [];
 
-  if (row.length === 0) {
-    return { works: data.register === true && !allowDisabledByUser };
-  }
-
-  if (!allowDisabledByUser && row[0]?.disabled === true) {
-    return { works: false };
-  }
+  if (data.db && row.length === 0) return { works: data.register === true && !allowDisabledByUser };
+  if (!allowDisabledByUser && (data.db && row[0]?.disabled === true)) return { works: false };
 
   const client = new FT(data.apiKey, data.logger);
   const res = await client.user({

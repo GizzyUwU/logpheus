@@ -4,6 +4,7 @@ import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
+import checkAPIKey from "../lib/apiKeyCheck";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -69,17 +70,22 @@ export default {
           user: userId,
           text: `You don't exist in the db! Run /${prefix}-register`,
         });
-      const apiKey = userData[0]?.apiKey;
-      if (!apiKey) {
-        const ctx = logger.with({
-          user: {
-            id: userId,
-            channel: channelId,
-          },
+      const checkKey = userData[0]?.apiKey;
+      const working = await checkAPIKey({
+        db: pg,
+        apiKey: checkKey,
+        logger,
+        register: true,
+      });
+      if (!working) 
+        return await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: `You're api key isn't working! Try re-entering it with /${prefix}-config`,
         });
-        ctx.error("User exists in db but lacks an api key in it");
-        return;
-      }
+      
+
+      const apiKey = checkKey!;
 
       let ftClient: FT = clients[apiKey]!;
       if (!ftClient) {

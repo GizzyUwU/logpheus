@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "../lib/apiKeyCheck";
+type UserInsert = typeof users.$inferInsert;
 
 export default {
   name: "register",
@@ -33,27 +34,23 @@ export default {
       }
 
       const values = view.state.values;
-      const apiKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
+      const checkKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
+      const metaRegion = values["meta"]?.["region"]?.value?.trim();
 
-      if (!apiKey)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "Flavortown API key is required",
-        });
-      if (apiKey.startsWith("ft_sk_") === false)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "Flavortown API key is invalid every api key should start with ft_sk_",
-        });
-      const working = await checkAPIKey({ db: pg, apiKey, logger, register: true });
+      const working = await checkAPIKey({
+        db: pg,
+        apiKey: checkKey,
+        logger,
+        register: true,
+      });
       if (!working.works)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: "Flavortown API Key is invalid, provide a valid one.",
         });
+
+      const apiKey = checkKey!;
 
       const exists = await pg
         .select()
@@ -67,11 +64,17 @@ export default {
           text: "This API key is already bound to a user.",
         });
 
-      await pg.insert(users).values({
+      const updateFields: UserInsert = {
         apiKey,
-        userId: userId,
+        userId,
         disabled: false,
-      });
+      };
+
+      if (metaRegion) {
+        updateFields.meta = ["Region::" + metaRegion];
+      }
+
+      await pg.insert(users).values(updateFields);
 
       await client.chat.postEphemeral({
         channel: channelId,

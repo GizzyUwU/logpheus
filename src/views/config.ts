@@ -5,6 +5,7 @@ import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "../lib/apiKeyCheck";
+type UserRow = typeof users._.inferSelect;
 
 export default {
   name: "config",
@@ -33,26 +34,17 @@ export default {
       }
 
       const values = view.state.values;
-      const apiKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
+      const checkKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
       // const optOuts = values["optOuts"]?.["opt_out"]?.value?.trim().split(",");
       const metaRegion = values["meta"]?.["region"]?.value?.trim();
-      type UserRow = typeof users._.inferSelect;
 
       const updateFields: Partial<UserRow> = {};
-      if (apiKey) {
-        if (apiKey.startsWith("ft_sk_") === false)
-          return await client.chat.postEphemeral({
-            channel: channelId,
-            user: userId,
-            text: "Flavortown API key is invalid every api key should start with ft_sk_",
-          });
-
+      if (checkKey) {
         const working = await checkAPIKey({
           db: pg,
-          apiKey,
+          apiKey: checkKey,
           logger,
-          allowTheDisabled: true,
-          userId,
+          register: true,
         });
         if (!working.works)
           return await client.chat.postEphemeral({
@@ -61,6 +53,7 @@ export default {
             text: "Flavortown API Key is invalid, provide a valid one.",
           });
 
+        const apiKey = checkKey!;
         const ftClient = new FT(apiKey, logger);
 
         const dbData = await pg

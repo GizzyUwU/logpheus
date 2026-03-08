@@ -58,6 +58,13 @@ export default {
           }),
           blocks: [
             {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "Get your API key here: <https://flavortown.hackclub.com/kitchen?settings=1#api_key|Flavortown Settings>",
+              },
+            },
+            {
               type: "input",
               block_id: "ftApiKey",
               label: {
@@ -69,6 +76,20 @@ export default {
                 action_id: "api_input",
                 multiline: false,
               },
+            },
+            {
+              type: "input",
+              block_id: "meta",
+              label: {
+                type: "plain_text",
+                text: "Whats your region? (Used for shop items (prices and also disabled items)",
+              },
+              element: {
+                type: "plain_text_input",
+                action_id: "region",
+                multiline: false,
+              },
+              optional: true,
             },
           ],
           submit: {

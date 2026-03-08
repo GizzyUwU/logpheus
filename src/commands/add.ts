@@ -7,13 +7,7 @@ export default {
   name: "add",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    {
-      callbackId,
-      logger,
-      client,
-      pg,
-      prefix,
-    }: RequestHandler,
+    { callbackId, logger, client, pg, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -36,92 +30,47 @@ export default {
         .limit(1)
         .where(eq(users.userId, command.user_id));
 
-      if (userData.length === 0) {
-        await client.views.open({
-          trigger_id: command.trigger_id,
-          view: {
-            type: "modal",
-            callback_id: callbackId!,
-            private_metadata: JSON.stringify({
-              channel: command.channel_id,
-            }),
-            title: {
-              type: "plain_text",
-              text: /^[a-z]/i.test(prefix!)
-                ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-                : prefix!,
-            },
-            blocks: [
-              {
-                type: "input",
-                block_id: "projId",
-                label: {
-                  type: "plain_text",
-                  text: "What is the project's id",
-                },
-                element: {
-                  type: "plain_text_input",
-                  action_id: "proj_input",
-                  multiline: false,
-                },
-              },
-              {
-                type: "input",
-                block_id: "ftApiKey",
-                label: {
-                  type: "plain_text",
-                  text: "What is your flavortown api key? (This is required everytime you submit a project)",
-                },
-                element: {
-                  type: "plain_text_input",
-                  action_id: "api_input",
-                  multiline: false,
-                },
-              },
-            ],
-            submit: {
-              type: "plain_text",
-              text: "Submit",
-            },
-          },
+      if (userData.length === 0)
+        return await respond({
+          text: `Run /${prefix}-register first to be able to run this command.`,
+          response_type: "ephemeral",
         });
-      } else {
-        await client.views.open({
-          trigger_id: command.trigger_id,
-          view: {
-            type: "modal",
-            callback_id: callbackId!,
-            title: {
-              type: "plain_text",
-              text: /^[a-z]/i.test(prefix!)
-                ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-                : prefix!,
-            },
-            private_metadata: JSON.stringify({
-              channel: command.channel_id,
-            }),
-            blocks: [
-              {
-                type: "input",
-                block_id: "projId",
-                label: {
-                  type: "plain_text",
-                  text: "What is the project's id",
-                },
-                element: {
-                  type: "plain_text_input",
-                  action_id: "proj_input",
-                  multiline: false,
-                },
-              },
-            ],
-            submit: {
-              type: "plain_text",
-              text: "Submit",
-            },
+
+      await client.views.open({
+        trigger_id: command.trigger_id,
+        view: {
+          type: "modal",
+          callback_id: callbackId!,
+          title: {
+            type: "plain_text",
+            text: /^[a-z]/i.test(prefix!)
+              ? prefix![0]!.toUpperCase() + prefix!.slice(1)
+              : prefix!,
           },
-        });
-      }
+          private_metadata: JSON.stringify({
+            channel: command.channel_id,
+          }),
+          blocks: [
+            {
+              type: "input",
+              block_id: "projId",
+              label: {
+                type: "plain_text",
+                text: "What is the project's id",
+              },
+              element: {
+                type: "plain_text_input",
+                action_id: "proj_input",
+                multiline: false,
+              },
+            },
+          ],
+          submit: {
+            type: "plain_text",
+            text: "Submit",
+          },
+        },
+      });
     } catch (error: any) {
       if (
         error.code === "slack_webapi_platform_error" &&
