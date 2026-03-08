@@ -249,7 +249,7 @@ export default {
                 const durationString = ([86400, 3600, 60] as const)
                   .map((sec, i) => {
                     const val =
-                      Math.floor(seconds || 0 / sec) %
+                      Math.floor((seconds || 0) / sec) %
                       (i === 0 ? Infinity : i === 1 ? 24 : 60);
                     const labels = ["day", "hour", "minute"];
                     return val > 0
