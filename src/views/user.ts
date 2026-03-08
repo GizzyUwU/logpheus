@@ -77,13 +77,12 @@ export default {
         logger,
         register: true,
       });
-      if (!working) 
+      if (!working)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: `You're api key isn't working! Try re-entering it with /${prefix}-config`,
         });
-      
 
       const apiKey = checkKey!;
 
@@ -112,11 +111,17 @@ export default {
               user: userId,
               text: "Bad API Key! Run /" + prefix + "-config to fix!",
             });
-          default:
+          case 404:
             return client.chat.postEphemeral({
               channel: channelId,
               user: userId,
               text: "User doesn't have an FT account.",
+            });
+          default:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "Unexpected error has occured.",
             });
         }
       }
@@ -141,11 +146,17 @@ export default {
               user: userId,
               text: "Bad API Key! Run /" + prefix + "-config to fix!",
             });
-          default:
+          case 404:
             return client.chat.postEphemeral({
               channel: channelId,
               user: userId,
               text: "User doesn't have an FT account.",
+            });
+          default:
+            return client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: "Unexpected error has occured.",
             });
         }
       }

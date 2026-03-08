@@ -1,14 +1,31 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { eq } from "drizzle-orm";
-import { users } from "../schema/users";
-import type { RequestHandler } from "..";
 import checkAPIKey from "../lib/apiKeyCheck";
+import type { RequestHandler } from "..";
+import { users } from "../schema/users";
+import { eq } from "drizzle-orm";
+import FT from "../lib/ft";
+
+function formatDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+
+  return `${seconds}s`;
+}
 
 export default {
   name: "user",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, client, logger, callbackId, prefix }: RequestHandler,
+    { pg, client, clients, logger, callbackId, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -33,7 +50,6 @@ export default {
 
       const checkKey = userExists[0]?.apiKey;
       const working = await checkAPIKey({
-        db: pg,
         apiKey: checkKey,
         logger,
       });
@@ -44,102 +60,201 @@ export default {
           response_type: "ephemeral",
         });
 
-      await client.views.open({
-        trigger_id: command.trigger_id,
-        view: {
-          type: "modal",
-          callback_id: callbackId!,
-          title: {
-            type: "plain_text",
-            text: /^[a-z]/i.test(prefix!)
-              ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-              : prefix!,
-          },
-          private_metadata: JSON.stringify({
-            channel: command.channel_id,
-          }),
-          blocks: [
-            {
-              type: "input",
-              block_id: "target_user",
-              element: {
-                type: "users_select",
-                action_id: "user",
-                placeholder: {
+      const apiKey = checkKey!;
+
+      const mention = command.text.trim();
+      if (!mention) {
+        await client.views.open({
+          trigger_id: command.trigger_id,
+          view: {
+            type: "modal",
+            callback_id: callbackId!,
+            title: {
+              type: "plain_text",
+              text: /^[a-z]/i.test(prefix!)
+                ? prefix![0]!.toUpperCase() + prefix!.slice(1)
+                : prefix!,
+            },
+            private_metadata: JSON.stringify({
+              channel: command.channel_id,
+            }),
+            blocks: [
+              {
+                type: "input",
+                block_id: "target_user",
+                element: {
+                  type: "users_select",
+                  action_id: "user",
+                  placeholder: {
+                    type: "plain_text",
+                    text: "Pick a user",
+                  },
+                },
+                label: {
                   type: "plain_text",
-                  text: "Pick a user",
+                  text: "User",
                 },
               },
-              label: {
+            ],
+            submit: {
+              type: "plain_text",
+              text: "Submit",
+            },
+          },
+        });
+      } else {
+        const match = mention.match(/<@([A-Z0-9]+)(?:\|[^>]+)?>/);
+        if (!match)
+          return respond({
+            text: `This wasn't a valid user mention try actually mentioning a user for the argument in this command.`,
+            response_type: "ephemeral",
+          });
+
+        const mentionId = match[1];
+        console.log(mentionId);
+
+        let ftClient: FT = clients[apiKey]!;
+        if (!ftClient) {
+          ftClient = new FT(apiKey, logger);
+        }
+
+        const queryWithTarget = await ftClient.users({
+          query: mentionId,
+        });
+
+        if (!queryWithTarget || !queryWithTarget.status) {
+          return respond({
+            text: "Unexpected error has occurred.",
+          });
+        }
+
+        if (!queryWithTarget.ok || !queryWithTarget.data.users?.length) {
+          switch (queryWithTarget.status) {
+            case 401:
+              return respond({
+                text: "Bad API Key! Run /" + prefix + "-config to fix!",
+                response_type: "ephemeral",
+              });
+            case 404:
+              return respond({
+                text: "User doesn't have an FT account.",
+                response_type: "ephemeral",
+              });
+            default:
+              return respond({
+                text: "Unexpected Error.",
+                response_type: "ephemeral",
+              });
+          }
+        }
+
+        const targetUser = await ftClient.user({
+          id: String(queryWithTarget.data.users[0]?.id),
+        });
+
+        if (!targetUser || !targetUser.status) {
+          return respond({
+            text: "Unexpected error has occurred.",
+            response_type: "ephemeral",
+          });
+        }
+
+        if (!targetUser.ok || !Object.keys(targetUser.data)?.length) {
+          switch (targetUser.status) {
+            case 401:
+              return respond({
+                text: "Bad API Key! Run /" + prefix + "-config to fix!",
+                response_type: "ephemeral",
+              });
+            case 404:
+              return respond({
+                text: "User doesn't have an FT account.",
+                response_type: "ephemeral",
+              });
+            default:
+              return respond({
+                text: "Unexpected Error has occured.",
+                response_type: "ephemeral",
+              });
+          }
+        }
+
+        const userText = [
+          { label: "Account ID", value: targetUser.data.id },
+          { label: "Cookies", value: targetUser.data.cookies ?? "Disabled" },
+          { label: "Votes Count", value: targetUser.data.vote_count },
+          { label: "Like Count", value: targetUser.data.like_count },
+          {
+            label: "Time today",
+            value: targetUser.data.devlog_seconds_today
+              ? formatDuration(targetUser.data.devlog_seconds_today)
+              : "0s",
+          },
+          {
+            label: "Total Time",
+            value: targetUser.data.devlog_seconds_total
+              ? formatDuration(targetUser.data.devlog_seconds_total)
+              : "0s",
+          },
+          {
+            label: "Projects",
+            value:
+              targetUser.data.project_ids &&
+              targetUser.data.project_ids.length > 0
+                ? targetUser.data.project_ids
+                    .map(
+                      (id: string | number) =>
+                        `<https://flavortown.hackclub.com/projects/${id}|${id}>`,
+                    )
+                    .join(", ")
+                : "No projects",
+          },
+        ]
+          .map((f) => `*${f.label}*: ${f.value}`)
+          .join("\n");
+        return await respond({
+          blocks: [
+            {
+              type: "header",
+              text: {
                 type: "plain_text",
-                text: "User",
+                text: targetUser.data.display_name ?? "Unknown",
+                emoji: true,
               },
             },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: userText,
+              },
+              accessory: {
+                type: "image",
+                image_url:
+                  targetUser.data.avatar ??
+                  "https://avatars.slack-edge.com/2026-02-16/10546676907328_5d442ad696e294c5feb7_512.png",
+                alt_text:
+                  (targetUser.data.display_name ?? "Unknown") + "'s avatar",
+              },
+            },
+            {
+              type: "divider",
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text:
+                    "https://flavortown.hackclub.com/users/" +
+                    targetUser.data.id,
+                },
+              ],
+            },
           ],
-          submit: {
-            type: "plain_text",
-            text: "Submit",
-          },
-        },
-      });
-      //   const projectId = command.text.trim();
-      //   const res = await pg
-      //     .select()
-      //     .from(users)
-      //     .where(eq(users.channel, command.channel_id));
-      //   if (res.length === 0)
-      //     return await respond({
-      //       text: `No API key found for this channel.`,
-      //       response_type: "ephemeral",
-      //     });
-      //   const data = res[0];
-
-      //   if (projectId.length > 0) {
-      //     if (!Number.isInteger(Number(projectId)))
-      //       return await respond({
-      //         text: "Project ID must be a valid number.",
-      //         response_type: "ephemeral",
-      //       });
-
-      //     if (!data?.projects.includes(Number(projectId)))
-      //       return await respond({
-      //         text: "This project id isn't subscribed to this channel.",
-      //         response_type: "ephemeral",
-      //       });
-
-      //     const updatedProjects = data.projects.filter(
-      //       (p) => p !== Number(projectId),
-      //     );
-      //     if (updatedProjects.length > 0) {
-      //       await pg
-      //         .update(users)
-      //         .set({
-      //           projects: updatedProjects,
-      //         })
-      //         .where(eq(users.channel, command.channel_id));
-      //     } else {
-      //       await pg.delete(users).where(eq(users.channel, command.channel_id));
-      //     }
-
-      //     if (clients[data.apiKey]) delete clients[data.apiKey];
-      //     return await respond({
-      //       text: `Project ${projectId} has been disconnected from this channel.`,
-      //       response_type: "ephemeral",
-      //     });
-      //   } else {
-      //     for (const pid of data?.projects!) {
-      //       await pg
-      //         .delete(projectData)
-      //         .where(eq(projectData.projectId, Number(pid)));
-      //     }
-
-      //     await pg.delete(users).where(eq(users.channel, command.channel_id));
-      //     if (clients[data!.apiKey]) delete clients[data!.apiKey];
-      //     return await respond({
-      //       text: "All projects previously connected to this channel have been disconnected.",
-      //       response_type: "ephemeral",
-      //     });
-      //   }
+          response_type: "ephemeral",
+        });
+      }
     } catch (error: any) {
       if (
         error.code === "slack_webapi_platform_error" &&
