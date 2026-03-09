@@ -4,9 +4,12 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 export default {
   name: "meow",
   execute: async (
-    { command }: SlackCommandMiddlewareArgs,
+    { command, respond }: SlackCommandMiddlewareArgs,
   ) => {
-    const projectIdRaw = command.text.trim();
-    console.log(projectIdRaw)
+    const mention = command.text.trim();
+    return respond({
+        text: mention + " " + "Meow!",
+        response_type: "in_channel"
+    })
   }
 }
