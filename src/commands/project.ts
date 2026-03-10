@@ -17,6 +17,19 @@ const formatDate = (iso: string) => {
   )}`;
 };
 
+function formatDuration(totalSeconds: number) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+
+  const parts = [];
+  if (h) parts.push(`${h}h`);
+  if (m) parts.push(`${m}m`);
+  if (s) parts.push(`${s}s`);
+
+  return parts.length ? parts.join(" ") : "0s";
+}
+
 export default {
   name: "project",
   execute: async (
@@ -58,7 +71,7 @@ export default {
         response_type: "ephemeral",
       });
     const apiKey = checkKey!;
-    
+
     let ftClient: FT = clients[apiKey]!;
     if (!ftClient) {
       ftClient = new FT(apiKey, logger);
@@ -95,6 +108,42 @@ export default {
       }
     }
 
+    const devlogs = await ftClient.devlogs({
+      project_id: projectId,
+    });
+
+    if (!devlogs || !devlogs.status) {
+      return respond({
+        text: "Unexpected error has occurred.",
+        response_type: "ephemeral",
+      });
+    }
+
+    if (!devlogs.ok || !Object.keys(devlogs.data)?.length) {
+      switch (devlogs.status) {
+        case 404:
+          return respond({
+            text: "Project doesn't exist.",
+            response_type: "ephemeral",
+          });
+        case 401:
+          return respond({
+            text: "Bad API Key! Run /" + prefix + "-config to fix!",
+            response_type: "ephemeral",
+          });
+        default:
+          return respond({
+            text: "Unexpected error!",
+            response_type: "ephemeral",
+          });
+      }
+    }
+
+    const totalSeconds = (devlogs.data.devlogs ?? []).reduce(
+      (sum, log) => sum + (log.duration_seconds ?? 0),
+      0
+    );
+
     const userText = [
       { label: "Project ID", value: project.data.id },
       { label: "Description", value: project.data.description },
@@ -109,6 +158,10 @@ export default {
         value: project.data.updated_at
           ? formatDate(project.data.updated_at)
           : "Never",
+      },
+      {
+        label: "Project Hours",
+        value: formatDuration(totalSeconds) || "0h"
       },
       {
         label: "Ship Status",
@@ -154,7 +207,7 @@ export default {
           elements: [
             {
               type: "mrkdwn",
-              text: `${project.data.repo_url ? "<" + project.data.repo_url + "|Repo>" : ""} ${project.data.readme_url ? "<" + project.data.readme_url + "|Read me>" : ""} ${project.data.demo_url ? "<" + project.data.demo_url + "|Demo>" : ""}`,
+              text: `${project.data.repo_url ? "<" + project.data.repo_url + "|Repository>" : ""} ${project.data.readme_url ? "<" + project.data.readme_url + "|README>" : ""} ${project.data.demo_url ? "<" + project.data.demo_url + "|Demo>" : ""}`,
             },
           ],
         },

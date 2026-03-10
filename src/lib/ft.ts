@@ -99,7 +99,7 @@ export default class FT {
     const parsedParam = param
       ? ZTypes.ListProjectDevlogsParams.parse(param)
       : undefined;
-    const parsedQuery = param
+    const parsedQuery = query
       ? ZTypes.ListDevlogsQueryParams.parse(query)
       : undefined;
 
@@ -109,11 +109,12 @@ export default class FT {
       {
         method: "GET",
         url:
-          "/projects" + parsedParam.project_id + "/devlogs" + parsedQuery?.page
-            ? "?page=" + parsedQuery?.page
-            : "",
+          "/projects/" +
+          parsedParam.project_id +
+          "/devlogs" +
+          (parsedQuery?.page ? "?page=" + parsedQuery.page : "")
       },
-      ZTypes.ListDevlogsResponse,
+      ZTypes.ListProjectDevlogsResponse,
     );
   }
 
