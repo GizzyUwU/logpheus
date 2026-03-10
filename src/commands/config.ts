@@ -91,7 +91,7 @@ export default {
               block_id: "meta",
               label: {
                 type: "plain_text",
-                text: "Whats your region? (Used for shop items (prices and also disabled items)",
+                text: "Whats your region? (Used for shop items prices and also disabled items)",
               },
               element: {
                 type: "plain_text_input",
