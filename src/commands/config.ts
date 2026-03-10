@@ -27,11 +27,7 @@ export default {
         logger.error("There is no channel id for this channel?");
         return;
       }
-      if (command.user_id !== channel.channel?.creator)
-        return await respond({
-          text: "You can only run this command in a channel that you are the creator of",
-          response_type: "ephemeral",
-        });
+  
       const res = await pg
         .select()
         .from(users)
