@@ -129,7 +129,7 @@ export default {
         response_type: "ephemeral",
       });
     } else {
-      const item = await ftClient.item({ id });
+      const item = await ftClient.item({ id: Number(id) });
 
       if (!item.ok || !Object.keys(item.data)?.length) {
         switch (item.status) {
