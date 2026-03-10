@@ -5,6 +5,7 @@ import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 import type { RichTextBlock } from "@slack/web-api";
 import checkAPIKey from "../lib/apiKeyCheck";
+import { getGenericErrorMessage } from "../lib/genericError";
 
 export default {
   name: "projects",
@@ -79,14 +80,15 @@ export default {
 
     if (!projects.ok || !projects.data.projects?.length) {
       switch (projects.status) {
-        case 401:
+        case 404:
           return respond({
-            text: "Bad API Key! Run /" + prefix + "-config to fix!",
+            text: "No projects exist?.",
             response_type: "ephemeral",
           });
         default:
+          const msg = getGenericErrorMessage(projects.status, prefix!);
           return respond({
-            text: "User doesn't have an FT account.",
+            text: msg ?? "Unexpected error has occured!",
             response_type: "ephemeral",
           });
       }

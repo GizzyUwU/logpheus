@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "../lib/apiKeyCheck";
+import { getGenericErrorMessage } from "../lib/genericError";
 type UserRow = typeof users._.inferSelect;
 
 export default {
@@ -134,17 +135,12 @@ export default {
               user: userId,
               text: "Project doesn't exist.",
             });
-          case 401:
-            return client.chat.postEphemeral({
-              channel: channelId,
-              user: userId,
-              text: "Bad API Key! Run /" + prefix + "-config to fix!",
-            });
           default:
+            const msg = getGenericErrorMessage(freshProject.status, prefix!);
             return client.chat.postEphemeral({
               channel: channelId,
               user: userId,
-              text: "Unexpected error!",
+              text: msg ?? "Unexpected error has occured!",
             });
         }
       }

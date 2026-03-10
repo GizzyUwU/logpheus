@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 import checkAPIKey from "../lib/apiKeyCheck";
+import { getGenericErrorMessage } from "../lib/genericError";
 
 export default {
   name: "shop",
@@ -60,14 +61,10 @@ export default {
 
       if (!items.ok || !items.data?.length) {
         switch (items.status) {
-          case 401:
-            return respond({
-              text: "Bad API Key! Run /" + prefix + "-config to fix!",
-              response_type: "ephemeral",
-            });
           default:
+            const msg = getGenericErrorMessage(items.status, prefix!);
             return respond({
-              text: "Unexpected error has occurred",
+              text: msg ?? "Unexpected error has occured!",
               response_type: "ephemeral",
             });
         }
@@ -133,14 +130,10 @@ export default {
 
       if (!item.ok || !Object.keys(item.data)?.length) {
         switch (item.status) {
-          case 401:
-            return respond({
-              text: "Bad API Key! Run /" + prefix + "-config to fix!",
-              response_type: "ephemeral",
-            });
           default:
+            const msg = getGenericErrorMessage(item.status, prefix!);
             return respond({
-              text: "Unexpected error.",
+              text: msg ?? "Unexpected error has occured!",
               response_type: "ephemeral",
             });
         }

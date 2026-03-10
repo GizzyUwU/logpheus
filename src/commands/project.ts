@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 import checkAPIKey from "../lib/apiKeyCheck";
+import { getGenericErrorMessage } from "../lib/genericError";
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
@@ -92,17 +93,13 @@ export default {
       switch (project.status) {
         case 404:
           return respond({
-            text: "Project doesn't exist.",
-            response_type: "ephemeral",
-          });
-        case 401:
-          return respond({
-            text: "Bad API Key! Run /" + prefix + "-config to fix!",
+            text: "This doesn't exist.",
             response_type: "ephemeral",
           });
         default:
+          const msg = getGenericErrorMessage(project.status, prefix!);
           return respond({
-            text: "Unexpected error!",
+            text: msg ?? "Unexpected error has occured!",
             response_type: "ephemeral",
           });
       }
@@ -126,14 +123,10 @@ export default {
             text: "Project doesn't exist.",
             response_type: "ephemeral",
           });
-        case 401:
-          return respond({
-            text: "Bad API Key! Run /" + prefix + "-config to fix!",
-            response_type: "ephemeral",
-          });
         default:
+          const msg = getGenericErrorMessage(devlogs.status, prefix!);
           return respond({
-            text: "Unexpected error!",
+            text: msg ?? "Unexpected error has occurred!",
             response_type: "ephemeral",
           });
       }
@@ -141,7 +134,7 @@ export default {
 
     const totalSeconds = (devlogs.data.devlogs ?? []).reduce(
       (sum, log) => sum + (log.duration_seconds ?? 0),
-      0
+      0,
     );
 
     const userText = [
@@ -161,7 +154,7 @@ export default {
       },
       {
         label: "Project Hours",
-        value: formatDuration(totalSeconds) || "0h"
+        value: formatDuration(totalSeconds) || "0h",
       },
       {
         label: "Ship Status",

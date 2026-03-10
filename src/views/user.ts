@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import type { RequestHandler } from "..";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "../lib/apiKeyCheck";
+import { getGenericErrorMessage } from "../lib/genericError";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -105,12 +106,6 @@ export default {
 
       if (!queryWithTarget.ok || !queryWithTarget.data.users?.length) {
         switch (queryWithTarget.status) {
-          case 401:
-            return client.chat.postEphemeral({
-              channel: channelId,
-              user: userId,
-              text: "Bad API Key! Run /" + prefix + "-config to fix!",
-            });
           case 404:
             return client.chat.postEphemeral({
               channel: channelId,
@@ -118,10 +113,11 @@ export default {
               text: "User doesn't have an FT account.",
             });
           default:
+            const msg = getGenericErrorMessage(queryWithTarget.status, prefix!);
             return client.chat.postEphemeral({
               channel: channelId,
               user: userId,
-              text: "Unexpected error has occured.",
+              text: msg ?? "Unexpected error has occured!",
             });
         }
       }
@@ -140,12 +136,6 @@ export default {
 
       if (!targetUser.ok || !Object.keys(targetUser.data)?.length) {
         switch (targetUser.status) {
-          case 401:
-            return client.chat.postEphemeral({
-              channel: channelId,
-              user: userId,
-              text: "Bad API Key! Run /" + prefix + "-config to fix!",
-            });
           case 404:
             return client.chat.postEphemeral({
               channel: channelId,
@@ -153,10 +143,11 @@ export default {
               text: "User doesn't have an FT account.",
             });
           default:
+            const msg = getGenericErrorMessage(targetUser.status, prefix!);
             return client.chat.postEphemeral({
               channel: channelId,
               user: userId,
-              text: "Unexpected error has occured.",
+              text: msg ?? "Unexpected error has occured!",
             });
         }
       }

@@ -4,6 +4,7 @@ import type { RequestHandler } from "..";
 import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
 import FT from "../lib/ft";
+import { getGenericErrorMessage } from "../lib/genericError";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -129,19 +130,18 @@ export default {
 
         if (!queryWithTarget.ok || !queryWithTarget.data.users?.length) {
           switch (queryWithTarget.status) {
-            case 401:
-              return respond({
-                text: "Bad API Key! Run /" + prefix + "-config to fix!",
-                response_type: "ephemeral",
-              });
             case 404:
               return respond({
                 text: "User doesn't have an FT account.",
                 response_type: "ephemeral",
               });
             default:
+              const msg = getGenericErrorMessage(
+                queryWithTarget.status,
+                prefix!,
+              );
               return respond({
-                text: "Unexpected Error.",
+                text: msg ?? "Unexpected error has occured!",
                 response_type: "ephemeral",
               });
           }
@@ -160,19 +160,15 @@ export default {
 
         if (!targetUser.ok || !Object.keys(targetUser.data)?.length) {
           switch (targetUser.status) {
-            case 401:
-              return respond({
-                text: "Bad API Key! Run /" + prefix + "-config to fix!",
-                response_type: "ephemeral",
-              });
             case 404:
               return respond({
                 text: "User doesn't have an FT account.",
                 response_type: "ephemeral",
               });
             default:
+              const msg = getGenericErrorMessage(targetUser.status, prefix!);
               return respond({
-                text: "Unexpected Error has occured.",
+                text: msg ?? "Unexpected error has occured!",
                 response_type: "ephemeral",
               });
           }

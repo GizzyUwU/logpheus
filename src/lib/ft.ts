@@ -14,6 +14,7 @@ export default class FT {
     if (!apiKey) throw new Error("FT API Key is required");
     this.fetch = axios.create({
       baseURL: "https://flavortown.hackclub.com/api/v1",
+      timeout: 10000,
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "X-Flavortown-Ext-1865": true,
