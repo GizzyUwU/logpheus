@@ -106,7 +106,7 @@ export default {
               optional: true,
             },
             ...(res[0]?.channel
-              ? [
+              ? ([
                   {
                     type: "input",
                     block_id: "pingGroupBlock",
@@ -119,11 +119,13 @@ export default {
                       action_id: "pingGroupId",
                       multiline: false,
                       initial_value:
-                        res[0]?.meta?.[0]?.split("PingGroup::")[1] ?? "",
+                        res[0]?.meta
+                          ?.find((s) => s.startsWith("PingGroup::"))
+                          ?.split("::")[1] ?? "",
                     },
                     optional: true,
                   },
-                ] as AnyBlock[]
+                ] as AnyBlock[])
               : []),
           ],
           submit: {
