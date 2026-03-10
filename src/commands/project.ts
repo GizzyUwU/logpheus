@@ -157,6 +157,10 @@ export default {
         value: formatDuration(totalSeconds) || "0h",
       },
       {
+        label: "Predicted Cookies",
+        value: Math.round(10 * (totalSeconds / 3600)) + " " + ":cookie:" // Based off 10 cookies per hour average
+      },
+      {
         label: "Ship Status",
         value: project.data.ship_status,
       },

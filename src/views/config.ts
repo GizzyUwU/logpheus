@@ -36,7 +36,9 @@ export default {
       const values = view.state.values;
       const checkKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
       // const optOuts = values["optOuts"]?.["opt_out"]?.value?.trim().split(",");
-      const metaRegion = values["meta"]?.["region"]?.value?.trim();
+      const region = values["regionBlock"]?.["region"]?.value?.trim();
+      const pingGroupId =
+        values["pingGroupBlock"]?.["pingGroupId"]?.value?.trim();
 
       const updateFields: Partial<UserRow> = {};
       if (checkKey) {
@@ -76,8 +78,15 @@ export default {
         }
       }
 
-      if (metaRegion) {
-        updateFields.meta = ["Region::" + metaRegion];
+      if (region) {
+        updateFields.meta = [...(updateFields.meta ?? []), "Region::" + region];
+      }
+
+      if (pingGroupId) {
+        updateFields.meta = [
+          ...(updateFields.meta ?? []),
+          "PingGroup::" + pingGroupId,
+        ];
       }
 
       if (Object.keys(updateFields).length > 0) {

@@ -1,4 +1,4 @@
-import type { WebClient } from "@slack/web-api";
+import type { RichTextBlock, WebClient } from "@slack/web-api";
 import type { PGlite } from "@electric-sql/pglite";
 import type { Pool } from "pg";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -47,7 +47,7 @@ async function getNewDevlogs(
       project = await client.project({ id: Number(projectId) });
     }
 
-    if(!project) return;
+    if (!project) return;
 
     if (project && !project.status) {
       const ctx = logger.with({
@@ -98,10 +98,7 @@ async function getNewDevlogs(
             },
           });
           ctx.error("No project exists at id");
-        } else if (
-          project.status >= 500 &&
-          project.status < 600
-        ) {
+        } else if (project.status >= 500 && project.status < 600) {
           return;
         } else {
           const ctx = logger.with({
@@ -231,7 +228,9 @@ export default {
           if (projData.devlogs.length > 0) {
             for (const devlog of projData.devlogs) {
               try {
-                const createdAt = devlog.created_at ? new Date(devlog.created_at) : new Date();
+                const createdAt = devlog.created_at
+                  ? new Date(devlog.created_at)
+                  : new Date();
                 const seconds = devlog.duration_seconds;
                 const pad = (n: number) => n.toString().padStart(2, "0");
                 const year = createdAt.getUTCFullYear();
@@ -280,6 +279,10 @@ export default {
                   })
                   .filter((b): b is Block => b !== null);
 
+                const pingGroupId =
+                  row?.meta
+                    ?.find((s) => s.startsWith("PingGroup::"))
+                    ?.split("::")[1] ?? "";
                 if (devlog.body && !containsMarkdown(devlog.body)) {
                   await client.chat.postMessage({
                     channel: row.channel,
@@ -300,6 +303,24 @@ export default {
                           text: `> ${devlog.body}`,
                         },
                       },
+                      ...(pingGroupId
+                        ? [
+                            {
+                              type: "rich_text",
+                              elements: [
+                                {
+                                  type: "rich_text_section",
+                                  elements: [
+                                    {
+                                      type: "usergroup",
+                                      usergroup_id: "S0AKABM82UF",
+                                    },
+                                  ],
+                                },
+                              ],
+                            } as RichTextBlock,
+                          ]
+                        : []),
                       {
                         type: "divider",
                       },
@@ -328,7 +349,27 @@ export default {
                           text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
                         },
                       },
-                     ...(devlog.body ? parseMarkdownToSlackBlocks(devlog.body) : []),
+                      ...(devlog.body
+                        ? parseMarkdownToSlackBlocks(devlog.body)
+                        : []),
+                      ...(pingGroupId
+                        ? [
+                            {
+                              type: "rich_text",
+                              elements: [
+                                {
+                                  type: "rich_text_section",
+                                  elements: [
+                                    {
+                                      type: "usergroup",
+                                      usergroup_id: "S0AKABM82UF",
+                                    },
+                                  ],
+                                },
+                              ],
+                            } as RichTextBlock,
+                          ]
+                        : []),
                       {
                         type: "divider",
                       },

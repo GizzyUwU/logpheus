@@ -2,6 +2,7 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
+import type { AnyBlock } from "@slack/web-api";
 
 export default {
   name: "config",
@@ -27,7 +28,7 @@ export default {
         logger.error("There is no channel id for this channel?");
         return;
       }
-  
+
       const res = await pg
         .select()
         .from(users)
@@ -88,7 +89,7 @@ export default {
             // },
             {
               type: "input",
-              block_id: "meta",
+              block_id: "regionBlock",
               label: {
                 type: "plain_text",
                 text: "Whats your region? (Used for shop items prices and also disabled items)",
@@ -97,10 +98,33 @@ export default {
                 type: "plain_text_input",
                 action_id: "region",
                 multiline: false,
-                initial_value: res[0]?.meta?.[0]?.split("Region::")[1] ?? "",
+                initial_value:
+                  res[0]?.meta
+                    ?.find((s) => s.startsWith("Region::"))
+                    ?.split("::")[1] ?? "",
               },
               optional: true,
             },
+            ...(res[0]?.channel
+              ? [
+                  {
+                    type: "input",
+                    block_id: "pingGroupBlock",
+                    label: {
+                      type: "plain_text",
+                      text: "Got a ping group? Want it to be pinged when a new devlog happens? Add it's id here!",
+                    },
+                    element: {
+                      type: "plain_text_input",
+                      action_id: "pingGroupId",
+                      multiline: false,
+                      initial_value:
+                        res[0]?.meta?.[0]?.split("PingGroup::")[1] ?? "",
+                    },
+                    optional: true,
+                  },
+                ] as AnyBlock[]
+              : []),
           ],
           submit: {
             type: "plain_text",
