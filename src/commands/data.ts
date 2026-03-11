@@ -38,6 +38,10 @@ export default {
       {
         label: "Opt Outs",
         value: (userData[0]?.optOuts ? userData[0]?.optOuts.join(", ") : "No data")
+      },
+        {
+        label: "Metadata",
+        value: (userData[0]?.meta && userData[0]?.meta.length > 0 ? userData[0]?.meta.join(", ") : "No metadata")
       }
     ].map(f => `*${f.label}*: ${f.value}`).join("\n");
     return respond({
@@ -58,9 +62,6 @@ export default {
             type: "mrkdwn",
             text: userText,
           },
-        },
-        {
-          type: "divider",
         },
       ],
       response_type: "ephemeral",
