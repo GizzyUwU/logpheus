@@ -41,34 +41,21 @@ async function getNewDevlogs(
     }
 
     let project = await client.project({ id: Number(projectId) });
-    while (project.status && project.status === 429) {
-      const waitMs = 2000 + Math.floor(Math.random() * 1000);
-      await new Promise((res) => setTimeout(res, waitMs));
-      project = await client.project({ id: Number(projectId) });
-    }
 
-    if (!project) return;
-
-    if (project && !project.status) {
-      const ctx = logger.with({
-        project: {
-          id: projectId,
-        },
-        output: {
-          ok: project.ok,
-          status: project.status,
-          data: project.ok && project.data ? project.data : undefined,
-        },
-      });
-      ctx.error(
-        "Unexpected error where project api call returned unexpected values",
-      );
-      return;
-    } else if (!project.ok) {
+    if (!project || !project.status) {
+      logger.error("Unexpected project response");
       return;
     }
 
-    if (!project.data || !Object.keys(project).length) {
+    if (!project.ok && project.status === 429) {
+      while (project.status === 429) {
+        const waitMs = 2000 + Math.floor(Math.random() * 1000);
+        await new Promise((res) => setTimeout(res, waitMs));
+        project = await client.project({ id: Number(projectId) });
+      }
+    }
+
+    if (!Object.keys(project).length || !project.ok || !project.data) {
       const row = await db
         .select()
         .from(users)
@@ -98,7 +85,7 @@ async function getNewDevlogs(
             },
           });
           ctx.error("No project exists at id");
-        } else if (project.status >= 500 && project.status < 600) {
+        } else if (project.status && project.status >= 500 && project.status < 600) {
           return;
         } else {
           const ctx = logger.with({
@@ -305,21 +292,21 @@ export default {
                       },
                       ...(pingGroupId
                         ? [
-                            {
-                              type: "rich_text",
-                              elements: [
-                                {
-                                  type: "rich_text_section",
-                                  elements: [
-                                    {
-                                      type: "usergroup",
-                                      usergroup_id: "S0AKABM82UF",
-                                    },
-                                  ],
-                                },
-                              ],
-                            } as RichTextBlock,
-                          ]
+                          {
+                            type: "rich_text",
+                            elements: [
+                              {
+                                type: "rich_text_section",
+                                elements: [
+                                  {
+                                    type: "usergroup",
+                                    usergroup_id: "S0AKABM82UF",
+                                  },
+                                ],
+                              },
+                            ],
+                          } as RichTextBlock,
+                        ]
                         : []),
                       {
                         type: "divider",
@@ -354,21 +341,21 @@ export default {
                         : []),
                       ...(pingGroupId
                         ? [
-                            {
-                              type: "rich_text",
-                              elements: [
-                                {
-                                  type: "rich_text_section",
-                                  elements: [
-                                    {
-                                      type: "usergroup",
-                                      usergroup_id: "S0AKABM82UF",
-                                    },
-                                  ],
-                                },
-                              ],
-                            } as RichTextBlock,
-                          ]
+                          {
+                            type: "rich_text",
+                            elements: [
+                              {
+                                type: "rich_text_section",
+                                elements: [
+                                  {
+                                    type: "usergroup",
+                                    usergroup_id: "S0AKABM82UF",
+                                  },
+                                ],
+                              },
+                            ],
+                          } as RichTextBlock,
+                        ]
                         : []),
                       {
                         type: "divider",
