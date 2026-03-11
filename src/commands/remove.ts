@@ -1,5 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
 import { projects } from "../schema/projects";
@@ -31,28 +31,13 @@ export default {
         .where(eq(users.userId, command.user_id));
       if (res.length === 0)
         return await respond({
-          text: `No API key found for this channel.`,
+          text: `You don't exist in the database.`,
           response_type: "ephemeral",
         });
       const data = res[0];
       const subscribedProjects = Array.isArray(data?.projects)
         ? data.projects
         : [];
-
-      if (projectId === "all") {
-        const projectIds = res[0]?.projects;
-
-        if (Array.isArray(projectIds) && projectIds.length > 0) {
-          await pg.delete(projects).where(inArray(projects.id, projectIds));
-        }
-
-        await pg.delete(users).where(eq(users.userId, command.user_id));
-
-        return await respond({
-          text: `Deleted you and all your projects from db`,
-          response_type: "ephemeral",
-        });
-      }
 
       if (projectId.length > 0) {
         if (!/^\d+$/.test(projectId))
@@ -69,19 +54,18 @@ export default {
             response_type: "ephemeral",
           });
 
+        await pg.delete(projects).where(eq(projects.id, numericProjectId));
+
         const updatedProjects = subscribedProjects.filter(
           (p) => p !== numericProjectId,
         );
-        if (updatedProjects.length > 0) {
-          await pg
-            .update(users)
-            .set({
-              projects: updatedProjects,
-            })
-            .where(eq(users.channel, command.channel_id));
-        } else {
-          await pg.delete(users).where(eq(users.channel, command.channel_id));
-        }
+
+        await pg
+          .update(users)
+          .set({
+            projects: updatedProjects,
+          })
+          .where(eq(users.userId, command.user_id));
 
         if (data?.apiKey && clients[data.apiKey]) delete clients[data.apiKey];
         return await respond({
@@ -93,7 +77,13 @@ export default {
           await pg.delete(projects).where(eq(projects.id, pid));
         }
 
-        await pg.delete(users).where(eq(users.channel, command.channel_id));
+        await pg
+          .update(users)
+          .set({
+            projects: [],
+          })
+          .where(eq(users.userId, command.user_id));
+
         if (data?.apiKey && clients[data.apiKey]) delete clients[data.apiKey];
         return await respond({
           text: "All projects previously connected to this channel have been disconnected.",
