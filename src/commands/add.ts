@@ -83,7 +83,7 @@ export default {
           },
         });
       } else {
-        if (!Number.isInteger(projectId)) return respond({
+        if (!Number.isInteger(Number(projectId))) return respond({
           text: `Project ID has to be a integer`,
           response_type: "ephemeral",
         })
@@ -103,8 +103,6 @@ export default {
         const apiKey = checkKey!;
 
         const ftClient = new FT(apiKey, logger);
-
-
         const projectsArr = Array.isArray(userData[0]?.projects)
           ? Array.from(
             new Set(

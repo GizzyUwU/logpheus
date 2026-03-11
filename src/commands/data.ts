@@ -24,11 +24,11 @@ export default {
       });
 
     const userText = [
-      { label: "Channel Id:", value: userData[0]?.channel},
-      { label: "Disabled:", value: userData[0]?.disabled},
+      { label: "Channel Id", value: userData[0]?.channel},
+      { label: "Disabled", value: userData[0]?.disabled},
       {
         label: "Projects",
-        value:  (userData[0]?.projects ? userData[0].projects
+        value:  (userData[0]?.projects && userData[0]?.projects.length > 0 ? userData[0].projects
           .map(
             (id: string | number) =>
               `<https://flavortown.hackclub.com/projects/${id}|${id}>`
