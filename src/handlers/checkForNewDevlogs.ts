@@ -43,7 +43,16 @@ async function getNewDevlogs(
     let project = await client.project({ id: Number(projectId) });
 
     if (!project || !project.status) {
-      logger.error("Unexpected project response");
+      const row = await db
+        .select()
+        .from(users)
+        .where(eq(users.apiKey, apiKey))
+        .limit(1);
+      const ctx = logger.with({
+        project,
+        user: row[0]
+      })
+      ctx.error("Unexpected project response",);
       return;
     }
 
