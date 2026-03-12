@@ -57,7 +57,11 @@ export default class FT {
       }
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        const status = err.response?.status ?? err.status ?? null;
+        let status = err.response?.status ?? err.status ?? null;
+
+        if (!status && err.code === "ECONNABORTED" || !status && err.message === "timeout of 10000ms exceeded") {
+          status = 408;
+        }
         this.lastCode = status;
         return { ok: false, status, msg: err.message };
       }

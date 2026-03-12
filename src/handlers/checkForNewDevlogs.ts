@@ -55,7 +55,8 @@ async function getNewDevlogs(
       ctx.error("Unexpected project response",);
       return;
     }
-
+    
+    if(!project.ok && project.status === 408) return;
     if (!project.ok && project.status === 429) {
       while (project.status === 429) {
         const waitMs = 2000 + Math.floor(Math.random() * 1000);
@@ -63,6 +64,7 @@ async function getNewDevlogs(
         project = await client.project({ id: Number(projectId) });
       }
     }
+
 
     if (!Object.keys(project).length || !project.ok || !project.data) {
       const row = await db
