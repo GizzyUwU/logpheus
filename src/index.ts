@@ -334,7 +334,6 @@ const app = new App({
             const body = await readJson<{ goals: number[] }>(req);
             const goals = body?.goals ?? [];
             if (goals.length === 0) {
-              console.log("a", body);
               res.writeHead(200, { "content-type": "application/json" });
               res.end(JSON.stringify({ goals: [] }));
               return;
@@ -375,7 +374,6 @@ const app = new App({
             );
 
             if (validGoalIds.length === 0) {
-              console.log("uhm");
               res.writeHead(200, { "content-type": "application/json" });
               res.end(JSON.stringify({ goals: [] }));
               return;
