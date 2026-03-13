@@ -26,11 +26,13 @@
     "@sentry/bun": "^10.36.0",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.13.0",
+    "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.13.2",
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
     "orval": "^8.5.1",
     "pg": "^8.16.3",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zod-openapi": "^5.4.6"
   }
 }
