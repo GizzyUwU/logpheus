@@ -50,13 +50,13 @@ async function getNewDevlogs(
         .limit(1);
       const ctx = logger.with({
         project,
-        user: row[0]
-      })
-      ctx.error("Unexpected project response",);
+        user: row[0],
+      });
+      ctx.error("Unexpected project response");
       return;
     }
-    
-    if(!project.ok && project.status === 408) return;
+
+    if (!project.ok && project.status === 408) return;
     if (!project.ok && project.status === 429) {
       while (project.status === 429) {
         const waitMs = 2000 + Math.floor(Math.random() * 1000);
@@ -64,7 +64,6 @@ async function getNewDevlogs(
         project = await client.project({ id: Number(projectId) });
       }
     }
-
 
     if (!Object.keys(project).length || !project.ok || !project.data) {
       const row = await db
@@ -96,7 +95,11 @@ async function getNewDevlogs(
             },
           });
           ctx.error("No project exists at id");
-        } else if (project.status && project.status >= 500 && project.status < 600) {
+        } else if (
+          project.status &&
+          project.status >= 500 &&
+          project.status < 600
+        ) {
           return;
         } else {
           const ctx = logger.with({
@@ -281,108 +284,145 @@ export default {
                   row?.meta
                     ?.find((s) => s.startsWith("PingGroup::"))
                     ?.split("::")[1] ?? "";
-                if (devlog.body && !containsMarkdown(devlog.body)) {
-                  await client.chat.postMessage({
-                    channel: row.channel,
-                    unfurl_links: true,
-                    unfurl_media: true,
-                    blocks: [
-                      {
-                        type: "section",
-                        text: {
-                          type: "mrkdwn",
-                          text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                try {
+                  if (devlog.body && !containsMarkdown(devlog.body)) {
+                    await client.chat.postMessage({
+                      channel: row.channel,
+                      unfurl_links: true,
+                      unfurl_media: true,
+                      blocks: [
+                        {
+                          type: "section",
+                          text: {
+                            type: "mrkdwn",
+                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                          },
                         },
-                      },
-                      {
-                        type: "section",
-                        text: {
-                          type: "mrkdwn",
-                          text: `> ${devlog.body}`,
+                        {
+                          type: "section",
+                          text: {
+                            type: "mrkdwn",
+                            text: `> ${devlog.body}`,
+                          },
                         },
-                      },
-                      ...(pingGroupId
-                        ? [
-                          {
-                            type: "rich_text",
-                            elements: [
+                        ...(pingGroupId
+                          ? [
                               {
-                                type: "rich_text_section",
+                                type: "rich_text",
                                 elements: [
                                   {
-                                    type: "usergroup",
-                                    usergroup_id: "S0AKABM82UF",
+                                    type: "rich_text_section",
+                                    elements: [
+                                      {
+                                        type: "usergroup",
+                                        usergroup_id: "S0AKABM82UF",
+                                      },
+                                    ],
                                   },
                                 ],
-                              },
-                            ],
-                          } as RichTextBlock,
-                        ]
-                        : []),
-                      {
-                        type: "divider",
-                      },
-                      {
-                        type: "context",
-                        elements: [
-                          {
-                            type: "mrkdwn",
-                            text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}`,
-                          },
-                        ],
-                      },
-                      ...mediaBlocks,
-                    ],
-                  });
-                } else {
-                  await client.chat.postMessage({
-                    channel: row.channel,
-                    unfurl_links: false,
-                    unfurl_media: false,
-                    blocks: [
-                      {
-                        type: "section",
-                        text: {
-                          type: "mrkdwn",
-                          text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                              } as RichTextBlock,
+                            ]
+                          : []),
+                        {
+                          type: "divider",
                         },
-                      },
-                      ...(devlog.body
-                        ? parseMarkdownToSlackBlocks(devlog.body)
-                        : []),
-                      ...(pingGroupId
-                        ? [
-                          {
-                            type: "rich_text",
-                            elements: [
+                        {
+                          type: "context",
+                          elements: [
+                            {
+                              type: "mrkdwn",
+                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}`,
+                            },
+                          ],
+                        },
+                        ...mediaBlocks,
+                      ],
+                    });
+                  } else {
+                    await client.chat.postMessage({
+                      channel: row.channel,
+                      unfurl_links: false,
+                      unfurl_media: false,
+                      blocks: [
+                        {
+                          type: "section",
+                          text: {
+                            type: "mrkdwn",
+                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                          },
+                        },
+                        ...(devlog.body
+                          ? parseMarkdownToSlackBlocks(devlog.body)
+                          : []),
+                        ...(pingGroupId
+                          ? [
                               {
-                                type: "rich_text_section",
+                                type: "rich_text",
                                 elements: [
                                   {
-                                    type: "usergroup",
-                                    usergroup_id: "S0AKABM82UF",
+                                    type: "rich_text_section",
+                                    elements: [
+                                      {
+                                        type: "usergroup",
+                                        usergroup_id: "S0AKABM82UF",
+                                      },
+                                    ],
                                   },
                                 ],
-                              },
-                            ],
-                          } as RichTextBlock,
-                        ]
-                        : []),
-                      {
-                        type: "divider",
-                      },
-                      {
-                        type: "context",
-                        elements: [
-                          {
-                            type: "mrkdwn",
-                            text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
-                          },
-                        ],
-                      },
-                      ...mediaBlocks,
-                    ],
+                              } as RichTextBlock,
+                            ]
+                          : []),
+                        {
+                          type: "divider",
+                        },
+                        {
+                          type: "context",
+                          elements: [
+                            {
+                              type: "mrkdwn",
+                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                            },
+                          ],
+                        },
+                        ...mediaBlocks,
+                      ],
+                    });
+                  }
+                } catch (err) {
+                  if (typeof err === "object" && err !== null) {
+                    const error = err as {
+                      code?: string;
+                      data?: {
+                        error: string;
+                      };
+                    };
+                    if (
+                      error?.code === "slack_webapi_platform_error" &&
+                      error.data?.error === "channel_not_found"
+                    ) {
+                      if (!row.userId) return;
+                      delete clients[row.apiKey];
+                      await pg
+                        .update(users)
+                        .set({
+                          disabled: true,
+                        })
+                        .where(eq(users.userId, row.userId));
+                      await client.chat.postMessage({
+                        channel: row.userId,
+                        text: "Hey! The automated devlog poster has been disabled for you because I am not in the channel where it's meant to be sent in. Add me to the channel and run /logpheus-reactivate to get it enabled.",
+                      });
+                      return;
+                    }
+                  }
+
+                  const ctx = logger.with({
+                    error: err,
                   });
+
+                  ctx.error(
+                    "Unexpected error occured when trying to post the automated message.",
+                  );
                 }
               } catch (err) {
                 const ctx = logger.with({
