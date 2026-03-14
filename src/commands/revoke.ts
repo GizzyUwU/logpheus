@@ -8,7 +8,7 @@ export default {
     name: "revoke",
     execute: async (
         { command, respond }: SlackCommandMiddlewareArgs,
-        { pg, logger, client, clients }: RequestHandler,
+        { pg, logger, prefix, client, clients }: RequestHandler,
     ) => {
         try {
             const channel = await client.conversations.info({
@@ -42,7 +42,7 @@ export default {
             await pg.delete(users).where(eq(users.userId, command.user_id));
 
             return await respond({
-                text: `You're data has completely been wiped from Logpheus! Sad to see you go :(`,
+                text: `You're data has completely been wiped from ${prefix}! Sad to see you go :(`,
                 response_type: "ephemeral",
             });
 

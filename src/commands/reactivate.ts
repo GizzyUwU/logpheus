@@ -37,7 +37,7 @@ export default {
 
       if (command.channel_id !== userData[0]?.channel)
         return respond({
-          text: "Please run this in the channel that logpheus is setup to post in.",
+          text: `Please run this in the channel that ${prefix} is setup to post in.`,
           response_type: "ephemeral",
         });
 

@@ -22,6 +22,7 @@ async function getNewDevlogs(
   app: WebClient,
   clients: Record<string, FT>,
   db: DB,
+  prefix: string,
   logger: typeof LogtapeLogger,
 ): Promise<{
   name: string;
@@ -86,7 +87,7 @@ async function getNewDevlogs(
           if (!row[0]?.channel) return;
           await app.chat.postMessage({
             channel: row[0]?.channel,
-            text: "Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /logpheus-config to get it re-enabled.",
+            text: `Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /${prefix}-config to get it re-enabled.`,
           });
         } else if (project.status === 404) {
           const ctx = logger.with({
@@ -198,7 +199,7 @@ async function getNewDevlogs(
 
 export default {
   name: "checkForNewDevlogs",
-  execute: async ({ client, clients, pg, logger }: RequestHandler) => {
+  execute: async ({ client, clients, prefix, pg, logger }: RequestHandler) => {
     try {
       const userRows = await pg.select().from(users);
       if (!userRows?.length) return;
@@ -223,6 +224,7 @@ export default {
             client,
             clients,
             pg,
+            String(prefix),
             logger,
           );
           if (!projData) continue;
@@ -410,7 +412,7 @@ export default {
                         .where(eq(users.userId, row.userId));
                       await client.chat.postMessage({
                         channel: row.userId,
-                        text: "Hey! The automated devlog poster has been disabled for you because I am not in the channel where it's meant to be sent in. Add me to the channel and run /logpheus-reactivate to get it enabled.",
+                        text: `Hey! The automated devlog poster has been disabled for you because I am not in the channel where it's meant to be sent in. Add me to the channel and run /${prefix}-reactivate to get it enabled.`,
                       });
                       return;
                     }

@@ -35,7 +35,7 @@ export default {
         .where(eq(users.userId, command.user_id));
       if (res.length === 0)
         return await respond({
-          text: "Gng you don't even got an api key set to this channel run /logpheus-add first.",
+          text: `Gng you don't even got an api key set to this channel run /${prefix}-add first.`,
           response_type: "ephemeral",
         });
       await client.views.open({
