@@ -46,6 +46,8 @@ export default {
         db: pg,
         apiKey: checkKey,
         logger,
+        allowTheDisabled: true,
+        userId: command.user_id
       });
       if (!working.works)
         return respond({
