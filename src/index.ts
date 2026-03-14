@@ -219,7 +219,7 @@ const app = new App({
         res.end(await html.text());
       },
     },
-      {
+    {
       path: "/api/v1/docs/:asset",
       method: ["GET"],
       handler: async (req, res) => {
@@ -542,22 +542,12 @@ function loadRequestHandlers(
         args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs,
       ) => {
         await args.ack();
-        const run = async (ctx?: typeof logger) => {
-          await mod.execute(args, {
-            pg,
-            client: app.client,
-            logger: ctx ? ctx : logger,
-            clients,
-            Sentry,
-            prefix,
-            callbackId,
-          } satisfies RequestHandler);
-        };
 
         const ctx = logger.with({
           handler: {
             type,
             module: mod.name,
+            file,
           },
           slack: {
             user:
@@ -576,7 +566,15 @@ function loadRequestHandlers(
         });
 
         try {
-          run(ctx);
+          await mod.execute(args, {
+            pg,
+            client: app.client,
+            logger: ctx,
+            clients,
+            Sentry,
+            prefix,
+            callbackId,
+          } satisfies RequestHandler);
         } catch (err) {
           logger.error({
             err,
@@ -614,9 +612,15 @@ async function loadHandlers() {
       }
       registeredInitModules.add(mod.name);
       try {
+        const ctxLogger = logger.with({
+          data: {
+            module: mod.name,
+            file,
+          },
+        });
         await mod.execute({
           pg,
-          logger,
+          logger: ctxLogger,
           client: app.client,
           clients,
           Sentry,
