@@ -92,7 +92,7 @@ export default {
               block_id: "regionBlock",
               label: {
                 type: "plain_text",
-                text: "Whats your region? (Used for shop items prices and also disabled items)",
+                text: "Whats your region? (Used for shop items prices and also disabled items), needs to be short version of the region like 'au, ca, eu, in, uk, us, xx' if it isn't in this format you will get base cost.",
               },
               element: {
                 type: "plain_text_input",
