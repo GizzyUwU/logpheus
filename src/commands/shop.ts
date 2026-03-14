@@ -77,7 +77,7 @@ export default {
             item.type !== "ShopItem::Accessory" &&
             !item.attached_shop_item_ids?.some((id) => id != null) &&
             (region && region.length > 0
-              ? item.enabled?.[`enabled_${region}` as keyof typeof item.enabled]
+              ? item.enabled?.[`enabled_${region.toLowerCase()}` as keyof typeof item.enabled]
               : true),
         )
         .slice(0, 40)
@@ -85,7 +85,7 @@ export default {
           const cost =
             region && region.length > 0
               ? ((item.ticket_cost as Record<string, number | undefined>)[
-                  region
+                  region.toLowerCase()
                 ] ??
                 item.ticket_cost?.base_cost ??
                 0)

@@ -71,7 +71,7 @@ export default {
       };
 
       if (metaRegion) {
-        insertFields.meta = [...(insertFields.meta ?? []), "Region::" + metaRegion];
+        insertFields.meta = [...(insertFields.meta ?? []), "Region::" + metaRegion.toLowerCase()];
       }
 
       await pg.insert(users).values(insertFields);

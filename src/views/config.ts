@@ -79,7 +79,7 @@ export default {
       }
 
       if (region) {
-        updateFields.meta = [...(updateFields.meta ?? []), "Region::" + region];
+        updateFields.meta = [...(updateFields.meta ?? []), "Region::" + region.toLowerCase()];
       }
 
       if (pingGroupId) {
