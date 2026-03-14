@@ -263,7 +263,7 @@ export default {
 
                 type Block =
                   | { type: "image"; image_url: string; alt_text: string }
-                  | { type: "video"; video_url: string; alt_text: string };
+                  | { type: "video"; video_url: string; thumbnail_url: string; title: string; alt_text: string };
 
                 const mediaBlocks: Block[] = (devlog.media || [])
                   .map((m, i): Block | null => {
@@ -271,7 +271,7 @@ export default {
                     const alt = String(i + 1);
 
                     if (m.content_type && m.content_type.startsWith("video")) {
-                      return { type: "video", video_url: url, alt_text: alt };
+                      return { type: "video", video_url: url, alt_text: alt, title: projData.name + "Video" + " " + i, thumbnail_url: "https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg" };
                     }
 
                     if (m.content_type && m.content_type.startsWith("image")) {
