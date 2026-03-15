@@ -8,6 +8,8 @@ import { getGenericErrorMessage } from "../lib/genericError";
 
 export default {
   name: "shop",
+  params: "[itemId]",
+  desc: "Look through the items on the shop and maybe add it to your goals!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, client, logger, clients, prefix }: RequestHandler,

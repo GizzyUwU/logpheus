@@ -9,6 +9,8 @@ import { getGenericErrorMessage } from "../lib/genericError";
 
 export default {
   name: "projects",
+  params: "[projectName]",
+  desc: "Search through all the projects on flavortown.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,

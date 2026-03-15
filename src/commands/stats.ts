@@ -6,6 +6,7 @@ import { heapStats } from "bun:jsc";
 
 export default {
   name: "stats",
+  desc: "View the stats like cpu usage, memory usage or amount of users that we have!",
   execute: async (
     { respond }: SlackCommandMiddlewareArgs,
     { pg, logger }: RequestHandler,

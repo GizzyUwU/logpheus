@@ -8,6 +8,7 @@ type UserRow = typeof users._.inferSelect;
 
 export default {
   name: "reactivate",
+  desc: "Got deactivated because of a bad config? Run this get reactivated!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { logger, client, clients, pg, prefix }: RequestHandler,

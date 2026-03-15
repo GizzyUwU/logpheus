@@ -6,6 +6,8 @@ import { projects } from "../schema/projects";
 
 export default {
   name: "remove",
+  params: "[projectId]",
+  desc: "Unsubscribe a project or all projects from the automated devlog poster",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, client, clients }: RequestHandler,

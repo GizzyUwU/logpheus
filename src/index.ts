@@ -272,9 +272,9 @@ const app = new App({
                 return;
               }
 
-              let ftClient: FT | undefined = clients[apiKey]; 
-              if(!ftClient) {
-                ftClient = new FT(apiKey, logger)
+              let ftClient: FT | undefined = clients[apiKey];
+              if (!ftClient) {
+                ftClient = new FT(apiKey, logger);
               }
               const shop = await ftClient.shop();
               if (!shop || !shop.status) {
@@ -343,9 +343,9 @@ const app = new App({
                 return;
               }
 
-              let ftClient: FT | undefined = clients[apiKey]; 
-              if(!ftClient) {
-                ftClient = new FT(apiKey, logger)
+              let ftClient: FT | undefined = clients[apiKey];
+              if (!ftClient) {
+                ftClient = new FT(apiKey, logger);
               }
               const shop = await ftClient.shop();
               if (!shop || !shop.status) {
@@ -538,6 +538,13 @@ export interface RequestHandler {
   callbackId?: string;
 }
 
+export const commands: {
+  name: string;
+  desc?: string;
+  hideFromHelp?: boolean;
+  params?: string;
+}[] = [];
+
 function loadRequestHandlers(
   app: App,
   folder: string,
@@ -549,6 +556,14 @@ function loadRequestHandlers(
     const importFile = await import(path.join(folderPath, file));
     const module = importFile.default ?? importFile;
     if (!module?.name || typeof module.execute !== "function") return;
+    if (type === "command") {
+      commands.push({
+        name: module.name,
+        desc: module.desc ?? "No description",
+        params: module.params ?? "",
+        hideFromHelp: module.hideFromHelp ?? false,
+      });
+    }
     const key = `${type}:${module.name}`;
     if (registeredRequestModules.has(key)) {
       throw new Error(

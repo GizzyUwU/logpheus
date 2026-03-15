@@ -33,6 +33,8 @@ function formatDuration(totalSeconds: number) {
 
 export default {
   name: "project",
+  params: "[projectId]",
+  desc: "Look at a project's stats by providing its id!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,

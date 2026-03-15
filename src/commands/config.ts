@@ -6,6 +6,7 @@ import type { AnyBlock } from "@slack/web-api";
 
 export default {
   name: "config",
+  desc: "Need to change the bots configuration on you?",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, client, callbackId, prefix }: RequestHandler,

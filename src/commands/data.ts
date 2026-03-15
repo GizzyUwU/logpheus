@@ -7,6 +7,7 @@ import type { RequestHandler } from "..";
 
 export default {
   name: "data",
+  desc: "Look through what data the bot has on you!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, prefix }: RequestHandler,

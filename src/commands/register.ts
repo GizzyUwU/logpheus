@@ -5,6 +5,7 @@ import type { RequestHandler } from "..";
 
 export default {
   name: "register",
+  desc: "Register to use the bot!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, client, callbackId, prefix }: RequestHandler,

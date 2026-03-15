@@ -24,6 +24,8 @@ function formatDuration(totalSeconds: number): string {
 
 export default {
   name: "user",
+  params: "[userMention]",
+  desc: "View a user's flavortown profile.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, client, clients, logger, callbackId, prefix }: RequestHandler,

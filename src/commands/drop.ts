@@ -31,6 +31,7 @@ function castValue(column: any, value: string): unknown {
 
 export default {
   name: "drop",
+  hideFromHelp: true,
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     {

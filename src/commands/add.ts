@@ -10,6 +10,8 @@ type UserRow = typeof users._.inferSelect;
 
 export default {
   name: "add",
+  params: "[projectId]",
+  desc: "Subscribe a project to get automated devlogs posts to your channel!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { callbackId, logger, client, pg, prefix }: RequestHandler,
