@@ -610,57 +610,72 @@ function loadRequestHandlers(
   });
 }
 
-async function loadHandlers() {
-  registeredInitModules.clear();
-  const handlerDir = path.resolve(__dirname, "./handlers");
-  const files = fs
-    .readdirSync(handlerDir)
-    .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
+let handlersRunning = false;
 
-  for (const file of files) {
-    try {
-      const importFile = await import(path.join(handlerDir, file));
-      const mod = importFile.default ?? importFile;
-      if (!mod?.name || typeof mod.execute !== "function") return;
-      if (registeredInitModules.has(mod.name)) {
-        throw new Error(
-          `[Logpheus] Duplicate init handler name "${mod.name}" in ${file}`,
-        );
-      }
-      registeredInitModules.add(mod.name);
+async function loadHandlers() {
+  if (handlersRunning) {
+    logger.warn(
+      "[Logpheus] Skipping handler load because previous run is still active",
+    );
+    return;
+  }
+
+  handlersRunning = true;
+
+  try {
+    registeredInitModules.clear();
+    const handlerDir = path.resolve(__dirname, "./handlers");
+    const files = fs
+      .readdirSync(handlerDir)
+      .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
+
+    for (const file of files) {
       try {
-        const ctxLogger = logger.with({
-          data: {
-            module: mod.name,
-            file,
-          },
-        });
-        await mod.execute({
-          pg,
-          logger: ctxLogger,
-          client: app.client,
-          clients,
-          Sentry,
-        } satisfies RequestHandler);
+        const importFile = await import(path.join(handlerDir, file));
+        const mod = importFile.default ?? importFile;
+        if (!mod?.name || typeof mod.execute !== "function") return;
+        if (registeredInitModules.has(mod.name)) {
+          throw new Error(
+            `[Logpheus] Duplicate init handler name "${mod.name}" in ${file}`,
+          );
+        }
+        registeredInitModules.add(mod.name);
+        try {
+          const ctxLogger = logger.with({
+            data: {
+              module: mod.name,
+              file,
+            },
+          });
+          await mod.execute({
+            pg,
+            logger: ctxLogger,
+            client: app.client,
+            clients,
+            Sentry,
+          } satisfies RequestHandler);
+        } catch (err) {
+          const ctx = logger.with({
+            data: {
+              module: mod.name,
+              file,
+            },
+          });
+          ctx.error("Failed to execute handler", {
+            error: err,
+          });
+        }
       } catch (err) {
-        const ctx = logger.with({
+        logger.error("Failed to execute handler", {
           data: {
-            module: mod.name,
             file,
           },
-        });
-        ctx.error("Failed to execute handler", {
           error: err,
         });
       }
-    } catch (err) {
-      logger.error("Failed to execute handler", {
-        data: {
-          file,
-        },
-        error: err,
-      });
     }
+  } finally {
+    handlersRunning = false;
   }
 }
 
@@ -701,8 +716,12 @@ async function loadHandlers() {
       Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
     );
 
-    loadHandlers();
-    setInterval(loadHandlers, 60 * 1000);
+    async function handlerLoop() {
+      await loadHandlers();
+      setTimeout(handlerLoop, 60 * 1000);
+    }
+
+    handlerLoop();
   } catch (err) {
     logger.error({ error: err });
   }
