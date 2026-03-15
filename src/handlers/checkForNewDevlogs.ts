@@ -16,42 +16,39 @@ type DB =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 
-async function getNewDevlogs(
-  apiKey: string,
-  projectId: number,
-  app: WebClient,
-  clients: Record<string, FT>,
-  db: DB,
-  prefix: string,
-  logger: typeof LogtapeLogger,
-): Promise<{
+async function getNewDevlogs(params: {
+  apiKey: string;
+  projectId: number;
+  app: WebClient;
+  clients: Record<string, FT>;
+  db: DB;
+  prefix: string;
+  logger: typeof LogtapeLogger;
+  userRows: Partial<typeof users.$inferSelect>[];
+}): Promise<{
   name: string;
   devlogs: z.infer<typeof GetDevlogResponse>[];
   shipped?: "pending" | "submitted";
 } | void> {
   try {
-    let client = clients[apiKey];
+    let client = params.clients[params.apiKey];
     if (!client) {
-      const ctx = logger.with({
+      const ctx = params.logger.with({
         project: {
-          id: projectId,
+          id: params.projectId,
         },
       });
       ctx.error("No FT Client for the project");
       return;
     }
 
-    let project = await client.project({ id: Number(projectId) });
+    let project = await client.project({ id: Number(params.projectId) });
 
     if (!project || !project.status) {
-      const row = await db
-        .select()
-        .from(users)
-        .where(eq(users.apiKey, apiKey))
-        .limit(1);
-      const ctx = logger.with({
+      const row = params.userRows.find((u) => u.apiKey === params.apiKey);
+      const ctx = params.logger.with({
         project,
-        user: row[0],
+        user: row,
       });
       ctx.error("Unexpected project response");
       return;
@@ -62,56 +59,48 @@ async function getNewDevlogs(
       while (project.status === 429) {
         const waitMs = 2000 + Math.floor(Math.random() * 1000);
         await new Promise((res) => setTimeout(res, waitMs));
-        project = await client.project({ id: Number(projectId) });
+        project = await client.project({ id: Number(params.projectId) });
       }
     }
 
     if (!Object.keys(project).length || !project.ok || !project.data) {
-      const row = await db
-        .select()
-        .from(users)
-        .where(eq(users.apiKey, apiKey))
-        .limit(1);
+      const row = params.userRows.find((u) => u.apiKey === params.apiKey);
 
-      const disabled = row[0]?.disabled;
-      if (disabled !== true) {
-        if (project.status === 401) {
-          delete clients[apiKey];
-          await db
-            .update(users)
-            .set({
-              disabled: true,
-            })
-            .where(eq(users.apiKey, apiKey));
+      if (project.status === 401) {
+        delete params.clients[params.apiKey];
+        await params.db
+          .update(users)
+          .set({
+            disabled: true,
+          })
+          .where(eq(users.apiKey, params.apiKey));
 
-          if (!row[0]?.channel) return;
-          await app.chat.postMessage({
-            channel: row[0]?.channel,
-            text: `Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /${prefix}-config to get it re-enabled.`,
-          });
-        } else if (project.status === 404) {
-          const ctx = logger.with({
-            project: {
-              id: projectId,
-            },
-          });
-          ctx.error("No project exists at id");
-        } else if (
-          project.status &&
-          project.status >= 500 &&
-          project.status < 600
-        ) {
-          return;
-        } else {
-          const ctx = logger.with({
-            project: {
-              id: projectId,
-            },
-          });
-          ctx.error(client.lastCode + " " + "Failed to get project");
-        }
+        if (!row?.channel) return;
+        await params.app.chat.postMessage({
+          channel: row?.channel,
+          text: `Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /${params.prefix}-config to get it re-enabled.`,
+        });
+      } else if (project.status === 404) {
+        const ctx = params.logger.with({
+          project: {
+            id: params.projectId,
+          },
+        });
+        ctx.error("No project exists at id");
+      } else if (
+        project.status &&
+        project.status >= 500 &&
+        project.status < 600
+      ) {
+        return;
+      } else {
+        const ctx = params.logger.with({
+          project: {
+            id: params.projectId,
+          },
+        });
+        ctx.error(client.lastCode + " " + "Failed to get project");
       }
-
       return;
     }
 
@@ -119,18 +108,18 @@ async function getNewDevlogs(
       ? project.data.devlog_ids
       : [];
 
-    const row = await db
+    const row = await params.db
       .select()
       .from(projects)
-      .where(eq(projects.id, Number(projectId)));
+      .where(eq(projects.id, Number(params.projectId)));
 
     if (row.length === 0) {
       const initialDevlogIds = Array.isArray(project?.data.devlog_ids)
         ? project.data.devlog_ids.map(Number)
         : [];
 
-      await db.insert(projects).values({
-        id: Number(projectId),
+      await params.db.insert(projects).values({
+        id: Number(params.projectId),
         devlogIds: initialDevlogIds,
       });
 
@@ -165,9 +154,9 @@ async function getNewDevlogs(
       }
 
       if (devlogs.length === 0) {
-        const ctx = logger.with({
+        const ctx = params.logger.with({
           project: {
-            id: projectId,
+            id: params.projectId,
           },
         });
         ctx.error(
@@ -176,19 +165,19 @@ async function getNewDevlogs(
         return { name: project.data.title ?? "Unknown", devlogs: [] };
       }
 
-      await db
+      await params.db
         .update(projects)
         .set({
           devlogIds: Array.from(new Set([...cachedIds, ...newIds])),
         })
-        .where(eq(projects.id, Number(projectId)));
+        .where(eq(projects.id, Number(params.projectId)));
 
       return { name: project.data.title ?? "Unknown", devlogs };
     }
   } catch (err) {
-    const ctx = logger.with({
+    const ctx = params.logger.with({
       project: {
-        id: projectId,
+        id: params.projectId,
       },
       location: "getNewDevlogs,topLevelTryCatch",
     });
@@ -201,32 +190,35 @@ export default {
   name: "checkForNewDevlogs",
   execute: async ({ client, clients, prefix, pg, logger }: RequestHandler) => {
     try {
-      const userRows = await pg.select().from(users);
+      const userRows = await pg
+        .select({
+          apiKey: users.apiKey,
+          userId: users.userId,
+          channel: users.channel,
+          projects: users.projects,
+          meta: users.meta,
+        })
+        .from(users)
+        .where(eq(users.disabled, false));
       if (!userRows?.length) return;
       for (const row of userRows) {
-        if (
-          !row ||
-          !row.apiKey ||
-          !row.channel ||
-          !row.projects ||
-          row.disabled
-        )
-          continue;
+        if (!row || !row.apiKey || !row.channel || !row.projects) continue;
         if (!clients[row.apiKey])
           clients[row.apiKey] = new FT(row.apiKey, logger);
         const projects = Array.isArray(row.projects)
           ? row.projects.map(Number)
           : [];
         for (const projectId of projects) {
-          const projData = await getNewDevlogs(
-            row.apiKey,
+          const projData = await getNewDevlogs({
+            apiKey: String(row.apiKey),
             projectId,
-            client,
+            app: client,
             clients,
-            pg,
-            String(prefix),
+            db: pg,
+            prefix: String(prefix),
             logger,
-          );
+            userRows,
+          });
           if (!projData) continue;
           if (projData.devlogs.length > 0) {
             for (const devlog of projData.devlogs) {
@@ -263,7 +255,13 @@ export default {
 
                 type Block =
                   | { type: "image"; image_url: string; alt_text: string }
-                  | { type: "video"; video_url: string; thumbnail_url: string; title: string; alt_text: string };
+                  | {
+                      type: "video";
+                      video_url: string;
+                      thumbnail_url: string;
+                      title: string;
+                      alt_text: string;
+                    };
 
                 const mediaBlocks: Block[] = (devlog.media || [])
                   .map((m, i): Block | null => {
@@ -271,7 +269,14 @@ export default {
                     const alt = String(i + 1);
 
                     if (m.content_type && m.content_type.startsWith("video")) {
-                      return { type: "video", video_url: url, alt_text: alt, title: projData.name + "Video" + " " + i, thumbnail_url: "https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg" };
+                      return {
+                        type: "video",
+                        video_url: url,
+                        alt_text: alt,
+                        title: projData.name + "Video" + " " + i,
+                        thumbnail_url:
+                          "https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg",
+                      };
                     }
 
                     if (m.content_type && m.content_type.startsWith("image")) {
