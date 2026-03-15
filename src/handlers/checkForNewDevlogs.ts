@@ -11,7 +11,7 @@ import { parseMarkdownToSlackBlocks } from "../lib/parseMarkdown";
 import type { logger as LogtapeLogger, RequestHandler } from "..";
 import FT from "../lib/ft";
 import { z } from "zod";
-import type { GetDevlogParams, GetDevlogResponse } from "../lib/ft.zod";
+import type { GetDevlogResponse } from "../lib/ft.zod";
 type DB =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
@@ -153,7 +153,6 @@ async function getNewDevlogs(params: {
       }
     }
 
-
     const cachedSet = new Set(cachedIds);
     const newIds = devlogIds.filter((id) => !cachedSet.has(Number(id)));
 
@@ -161,11 +160,22 @@ async function getNewDevlogs(params: {
       return { name: project.data.title ?? "Unknown", devlogs: [] };
     } else {
       const devlogs: z.infer<typeof GetDevlogResponse>[] = [];
-      for (const id of newIds) {
-        const res = await client.devlog({
-          id,
-        } as z.infer<typeof GetDevlogParams>);
-        if (res && res.ok) devlogs.push(res.data || []);
+      let page: number | null = 1;
+      while (page) {
+        const res = await client.devlogs(
+          { project_id: Number(params.projectId) },
+          { page },
+        );
+        if (!res || !res.ok) break;
+        const data = res.data;
+        if (data?.devlogs) {
+          for (const log of data.devlogs) {
+            if (newIds.includes(Number(log.id))) {
+              devlogs.push(log);
+            }
+          }
+        }
+        page = data?.pagination?.next_page ?? null;
       }
 
       if (devlogs.length === 0) {
@@ -239,11 +249,7 @@ export default {
           ? row.projects.map(Number)
           : [];
         const projectsMap = new Map(
-          (
-            await pg
-              .select()
-              .from(projects)
-          ).map((r) => [r.id, r]),
+          (await pg.select().from(projects)).map((r) => [r.id, r]),
         );
         for (const projectId of userProjectIds) {
           const projData = await getNewDevlogs({
