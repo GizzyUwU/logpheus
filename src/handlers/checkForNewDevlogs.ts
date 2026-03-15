@@ -35,7 +35,9 @@ async function getNewDevlogs(params: {
 }): Promise<{
   name: string;
   devlogs: z.infer<typeof GetDevlogResponse>[];
-  shipped?: "pending" | "submitted";
+  additionCookies?: number;
+  nextGoalItem?: string;
+  distanceFromGoal?: number;
 } | void> {
   try {
     let client = params.clients[params.apiKey];
@@ -160,6 +162,7 @@ async function getNewDevlogs(params: {
       return { name: project.data.title ?? "Unknown", devlogs: [] };
     } else {
       const devlogs: z.infer<typeof GetDevlogResponse>[] = [];
+      const devlogS: number[] = [];
       let page: number | null = 1;
       while (page) {
         const res = await client.devlogs(
@@ -170,12 +173,78 @@ async function getNewDevlogs(params: {
         const data = res.data;
         if (data?.devlogs) {
           for (const log of data.devlogs) {
+            devlogS.push(Number(log.duration_seconds));
             if (newIds.includes(Number(log.id))) {
               devlogs.push(log);
             }
           }
         }
         page = data?.pagination?.next_page ?? null;
+      }
+
+      const totalSeconds = (devlogS ?? []).reduce((sum, item) => sum + item, 0);
+      const predictedCookies = Math.round(10 * (totalSeconds / 3600));
+      const userRow = params.userByAPIKey.get(params.apiKey);
+      const previousPredicted =
+        userRow?.meta
+          ?.find((s) => s.startsWith("PredictedCookies::"))
+          ?.split("::")[1] ?? "0";
+
+      let nextGoalItem = "";
+      let distanceFromGoal = 0;
+      let metaArr = userRow?.meta ?? [];
+      let additionCookies = 0;
+
+      const meUser = await client.user({ id: "me" });
+      if (meUser.ok && Object.keys(meUser.data)?.length) {
+        if (previousPredicted) {
+          additionCookies = predictedCookies - Number(previousPredicted);
+        }
+        metaArr = metaArr.filter(
+          (item) => !item.startsWith("PredictedCookies::"),
+        );
+        metaArr.push(
+          "PredictedCookies::" + (predictedCookies + Number(meUser.data.cookies)),
+        );
+
+        const goals =
+          userRow?.meta?.find((s) => s.startsWith("Goals::"))?.split("::")[1] ??
+          "";
+        if (goals.length > 0) {
+          const shop = await client.shop();
+          if (shop.ok && shop.data?.length) {
+            const region =
+              userRow?.meta
+                ?.find((s) => s.startsWith("Region::"))
+                ?.split("::")[1] ?? "";
+            const match = goals.match(/\[(.*?)\]/);
+            const parsedGoals = match?.[1]
+              ? match[1]
+                  .split(",")
+                  .map((v) => parseInt(v.trim()))
+                  .filter((v) => !isNaN(v))
+              : [];
+            for (const goalId of parsedGoals) {
+              const item = shop.data.find((s) => s.id === goalId);
+              if (!item) continue;
+
+              const cost =
+                region && region.length > 0
+                  ? ((item.ticket_cost as Record<string, number | undefined>)[
+                      region.toLowerCase()
+                    ] ??
+                    item.ticket_cost?.base_cost ??
+                    0)
+                  : (item.ticket_cost?.base_cost ?? 0);
+
+              if ((Number(meUser.data.cookies) + predictedCookies) < cost) {
+                nextGoalItem = String(item.name);
+                distanceFromGoal = cost - ((Number(meUser.data.cookies) + predictedCookies));
+                break;
+              }
+            }
+          }
+        }
       }
 
       if (devlogs.length === 0) {
@@ -191,13 +260,24 @@ async function getNewDevlogs(params: {
       }
 
       await params.db
+        .update(users)
+        .set({ meta: metaArr })
+        .where(eq(users.userId, String(userRow?.userId)));
+
+      await params.db
         .update(projects)
         .set({
           devlogIds: Array.from(new Set([...cachedIds, ...newIds])),
         })
         .where(eq(projects.id, Number(params.projectId)));
 
-      return { name: project.data.title ?? "Unknown", devlogs };
+      return {
+        name: project.data.title ?? "Unknown",
+        devlogs,
+        additionCookies: previousPredicted ? additionCookies : 0,
+        nextGoalItem,
+        distanceFromGoal,
+      };
     }
   } catch (err) {
     const ctx = params.logger.with({
@@ -331,6 +411,7 @@ export default {
                   row?.meta
                     ?.find((s) => s.startsWith("PingGroup::"))
                     ?.split("::")[1] ?? "";
+
                 try {
                   if (devlog.body && !containsMarkdown(devlog.body)) {
                     await client.chat.postMessage({
@@ -378,7 +459,7 @@ export default {
                           elements: [
                             {
                               type: "mrkdwn",
-                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}`,
+                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}. ${projData.additionCookies && projData.additionCookies !== 0 ? `+${projData.additionCookies} based off predicted cookies.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} cookies away!` : ""}`,
                             },
                           ],
                         },
@@ -427,7 +508,7 @@ export default {
                           elements: [
                             {
                               type: "mrkdwn",
-                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}. ${projData.additionCookies && projData.additionCookies !== 0 ? `+${projData.additionCookies} based off predicted cookies.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} cookies away!` : ""}`,
                             },
                           ],
                         },
