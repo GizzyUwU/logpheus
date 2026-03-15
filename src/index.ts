@@ -419,7 +419,7 @@ const app = new App({
                 "content-type": "application/json",
               });
 
-              res.end(JSON.stringify({ goals }));
+              res.end(JSON.stringify({ goals: mergedGoals }));
               return;
             }
 
