@@ -138,7 +138,7 @@ export default {
     );
 
     const userText = [
-      { label: "Project ID", value: project.data.id },
+      { label: "Project ID", value: `<https://flavortown.hackclub.com/projects/${project.data.id}|${project.data.id}>` },
       { label: "Description", value: project.data.description },
       {
         label: "Created at",
@@ -172,7 +172,7 @@ export default {
         value: (project.data.devlog_ids ?? [])
           .map(
             (id: string | number) =>
-              `<https://flavortown.hackclub.com/projects/${project.data.id}|${id}>`,
+              id,
           )
           .join(", "),
       },
