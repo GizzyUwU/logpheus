@@ -70,7 +70,7 @@ export default class FT {
     }
   }
 
-  projects(query?: unknown) {
+  projects(query?: z.infer<typeof ZTypes.ListProjectsQueryParams>) {
     const parsedQuery = query
       ? ZTypes.ListProjectsQueryParams.parse(query)
       : undefined;
@@ -85,7 +85,7 @@ export default class FT {
     );
   }
 
-  project(param: unknown) {
+  project(param: z.infer<typeof ZTypes.GetProjectParams>) {
     const parsedParam = param
       ? ZTypes.GetProjectParams.parse(param)
       : undefined;
@@ -100,7 +100,7 @@ export default class FT {
     );
   }
 
-  devlogs(param: unknown, query?: unknown) {
+  devlogs(param: z.infer<typeof ZTypes.ListProjectDevlogsParams>, query?: z.infer<typeof ZTypes.ListDevlogsQueryParams>) {
     const parsedParam = param
       ? ZTypes.ListProjectDevlogsParams.parse(param)
       : undefined;
@@ -123,7 +123,7 @@ export default class FT {
     );
   }
 
-  devlog(param: unknown) {
+  devlog(param: z.infer<typeof ZTypes.GetDevlogParams>) {
     const parsedParam = param ? ZTypes.GetDevlogParams.parse(param) : undefined;
 
     if (!parsedParam) throw new Error("Missing Params");
@@ -136,7 +136,7 @@ export default class FT {
     );
   }
 
-  users(query?: unknown) {
+  users(query?: z.infer<typeof ZTypes.ListUsersQueryParams>) {
     const parsedQuery = query
       ? ZTypes.ListUsersQueryParams.parse(query)
       : undefined;
@@ -160,7 +160,7 @@ export default class FT {
     );
   }
 
-  user(param: unknown) {
+  user(param: z.infer<typeof ZTypes.GetUserParams>) {
     const parsedParam = param ? ZTypes.GetUserParams.parse(param) : undefined;
     if (!parsedParam) throw new Error("Missing Params");
     return this.request(
@@ -182,7 +182,7 @@ export default class FT {
     );
   }
 
-  item(param: unknown) {
+  item(param: z.infer<typeof ZTypes.GetStoreItemParams>) {
     const parsedParam = param
       ? ZTypes.GetStoreItemParams.parse(param)
       : undefined;
