@@ -255,7 +255,7 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
       continue;
     }
 
-    const imageMatch = line.match(IMAGE_REGEX);
+    const imageMatch = line.match(/!\[([^\]]+)]\(([^)]+)\)/);
     if (imageMatch) {
       blocks.push({
         type: "image",

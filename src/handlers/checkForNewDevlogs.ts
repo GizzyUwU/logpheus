@@ -5,7 +5,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import { users } from "../schema/users";
 import { projects } from "../schema/projects";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, not } from "drizzle-orm";
 import { containsMarkdown } from "../lib/parseMarkdown";
 import { parseMarkdownToSlackBlocks } from "../lib/parseMarkdown";
 import type { logger as LogtapeLogger, RequestHandler } from "..";
@@ -16,6 +16,12 @@ type DB =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 
+const utcFormatter = new Intl.DateTimeFormat("en-GB", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+
 async function getNewDevlogs(params: {
   apiKey: string;
   projectId: number;
@@ -24,7 +30,8 @@ async function getNewDevlogs(params: {
   db: DB;
   prefix: string;
   logger: typeof LogtapeLogger;
-  userRows: Partial<typeof users.$inferSelect>[];
+  userByAPIKey: Map<string, Partial<typeof users.$inferSelect>>;
+  projectsMap: Map<number, Partial<typeof projects.$inferSelect>>;
 }): Promise<{
   name: string;
   devlogs: z.infer<typeof GetDevlogResponse>[];
@@ -45,7 +52,7 @@ async function getNewDevlogs(params: {
     let project = await client.project({ id: Number(params.projectId) });
 
     if (!project || !project.status) {
-      const row = params.userRows.find((u) => u.apiKey === params.apiKey);
+      const row = params.userByAPIKey.get(params.apiKey);
       const ctx = params.logger.with({
         project,
         user: row,
@@ -64,7 +71,7 @@ async function getNewDevlogs(params: {
     }
 
     if (!Object.keys(project).length || !project.ok || !project.data) {
-      const row = params.userRows.find((u) => u.apiKey === params.apiKey);
+      const row = params.userByAPIKey.get(params.apiKey);
 
       if (project.status === 401) {
         delete params.clients[params.apiKey];
@@ -108,10 +115,9 @@ async function getNewDevlogs(params: {
       ? project.data.devlog_ids
       : [];
 
-    const row = await params.db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, Number(params.projectId)));
+    const row = params.projectsMap.get(params.projectId)
+      ? [params.projectsMap.get(params.projectId)!]
+      : [];
 
     if (row.length === 0) {
       const initialDevlogIds = Array.isArray(project?.data.devlog_ids)
@@ -141,11 +147,12 @@ async function getNewDevlogs(params: {
 
     if (row.length > 0) {
       try {
-        cachedIds = row[0]!.devlogIds.map(Number);
+        cachedIds = row[0]?.devlogIds?.map(Number) ?? [];
       } catch {
         cachedIds = [];
       }
     }
+
 
     const cachedSet = new Set(cachedIds);
     const newIds = devlogIds.filter((id) => !cachedSet.has(Number(id)));
@@ -207,16 +214,38 @@ export default {
           meta: users.meta,
         })
         .from(users)
-        .where(eq(users.disabled, false));
-      if (!userRows?.length) return;
+        .where(
+          and(
+            eq(users.disabled, false),
+            not(isNull(users.apiKey)),
+            not(isNull(users.channel)),
+            not(isNull(users.projects)),
+          ),
+        );
+      if (!userRows?.length) {
+        for (const key of Object.keys(clients)) {
+          delete clients[key];
+        }
+        return;
+      }
+      const userByAPIKey = new Map(
+        userRows.filter((u) => u.apiKey).map((u) => [String(u.apiKey), u]),
+      );
       for (const row of userRows) {
         if (!row || !row.apiKey || !row.channel || !row.projects) continue;
         if (!clients[row.apiKey])
           clients[row.apiKey] = new FT(row.apiKey, logger);
-        const projects = Array.isArray(row.projects)
+        const userProjectIds = Array.isArray(row.projects)
           ? row.projects.map(Number)
           : [];
-        for (const projectId of projects) {
+        const projectsMap = new Map(
+          (
+            await pg
+              .select()
+              .from(projects)
+          ).map((r) => [r.id, r]),
+        );
+        for (const projectId of userProjectIds) {
           const projData = await getNewDevlogs({
             apiKey: String(row.apiKey),
             projectId,
@@ -225,7 +254,8 @@ export default {
             db: pg,
             prefix: String(prefix),
             logger,
-            userRows,
+            userByAPIKey,
+            projectsMap,
           });
           if (!projData) continue;
           if (projData.devlogs.length > 0) {
@@ -242,11 +272,7 @@ export default {
                 const hours = pad(createdAt.getUTCHours());
                 const minutes = pad(createdAt.getUTCMinutes());
                 const cs50Timestamp = `${year}${month}${day}T${hours}${minutes}+0000`;
-                const timestamp = createdAt.toLocaleString("en-GB", {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                  timeZone: "UTC",
-                });
+                const timestamp = utcFormatter.format(createdAt);
 
                 const durationString = ([86400, 3600, 60] as const)
                   .map((sec, i) => {

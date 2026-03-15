@@ -639,7 +639,7 @@ async function loadHandlers() {
       try {
         const importFile = await import(path.join(handlerDir, file));
         const mod = importFile.default ?? importFile;
-        if (!mod?.name || typeof mod.execute !== "function") return;
+        if (!mod?.name || typeof mod.execute !== "function") continue;
         if (registeredInitModules.has(mod.name)) {
           throw new Error(
             `[Logpheus] Duplicate init handler name "${mod.name}" in ${file}`,
