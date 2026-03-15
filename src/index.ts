@@ -272,7 +272,10 @@ const app = new App({
                 return;
               }
 
-              const ftClient = new FT(apiKey, logger);
+              let ftClient: FT | undefined = clients[apiKey]; 
+              if(!ftClient) {
+                ftClient = new FT(apiKey, logger)
+              }
               const shop = await ftClient.shop();
               if (!shop || !shop.status) {
                 res.writeHead(500, {
@@ -340,7 +343,10 @@ const app = new App({
                 return;
               }
 
-              const ftClient = new FT(apiKey, logger);
+              let ftClient: FT | undefined = clients[apiKey]; 
+              if(!ftClient) {
+                ftClient = new FT(apiKey, logger)
+              }
               const shop = await ftClient.shop();
               if (!shop || !shop.status) {
                 res.writeHead(500, {
