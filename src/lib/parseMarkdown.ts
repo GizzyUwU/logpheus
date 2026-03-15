@@ -4,9 +4,39 @@ import type {
   RichTextElement,
 } from "@slack/web-api";
 
+const IMAGE_REGEX = /!\[([^\]]+)]\(([^)]+)\)/g;
+const INLINE_REGEX =
+  /(?<emoji>:(?<emojiName>[a-zA-Z0-9_.+-]+):)|(?<underline><u>(?<underlineText>.+?)<\/u>)|(?<bold>\*\*(?<boldText>[^*]+)\*\*)|(?<italic>\*(?<italicText>[^*]+)\*)|(?<strike>~~(?<strikeText>[^~]+)~~)|(?<link>\[(?<linkText>.+?)\]\((?<linkUrl>https?:\/\/[^\s)]+)\))|(?<code>`(?<codeText>[^`]+)`)/g;
+
+const CODE_BLOCK_REGEX = /^```/;
+const HEADER1_REGEX = /^# /;
+const HEADER2_REGEX = /^## /;
+const HEADER3_REGEX = /^### /;
+const BLOCKQUOTE_REGEX = /^>/;
+const TASK_REGEX = /^- \[( |x|X)\] (.+)/;
+const UNORDERED_LIST_REGEX = /^- /;
+const ORDERED_LIST_REGEX = /^\d+\. /;
+const HORIZONTAL_RULE_REGEX = /^---/;
+
+const MARKDOWN_PATTERNS: RegExp[] = [
+  /^#{1,6}\s.+/m,
+  /\*\*[^*]+\*\*/,
+  /\*[^*]+\*/,
+  /~~[^~]+~~/,
+  /`[^`]+`/,
+  /^```[\s\S]*```/m,
+  /^>.+/m,
+  /^- \[( |x|X)\] .+/m,
+  /^- .+/m,
+  /^\d+\. .+/m,
+  /!\[[^\]]*\]\([^)]+\)/,
+  /\[[^\]]+\]\([^)]+\)/,
+  /<u>[^<]+<\/u>/,
+];
+
 export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
   if (!text) return [];
-  text = text.replace(/!\[([^\]]+)]\(([^)]+)\)/g, (match, name, url) => {
+  text = text.replace(IMAGE_REGEX, (match, name, url) => {
     try {
       const decoded = decodeURIComponent(url);
 
@@ -28,8 +58,7 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
   const parseInline = (s: string): RichTextElement[] => {
     const elements: RichTextElement[] = [];
     let cursor = 0;
-    const regex =
-      /(?<emoji>:(?<emojiName>[a-zA-Z0-9_.+-]+):)|(?<underline><u>(?<underlineText>.+?)<\/u>)|(?<bold>\*\*(?<boldText>[^*]+)\*\*)|(?<italic>\*(?<italicText>[^*]+)\*)|(?<strike>~~(?<strikeText>[^~]+)~~)|(?<link>\[(?<linkText>.+?)\]\((?<linkUrl>https?:\/\/[^\s)]+)\))|(?<code>`(?<codeText>[^`]+)`)/g;
+    const regex = INLINE_REGEX;
 
     for (const match of s.matchAll(regex)) {
       if ((match.index ?? 0) > cursor) {
@@ -38,57 +67,57 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
 
       const group = match.groups!;
       switch (true) {
-        case !!group['emoji']:
+        case !!group["emoji"]:
           elements.push({
             type: "emoji",
-            name: group['emojiName']! ,
+            name: group["emojiName"]!,
           });
           break;
 
-        case !!group['underline']:
+        case !!group["underline"]:
           elements.push({
             type: "text",
-            text: group['underlineText']!,
+            text: group["underlineText"]!,
             style: { underline: true },
           });
           break;
 
-        case !!group['bold']:
+        case !!group["bold"]:
           elements.push({
             type: "text",
-            text: group['boldText']!,
+            text: group["boldText"]!,
             style: { bold: true },
           });
           break;
 
-        case !!group['italic']:
+        case !!group["italic"]:
           elements.push({
             type: "text",
-            text: group['italicText']!,
+            text: group["italicText"]!,
             style: { italic: true },
           });
           break;
 
-        case !!group['strike']:
+        case !!group["strike"]:
           elements.push({
             type: "text",
-            text: group['strikeText']!,
+            text: group["strikeText"]!,
             style: { strike: true },
           });
           break;
 
-        case !!group['link']:
+        case !!group["link"]:
           elements.push({
             type: "link",
-            url: group['linkUrl']!,
-            text: group['linkText']!,
+            url: group["linkUrl"]!,
+            text: group["linkText"]!,
           });
           break;
 
-        case !!group['code']:
+        case !!group["code"]:
           elements.push({
             type: "text",
-            text: group['codeText']!,
+            text: group["codeText"]!,
             style: { code: true },
           });
           break;
@@ -107,7 +136,7 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
 
-    if (/^```/.test(line)) {
+    if (CODE_BLOCK_REGEX.test(line)) {
       if (!inCodeBlock) {
         inCodeBlock = true;
         codeBuffer = [];
@@ -126,49 +155,49 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
       continue;
     }
 
-    if (line === "---") {
+    if (HORIZONTAL_RULE_REGEX.test(line)) {
       blocks.push({ type: "divider" });
       continue;
     }
 
-    if (/^### /.test(line)) {
+    if (HEADER3_REGEX.test(line)) {
       blocks.push({
         type: "header",
         text: {
           type: "plain_text",
-          text: line.replace(/^### /, ""),
+          text: line.replace(HEADER3_REGEX, ""),
           emoji: true,
         },
       });
       continue;
     }
 
-    if (/^## /.test(line)) {
+    if (HEADER2_REGEX.test(line)) {
       blocks.push({
         type: "rich_text",
         elements: [
           {
             type: "rich_text_section",
-            elements: parseInline(line.replace(/^## /, "")),
+            elements: parseInline(line.replace(HEADER2_REGEX, "")),
           },
         ],
       } as RichTextBlock);
       continue;
     }
 
-    if (/^# /.test(line)) {
+    if (HEADER1_REGEX.test(line)) {
       blocks.push({
         type: "header",
         text: {
           type: "plain_text",
-          text: line.replace(/^# /, ""),
+          text: line.replace(HEADER1_REGEX, ""),
           emoji: true,
         },
       });
       continue;
     }
 
-    if (/^>/.test(line)) {
+    if (BLOCKQUOTE_REGEX.test(line)) {
       blocks.push({
         type: "rich_text",
         elements: [
@@ -181,7 +210,7 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
       continue;
     }
 
-    const taskMatch = line.match(/^- \[( |x|X)\] (.+)/);
+    const taskMatch = line.match(TASK_REGEX);
     if (taskMatch) {
       const checked = taskMatch[1]!.toLowerCase() === "x";
       const content = parseInline(taskMatch[2]!);
@@ -204,8 +233,8 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
       continue;
     }
 
-    if (/^- /.test(line)) {
-      const content = parseInline(line.replace(/^- /, ""));
+    if (UNORDERED_LIST_REGEX.test(line)) {
+      const content = parseInline(line.replace(UNORDERED_LIST_REGEX, ""));
       blocks.push({
         type: "rich_text",
         elements: [
@@ -218,7 +247,7 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
       continue;
     }
 
-    if (/^\d+\. /.test(line)) {
+    if (ORDERED_LIST_REGEX.test(line)) {
       blocks.push({
         type: "rich_text",
         elements: [{ type: "rich_text_section", elements: parseInline(line) }],
@@ -226,7 +255,7 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
       continue;
     }
 
-    const imageMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+    const imageMatch = line.match(IMAGE_REGEX);
     if (imageMatch) {
       blocks.push({
         type: "image",
@@ -260,22 +289,5 @@ export function parseMarkdownToSlackBlocks(text: string): KnownBlock[] {
 
 export function containsMarkdown(text: string): boolean {
   if (!text) return false;
-
-  const markdownPatterns: RegExp[] = [
-    /^#{1,6}\s.+/m,
-    /\*\*[^*]+\*\*/,
-    /\*[^*]+\*/,
-    /~~[^~]+~~/,
-    /`[^`]+`/,
-    /^```[\s\S]*```/m,
-    /^>.+/m,
-    /^- \[( |x|X)\] .+/m,
-    /^- .+/m,
-    /^\d+\. .+/m,
-    /!\[[^\]]*\]\([^)]+\)/,
-    /\[[^\]]+\]\([^)]+\)/,
-    /<u>[^<]+<\/u>/,
-  ];
-
-  return markdownPatterns.some((pattern) => pattern.test(text));
+  return MARKDOWN_PATTERNS.some((pattern) => pattern.test(text));
 }

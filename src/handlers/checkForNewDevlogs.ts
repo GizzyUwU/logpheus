@@ -118,10 +118,18 @@ async function getNewDevlogs(params: {
         ? project.data.devlog_ids.map(Number)
         : [];
 
-      await params.db.insert(projects).values({
-        id: Number(params.projectId),
-        devlogIds: initialDevlogIds,
-      });
+      await params.db
+        .insert(projects)
+        .values({
+          id: Number(params.projectId),
+          devlogIds: initialDevlogIds,
+        })
+        .onConflictDoUpdate({
+          target: projects.id,
+          set: {
+            devlogIds: initialDevlogIds,
+          },
+        });
 
       return {
         name: project.data.title ?? "Unknown",
