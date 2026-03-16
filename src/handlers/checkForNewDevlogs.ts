@@ -371,13 +371,12 @@ export default {
                   .filter(Boolean)
                   .join(" ");
 
-                type Block =
-                  | {
-                      type: "image";
-                      image_url: string;
-                      alt_text: string;
-                    };
-                    
+                type Block = {
+                  type: "image";
+                  image_url: string;
+                  alt_text: string;
+                };
+
                 const mediaBlocks: Block[] = (devlog.media || [])
                   .map((m, i): Block | null => {
                     const url = "https://flavortown.hackclub.com" + m.url;
@@ -395,7 +394,7 @@ export default {
                   .filter(
                     (m) => m.content_type && m.content_type.startsWith("video"),
                   )
-                  .map((m) => "https://flavortown.hackclub.com" + m.url);
+                  .map((m, i) => `<https://flavortown.hackclub.com${m.url}|Video ${i + 1}`);
 
                 const pingGroupId =
                   row?.meta
@@ -507,13 +506,23 @@ export default {
                               } as RichTextBlock,
                             ]
                           : []),
-                        //                    {
-                        //   type: "section",
-                        //   text: {
-                        //     type: "mrkdwn",
-                        //     text: `> ${videoLinks.join(",")}`,
-                        //   },
-                        // },
+                        ...(videoLinks.length > 0
+                          ? [
+                              {
+                                type: "section",
+                                text: {
+                                  type: "mrkdwn",
+                                  text: `> Video Devlog Links: ${videoLinks.join(", ")}`,
+                                },
+                              } as {
+                                type: "section";
+                                text: {
+                                  type: "mrkdwn";
+                                  text: string;
+                                };
+                              },
+                            ]
+                          : []),
                         {
                           type: "divider",
                         },

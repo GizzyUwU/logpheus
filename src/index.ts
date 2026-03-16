@@ -25,7 +25,6 @@ import { eq } from "drizzle-orm";
 import { getGenericErrorMessage } from "./lib/genericError";
 import { createDocument } from "zod-openapi";
 import openapiSpecification from "./oapiDocument";
-import type { Unfurls } from "@slack/web-api/dist/types/request/chat";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
