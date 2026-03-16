@@ -201,7 +201,7 @@ async function getNewDevlogs(params: {
         );
         metaArr.push(
           "PredictedCookies::" +
-          (predictedCookies + Number(meUser.data.cookies)),
+            (predictedCookies + Number(meUser.data.cookies)),
         );
 
         const goals =
@@ -217,9 +217,9 @@ async function getNewDevlogs(params: {
             const match = goals.match(/\[(.*?)\]/);
             const parsedGoals = match?.[1]
               ? match[1]
-                .split(",")
-                .map((v) => parseInt(v.trim()))
-                .filter((v) => !isNaN(v))
+                  .split(",")
+                  .map((v) => parseInt(v.trim()))
+                  .filter((v) => !isNaN(v))
               : [];
             for (const goalId of parsedGoals) {
               const item = shop.data.find((s) => s.id === goalId);
@@ -228,8 +228,8 @@ async function getNewDevlogs(params: {
               const cost =
                 region && region.length > 0
                   ? ((item.ticket_cost as Record<string, number | undefined>)[
-                    region.toLowerCase()
-                  ] ??
+                      region.toLowerCase()
+                    ] ??
                     item.ticket_cost?.base_cost ??
                     0)
                   : (item.ticket_cost?.base_cost ?? 0);
@@ -371,40 +371,17 @@ export default {
                   .filter(Boolean)
                   .join(" ");
 
-                type Block = {
-                  type: "image";
-                  image_url: string;
-                  alt_text: string;
-                } | {
-                  type: "video";
-                  video_url: string;
-                  thumbnail_url: string;
-                  title: {
-                    type: "plain_text",
-                    text: string;
-                  };
-                  alt_text: string;
-                };
-                ;
+                type Block =
+                  | {
+                      type: "image";
+                      image_url: string;
+                      alt_text: string;
+                    };
+                    
                 const mediaBlocks: Block[] = (devlog.media || [])
                   .map((m, i): Block | null => {
                     const url = "https://flavortown.hackclub.com" + m.url;
                     const alt = String(i + 1);
-                    if (m.content_type && m.content_type.startsWith("video") && process.env["DOMAIN"]) {
-                    console.log(process.env['DOMAIN'] + "/ftvToSlackV?url=" + url)
-
-                      return {
-                        type: "video",
-                        video_url: process.env['DOMAIN'] + "/ftvToSlackV?url=" + url,
-                        alt_text: alt,
-                        title: {
-                          type: "plain_text",
-                          text: projData.name + "Video" + " " + i,
-                        },
-                        thumbnail_url:
-                          "https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg",
-                      };
-                    }
 
                     if (m.content_type && m.content_type.startsWith("image")) {
                       return { type: "image", image_url: url, alt_text: alt };
@@ -414,11 +391,11 @@ export default {
                   })
                   .filter((b): b is Block => b !== null);
 
-                // const videoLinks = (devlog.media || [])
-                //   .filter(
-                //     (m) => m.content_type && m.content_type.startsWith("video"),
-                //   )
-                //   .map((m) => "https://flavortown.hackclub.com" + m.url);
+                const videoLinks = (devlog.media || [])
+                  .filter(
+                    (m) => m.content_type && m.content_type.startsWith("video"),
+                  )
+                  .map((m) => "https://flavortown.hackclub.com" + m.url);
 
                 const pingGroupId =
                   row?.meta
@@ -448,29 +425,39 @@ export default {
                         },
                         ...(pingGroupId
                           ? [
-                            {
-                              type: "rich_text",
-                              elements: [
-                                {
-                                  type: "rich_text_section",
-                                  elements: [
-                                    {
-                                      type: "usergroup",
-                                      usergroup_id: "S0AKABM82UF",
-                                    },
-                                  ],
-                                },
-                              ],
-                            } as RichTextBlock,
-                          ]
+                              {
+                                type: "rich_text",
+                                elements: [
+                                  {
+                                    type: "rich_text_section",
+                                    elements: [
+                                      {
+                                        type: "usergroup",
+                                        usergroup_id: "S0AKABM82UF",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              } as RichTextBlock,
+                            ]
                           : []),
-                        // {
-                        //   type: "section",
-                        //   text: {
-                        //     type: "mrkdwn",
-                        //     text: `> ${videoLinks.join(",")}`,
-                        //   },
-                        // },
+                        ...(videoLinks.length > 0
+                          ? [
+                              {
+                                type: "section",
+                                text: {
+                                  type: "mrkdwn",
+                                  text: `> Video Devlog Links: ${videoLinks.join(", ")}`,
+                                },
+                              } as {
+                                type: "section";
+                                text: {
+                                  type: "mrkdwn";
+                                  text: string;
+                                };
+                              },
+                            ]
+                          : []),
                         {
                           type: "divider",
                         },
@@ -504,21 +491,21 @@ export default {
                           : []),
                         ...(pingGroupId
                           ? [
-                            {
-                              type: "rich_text",
-                              elements: [
-                                {
-                                  type: "rich_text_section",
-                                  elements: [
-                                    {
-                                      type: "usergroup",
-                                      usergroup_id: "S0AKABM82UF",
-                                    },
-                                  ],
-                                },
-                              ],
-                            } as RichTextBlock,
-                          ]
+                              {
+                                type: "rich_text",
+                                elements: [
+                                  {
+                                    type: "rich_text_section",
+                                    elements: [
+                                      {
+                                        type: "usergroup",
+                                        usergroup_id: "S0AKABM82UF",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              } as RichTextBlock,
+                            ]
                           : []),
                         //                    {
                         //   type: "section",

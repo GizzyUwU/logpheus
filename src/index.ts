@@ -4,6 +4,7 @@ import {
   type SlackCommandMiddlewareArgs,
   type SlackViewMiddlewareArgs,
 } from "@slack/bolt";
+import https from "node:https";
 import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
@@ -13,7 +14,7 @@ import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun";
-import type { WebClient } from "@slack/web-api";
+import type { LinkUnfurls, VideoBlock, WebClient } from "@slack/web-api";
 import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
@@ -24,6 +25,7 @@ import { eq } from "drizzle-orm";
 import { getGenericErrorMessage } from "./lib/genericError";
 import { createDocument } from "zod-openapi";
 import openapiSpecification from "./oapiDocument";
+import type { Unfurls } from "@slack/web-api/dist/types/request/chat";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
@@ -200,89 +202,6 @@ const app = new App({
       handler: (_, res) => {
         res.writeHead(200);
         res.end("I'm ogay!");
-      },
-    },
-    {
-      path: "/ftvTransform",
-      method: ["GET"],
-      handler: async (req, res) => {
-        try {
-          const reqUrl = new URL(req.url!, "http://localhost");
-          const videoUrl = reqUrl.searchParams.get("url");
-
-          if (!videoUrl) {
-            res.writeHead(400, { "content-type": "text/plain" });
-            res.end("Missing ?url parameter");
-            return;
-          }
-
-          try {
-            new URL(videoUrl);
-          } catch {
-            res.writeHead(400, { "content-type": "text/plain" });
-            res.end("Invalid url");
-            return;
-          }
-
-          const playerUrl = `https://logpheus.gizzy.gay/ftvTransform?url=${encodeURIComponent(videoUrl)}`;
-
-          const html = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Video</title>
-
-<meta property="og:type" content="video.other">
-<meta property="og:title" content="Video">
-<meta property="og:description" content="Watch this video">
-<meta property="og:video" content="${playerUrl}">
-<meta property="og:video:secure_url" content="${playerUrl}">
-<meta property="og:url" content="${playerUrl}">
-<meta property="og:image" content="https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg">
-<meta property="og:image:width" content="1280">
-<meta property="og:image:height" content="720">
-<meta property="og:video:type" content="text/html">
-<meta property="og:video:width" content="1280">
-<meta property="og:video:height" content="720">
-
-<meta name="twitter:card" content="player">
-<meta name="twitter:title" content="Video">
-<meta name="twitter:description" content="Watch this video">
-<meta name="twitter:player" content="${playerUrl}">
-<meta name="twitter:player:width" content="1280">
-<meta name="twitter:player:height" content="720">
-
-<style>
-html, body {
-  margin:0;
-  padding:0;
-  background:#000;
-  height:100%;
-}
-video {
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-</style>
-</head>
-<body>
-<video controls autoplay playsinline>
-  <source src="${videoUrl}">
-</video>
-</body>
-</html>
-`;
-
-res.writeHead(200, {
-  "content-type": "text/html"
-});
-          res.end(html);
-        } catch (err) {
-          res.writeHead(500);
-          res.end("Internal error");
-        }
       },
     },
     {
