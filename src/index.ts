@@ -203,6 +203,69 @@ const app = new App({
       },
     },
     {
+      path: "/ftvToSlackV",
+      method: ["GET"],
+      handler: async (req, res) => {
+        try {
+          const reqUrl = new URL(req.url!, "http://localhost");
+          const videoUrl = reqUrl.searchParams.get("url");
+
+          if (!videoUrl) {
+            res.writeHead(400, { "content-type": "text/plain" });
+            res.end("Missing ?url parameter");
+            return;
+          }
+
+          try {
+            new URL(videoUrl);
+          } catch {
+            res.writeHead(400, { "content-type": "text/plain" });
+            res.end("Invalid url");
+            return;
+          }
+
+          const html = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Video</title>
+<style>
+html, body {
+  margin:0;
+  padding:0;
+  background:#000;
+  height:100%;
+}
+video {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+</style>
+</head>
+<body>
+<video controls autoplay playsinline>
+  <source src="${videoUrl}">
+  Your browser does not support the video tag.
+</video>
+</body>
+</html>
+`;
+
+          res.writeHead(200, {
+            "content-type": "text/html",
+            "x-frame-options": "ALLOWALL",
+          });
+
+          res.end(html);
+        } catch (err) {
+          res.writeHead(500);
+          res.end("Internal error");
+        }
+      },
+    },
+    {
       path: "/api/v1/docs",
       method: ["GET"],
       handler: async (req, res) => {
@@ -398,9 +461,9 @@ const app = new App({
                 const match = existGoals.match(/\[(.*?)\]/);
                 const parsedGoals = match?.[1]
                   ? match[1]
-                      .split(",")
-                      .map((v) => parseInt(v.trim()))
-                      .filter((v) => !isNaN(v))
+                    .split(",")
+                    .map((v) => parseInt(v.trim()))
+                    .filter((v) => !isNaN(v))
                   : [];
 
                 mergedGoals = Array.from(new Set([...parsedGoals, ...goals]));
@@ -445,9 +508,9 @@ const app = new App({
               const match = existGoalsStr.match(/\[(.*?)\]/);
               const parsedGoals = match?.[1]
                 ? match[1]
-                    .split(",")
-                    .map((v) => parseInt(v.trim()))
-                    .filter((v) => !isNaN(v))
+                  .split(",")
+                  .map((v) => parseInt(v.trim()))
+                  .filter((v) => !isNaN(v))
                 : [];
 
               const remainingGoals = parsedGoals.filter(
@@ -494,9 +557,9 @@ const app = new App({
               const match = goalsRaw.match(/\[(.*?)\]/);
               const goals = match?.[1]
                 ? match[1]
-                    .split(",")
-                    .map((v) => parseInt(v.trim()))
-                    .filter((v) => !isNaN(v))
+                  .split(",")
+                  .map((v) => parseInt(v.trim()))
+                  .filter((v) => !isNaN(v))
                 : [];
 
               res.writeHead(200, {
@@ -525,10 +588,6 @@ const app = new App({
     },
   ],
 });
-
-app.event("link_shared", async ({ event, say, client, logger }) => {
-  console.log(event)
-})
 
 let clients: Record<string, FT> = {};
 
@@ -598,11 +657,11 @@ function loadRequestHandlers(
               "channel_id" in args.body
                 ? args.body.channel_id
                 : (args.body.view.private_metadata.length > 0
-                    ? (JSON.parse(args.body.view.private_metadata) as {
-                        channel: string;
-                      })
-                    : { channel: "" }
-                  ).channel,
+                  ? (JSON.parse(args.body.view.private_metadata) as {
+                    channel: string;
+                  })
+                  : { channel: "" }
+                ).channel,
             triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
           },
         });

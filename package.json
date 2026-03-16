@@ -26,6 +26,7 @@
     "@sentry/bun": "^10.36.0",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.13.0",
+    "@types/lodash": "^4.17.24",
     "axios": "^1.13.2",
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
