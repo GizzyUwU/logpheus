@@ -224,6 +224,8 @@ const app = new App({
             return;
           }
 
+          const playerUrl = `https://logpheus.gizzy.gay/ftvTransform?url=${encodeURIComponent(videoUrl)}`;
+
           const html = `
 <!DOCTYPE html>
 <html>
@@ -234,9 +236,9 @@ const app = new App({
 <meta property="og:type" content="video.other">
 <meta property="og:title" content="Video">
 <meta property="og:description" content="Watch this video">
-<meta property="og:video" content="${videoUrl}">
-<meta property="og:video:secure_url" content="${videoUrl}">
-<meta property="og:url" content="https://logpheus.gizzy.gay/ftvTransform?url=${encodeURIComponent(videoUrl)}">
+<meta property="og:video" content="${playerUrl}">
+<meta property="og:video:secure_url" content="${playerUrl}">
+<meta property="og:url" content="${playerUrl}">
 <meta property="og:image" content="https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="720">
@@ -247,7 +249,7 @@ const app = new App({
 <meta name="twitter:card" content="player">
 <meta name="twitter:title" content="Video">
 <meta name="twitter:description" content="Watch this video">
-<meta name="twitter:player" content="${videoUrl}">
+<meta name="twitter:player" content="${playerUrl}">
 <meta name="twitter:player:width" content="1280">
 <meta name="twitter:player:height" content="720">
 
