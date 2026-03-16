@@ -230,6 +230,23 @@ const app = new App({
 <head>
 <meta charset="utf-8">
 <title>Video</title>
+
+<meta property="og:type" content="video.other">
+<meta property="og:title" content="Video">
+<meta property="og:description" content="Watch this video">
+<meta property="og:video" content="${videoUrl}">
+<meta property="og:video:secure_url" content="${videoUrl}">
+<meta property="og:video:type" content="video/mp4">
+<meta property="og:video:width" content="1280">
+<meta property="og:video:height" content="720">
+
+<meta name="twitter:card" content="player">
+<meta name="twitter:title" content="Video">
+<meta name="twitter:description" content="Watch this video">
+<meta name="twitter:player" content="${videoUrl}">
+<meta name="twitter:player:width" content="1280">
+<meta name="twitter:player:height" content="720">
+
 <style>
 html, body {
   margin:0;
@@ -247,7 +264,6 @@ video {
 <body>
 <video controls autoplay playsinline>
   <source src="${videoUrl}">
-  Your browser does not support the video tag.
 </video>
 </body>
 </html>
@@ -461,9 +477,9 @@ video {
                 const match = existGoals.match(/\[(.*?)\]/);
                 const parsedGoals = match?.[1]
                   ? match[1]
-                    .split(",")
-                    .map((v) => parseInt(v.trim()))
-                    .filter((v) => !isNaN(v))
+                      .split(",")
+                      .map((v) => parseInt(v.trim()))
+                      .filter((v) => !isNaN(v))
                   : [];
 
                 mergedGoals = Array.from(new Set([...parsedGoals, ...goals]));
@@ -508,9 +524,9 @@ video {
               const match = existGoalsStr.match(/\[(.*?)\]/);
               const parsedGoals = match?.[1]
                 ? match[1]
-                  .split(",")
-                  .map((v) => parseInt(v.trim()))
-                  .filter((v) => !isNaN(v))
+                    .split(",")
+                    .map((v) => parseInt(v.trim()))
+                    .filter((v) => !isNaN(v))
                 : [];
 
               const remainingGoals = parsedGoals.filter(
@@ -557,9 +573,9 @@ video {
               const match = goalsRaw.match(/\[(.*?)\]/);
               const goals = match?.[1]
                 ? match[1]
-                  .split(",")
-                  .map((v) => parseInt(v.trim()))
-                  .filter((v) => !isNaN(v))
+                    .split(",")
+                    .map((v) => parseInt(v.trim()))
+                    .filter((v) => !isNaN(v))
                 : [];
 
               res.writeHead(200, {
@@ -657,11 +673,11 @@ function loadRequestHandlers(
               "channel_id" in args.body
                 ? args.body.channel_id
                 : (args.body.view.private_metadata.length > 0
-                  ? (JSON.parse(args.body.view.private_metadata) as {
-                    channel: string;
-                  })
-                  : { channel: "" }
-                ).channel,
+                    ? (JSON.parse(args.body.view.private_metadata) as {
+                        channel: string;
+                      })
+                    : { channel: "" }
+                  ).channel,
             triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
           },
         });
