@@ -526,6 +526,10 @@ const app = new App({
   ],
 });
 
+app.event("link_shared", async ({ event, say, client, logger }) => {
+  console.log(event)
+})
+
 let clients: Record<string, FT> = {};
 
 export interface RequestHandler {

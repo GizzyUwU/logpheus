@@ -42,12 +42,11 @@ async function getNewDevlogs(params: {
   try {
     let client = params.clients[params.apiKey];
     if (!client) {
-      const ctx = params.logger.with({
+      params.logger.error("No FT Client for the project", {
         project: {
           id: params.projectId,
         },
       });
-      ctx.error("No FT Client for the project");
       return;
     }
 
@@ -55,11 +54,10 @@ async function getNewDevlogs(params: {
 
     if (!project || !project.status) {
       const row = params.userByAPIKey.get(params.apiKey);
-      const ctx = params.logger.with({
+      params.logger.error("Unexpected project response", {
         project,
         user: row,
       });
-      ctx.error("Unexpected project response");
       return;
     }
 
@@ -90,12 +88,11 @@ async function getNewDevlogs(params: {
           text: `Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /${params.prefix}-config to get it re-enabled.`,
         });
       } else if (project.status === 404) {
-        const ctx = params.logger.with({
+        params.logger.error("No project exists at id", {
           project: {
             id: params.projectId,
           },
         });
-        ctx.error("No project exists at id");
       } else if (
         project.status &&
         project.status >= 500 &&
@@ -103,12 +100,11 @@ async function getNewDevlogs(params: {
       ) {
         return;
       } else {
-        const ctx = params.logger.with({
+        params.logger.error(client.lastCode + " " + "Failed to get project", {
           project: {
             id: params.projectId,
           },
         });
-        ctx.error(client.lastCode + " " + "Failed to get project");
       }
       return;
     }
@@ -204,7 +200,8 @@ async function getNewDevlogs(params: {
           (item) => !item.startsWith("PredictedCookies::"),
         );
         metaArr.push(
-          "PredictedCookies::" + (predictedCookies + Number(meUser.data.cookies)),
+          "PredictedCookies::" +
+            (predictedCookies + Number(meUser.data.cookies)),
         );
 
         const goals =
@@ -237,9 +234,10 @@ async function getNewDevlogs(params: {
                     0)
                   : (item.ticket_cost?.base_cost ?? 0);
 
-              if ((Number(meUser.data.cookies) + predictedCookies) < cost) {
+              if (Number(meUser.data.cookies) + predictedCookies < cost) {
                 nextGoalItem = String(item.name);
-                distanceFromGoal = cost - ((Number(meUser.data.cookies) + predictedCookies));
+                distanceFromGoal =
+                  cost - (Number(meUser.data.cookies) + predictedCookies);
                 break;
               }
             }
@@ -248,13 +246,13 @@ async function getNewDevlogs(params: {
       }
 
       if (devlogs.length === 0) {
-        const ctx = params.logger.with({
-          project: {
-            id: params.projectId,
-          },
-        });
-        ctx.error(
+        params.logger.error(
           "There was a new id but yet devlogs array stayed empty this could indicate a bug.",
+          {
+            project: {
+              id: params.projectId,
+            },
+          },
         );
         return { name: project.data.title ?? "Unknown", devlogs: [] };
       }
@@ -280,13 +278,13 @@ async function getNewDevlogs(params: {
       };
     }
   } catch (err) {
-    const ctx = params.logger.with({
+    params.logger.error({
+      error: err,
       project: {
         id: params.projectId,
       },
       location: "getNewDevlogs,topLevelTryCatch",
     });
-    ctx.error({ error: err });
     return;
   }
 }
@@ -373,31 +371,15 @@ export default {
                   .filter(Boolean)
                   .join(" ");
 
-                type Block =
-                  | { type: "image"; image_url: string; alt_text: string }
-                  | {
-                      type: "video";
-                      video_url: string;
-                      thumbnail_url: string;
-                      title: string;
-                      alt_text: string;
-                    };
-
+                type Block = {
+                  type: "image";
+                  image_url: string;
+                  alt_text: string;
+                };
                 const mediaBlocks: Block[] = (devlog.media || [])
                   .map((m, i): Block | null => {
                     const url = "https://flavortown.hackclub.com" + m.url;
                     const alt = String(i + 1);
-
-                    if (m.content_type && m.content_type.startsWith("video")) {
-                      return {
-                        type: "video",
-                        video_url: url,
-                        alt_text: alt,
-                        title: projData.name + "Video" + " " + i,
-                        thumbnail_url:
-                          "https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg",
-                      };
-                    }
 
                     if (m.content_type && m.content_type.startsWith("image")) {
                       return { type: "image", image_url: url, alt_text: alt };
@@ -406,6 +388,12 @@ export default {
                     return null;
                   })
                   .filter((b): b is Block => b !== null);
+
+                const videoLinks = (devlog.media || [])
+                  .filter(
+                    (m) => m.content_type && m.content_type.startsWith("video"),
+                  )
+                  .map((m) => "https://flavortown.hackclub.com" + m.url);
 
                 const pingGroupId =
                   row?.meta
@@ -451,6 +439,13 @@ export default {
                               } as RichTextBlock,
                             ]
                           : []),
+                        // {
+                        //   type: "section",
+                        //   text: {
+                        //     type: "mrkdwn",
+                        //     text: `> ${videoLinks.join(",")}`,
+                        //   },
+                        // },
                         {
                           type: "divider",
                         },
@@ -469,8 +464,8 @@ export default {
                   } else {
                     await client.chat.postMessage({
                       channel: row.channel,
-                      unfurl_links: false,
-                      unfurl_media: false,
+                      unfurl_links: true,
+                      unfurl_media: true,
                       blocks: [
                         {
                           type: "section",
@@ -500,6 +495,13 @@ export default {
                               } as RichTextBlock,
                             ]
                           : []),
+                        //                    {
+                        //   type: "section",
+                        //   text: {
+                        //     type: "mrkdwn",
+                        //     text: `> ${videoLinks.join(",")}`,
+                        //   },
+                        // },
                         {
                           type: "divider",
                         },
@@ -544,21 +546,15 @@ export default {
                     }
                   }
 
-                  const ctx = logger.with({
-                    error: err,
-                  });
-
-                  ctx.error(
+                  logger.error(
                     "Unexpected error occured when trying to post the automated message.",
+                    {
+                      error: err,
+                    },
                   );
                 }
               } catch (err) {
-                const ctx = logger.with({
-                  project: {
-                    id: projectId,
-                  },
-                });
-                ctx.error({ error: err });
+                logger.error({ error: err, projectId });
               }
             }
           }
@@ -567,11 +563,9 @@ export default {
         }
       }
     } catch (err) {
-      const ctx = logger.with({
-        location: "checkForNewDevlogs,topLevelTryCatch",
-      });
-      ctx.error({
+      logger.error({
         error: err,
+        location: "checkForNewDevlogs,topLevelTryCatch",
       });
     }
   },
