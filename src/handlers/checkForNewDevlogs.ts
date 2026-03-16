@@ -390,8 +390,9 @@ export default {
                   .map((m, i): Block | null => {
                     const url = "https://flavortown.hackclub.com" + m.url;
                     const alt = String(i + 1);
-
                     if (m.content_type && m.content_type.startsWith("video") && process.env["DOMAIN"]) {
+                    console.log(process.env['DOMAIN'] + "/ftvToSlackV?url=" + url)
+
                       return {
                         type: "video",
                         video_url: process.env['DOMAIN'] + "/ftvToSlackV?url=" + url,

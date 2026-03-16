@@ -203,7 +203,7 @@ const app = new App({
       },
     },
     {
-      path: "/ftvToSlackV",
+      path: "/ftvTransform",
       method: ["GET"],
       handler: async (req, res) => {
         try {
