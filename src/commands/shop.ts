@@ -71,8 +71,10 @@ export default {
             });
         }
       }
-      const region = working.row![0]?.meta?.[0]?.split("Region::")[1] ?? null;
-
+    const region =
+             working.row![0]?.meta
+                ?.find((s) => s.startsWith("Region::"))
+                ?.split("::")[1] ?? "";
       const text = (items.data ?? [])
         .filter(
           (item) =>

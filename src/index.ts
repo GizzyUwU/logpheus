@@ -4,7 +4,6 @@ import {
   type SlackCommandMiddlewareArgs,
   type SlackViewMiddlewareArgs,
 } from "@slack/bolt";
-import https from "node:https";
 import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
@@ -14,7 +13,7 @@ import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun";
-import type { LinkUnfurls, VideoBlock, WebClient } from "@slack/web-api";
+import type { WebClient } from "@slack/web-api";
 import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
@@ -729,7 +728,10 @@ async function loadHandlers() {
       console.info("[Logpheus] Running as Socket Mode");
     } else {
       const port = process.env["PORT"] ? parseInt(process.env["PORT"]) : 3000;
-      await app.start(port);
+      console.log(port)
+      await app.start({
+        port
+    });
       console.info("[Logpheus] Running on port:", port);
     }
 
