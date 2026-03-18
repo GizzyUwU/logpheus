@@ -1,7 +1,7 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "..";
 import { users } from "../schema/users";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { projects } from "../schema/projects";
 import checkAPIKey from "../lib/apiKeyCheck";
 import FT from "../lib/ft";
@@ -32,8 +32,6 @@ export default {
         });
 
       const updateFields: Partial<UserRow> = {};
-
-
       const userData = await pg
         .select()
         .from(users)
@@ -48,41 +46,106 @@ export default {
 
       const projectId = command.text.trim()
       if (!projectId) {
+        // const checkKey = String(userData[0]?.apiKey);
 
-        await client.views.open({
-          trigger_id: command.trigger_id,
-          view: {
-            type: "modal",
-            callback_id: callbackId!,
-            title: {
-              type: "plain_text",
-              text: /^[a-z]/i.test(prefix!)
-                ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-                : prefix!,
-            },
-            private_metadata: JSON.stringify({
-              channel: command.channel_id,
-            }),
-            blocks: [
-              {
-                type: "input",
-                block_id: "projId",
-                label: {
-                  type: "plain_text",
-                  text: "What is the project's id",
-                },
-                element: {
-                  type: "plain_text_input",
-                  action_id: "proj_input",
-                  multiline: false,
-                },
-              },
-            ],
-            submit: {
-              type: "plain_text",
-              text: "Submit",
-            },
-          },
+        // const working = await checkAPIKey({
+        //   db: pg,
+        //   apiKey: checkKey,
+        //   logger,
+        // });
+        // if (!working.works)
+        //   return respond({
+        //     text: "Flavortown API Key is invalid, provide a valid one.",
+        //     response_type: "ephemeral",
+        //   });
+
+        // const apiKey = checkKey!;
+        // const ftClient = new FT(apiKey, logger);
+        // const projectsArr = Array.isArray(userData[0]?.projects)
+        //   ? Array.from(
+        //     new Set(
+        //       userData[0]?.projects.filter(
+        //         (p): p is number => Number.isInteger(p) && p > 0,
+        //       ),
+        //     ),
+        //   )
+        //   : [];
+
+        // const arrOfProjects: any[] = [];
+        // let page: number | null = 1;
+        // while (page) {
+        //   const res = await ftClient.projects({
+        //     page
+        //   })
+        //   if (!res || !res.ok) break;
+        //   const data = res.data;
+        //   if (data?.projects) {
+        //     for (const project of data.projects) {
+        //       if (projectsArr.includes(Number(project.id))) continue;
+        //       projectsArr.push(Number(project.id))
+        //       arrOfProjects.push(project);
+        //     }
+        //   }
+        //   page = data?.pagination?.next_page ?? null;
+        // }
+
+        // if (!userData[0]?.userId) {
+        //   updateFields.userId = command.user_id;
+        // }
+
+        // if (!userData[0]?.channel) {
+        //   updateFields.channel = command.channel_id;
+        // }
+
+        // updateFields.projects = projectsArr;
+        // await pg.update(users).set(updateFields).where(eq(users.userId, command.user_id));
+
+
+        // const projectRows = arrOfProjects.map((project) => ({
+        //   id: Number(project.id),
+        //   devlogIds: Array.isArray(project.devlog_ids)
+        //     ? project.devlog_ids
+        //     : [],
+        // }));
+
+        // const existing = await pg
+        //   .select({ id: projects.id })
+        //   .from(projects)
+        //   .where(inArray(
+        //     projects.id,
+        //     projectRows.map((p) => p.id)
+        //   ));
+
+        // const existingIds = new Set(existing.map((e) => e.id));
+
+        // const toInsert = projectRows.filter((p) => !existingIds.has(p.id));
+        // const toUpdate = projectRows.filter((p) => existingIds.has(p.id));
+
+        // if (toInsert.length) {
+        //   await pg.insert(projects).values(toInsert);
+        // }
+
+        // const chunkSize = 100;
+
+        // for (let i = 0; i < toUpdate.length; i += chunkSize) {
+        //   const chunk = toUpdate.slice(i, i + chunkSize);
+
+        //   await Promise.all(
+        //     chunk.map((p) =>
+        //       pg
+        //         .update(projects)
+        //         .set({ devlogIds: p.devlogIds })
+        //         .where(eq(projects.id, p.id))
+        //     )
+        //   );
+        // }
+        // return respond({
+        //   text: "All projects from user have been added.",
+        //   response_type: "ephemeral",
+        // });
+        return respond({
+          text: "Provide an id.",
+          response_type: "ephemeral",
         });
       } else {
         if (!Number.isInteger(Number(projectId))) return respond({
@@ -178,29 +241,29 @@ export default {
           });
 
         return respond({
-            unfurl_links: false,
-            unfurl_media: false,
-            blocks: [
-              {
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: `:woah-dino: <https://flavortown.hackclub.com/projects/${Number(projectId)}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
-                },
+          unfurl_links: false,
+          unfurl_media: false,
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `:woah-dino: <https://flavortown.hackclub.com/projects/${Number(projectId)}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
               },
-              {
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: String(freshProject.data.description)
-                    .split("\n")
-                    .map((line: string) => `> ${line}`)
-                    .join("\n"),
-                },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: String(freshProject.data.description)
+                  .split("\n")
+                  .map((line: string) => `> ${line}`)
+                  .join("\n"),
               },
-            ],
-            response_type: "in_channel"
-          });
+            },
+          ],
+          response_type: "in_channel"
+        });
       }
     } catch (error: any) {
       if (
