@@ -71,45 +71,107 @@ export default {
             });
         }
       }
-    const region =
-             working.row![0]?.meta
-                ?.find((s) => s.startsWith("Region::"))
-                ?.split("::")[1] ?? "";
-      const text = (items.data ?? [])
+
+      let goalsRaw = (working.row![0]?.meta ?? []).find((item) =>
+        item.startsWith("Goals::"),
+      );
+
+      if (!goalsRaw) {
+        goalsRaw = "[]";
+      }
+
+      const match = goalsRaw.match(/\[(.*?)\]/);
+      const goals = match?.[1]
+        ? match[1]
+          .split(",")
+          .map((v) => parseInt(v.trim()))
+          .filter((v) => !isNaN(v))
+        : [];
+
+      const region =
+        working.row![0]?.meta
+          ?.find((s) => s.startsWith("Region::"))
+          ?.split("::")[1] ?? "";
+
+      const text = "*Items*:\n" + (items.data ?? [])
         .filter(
           (item) =>
             item.type !== "ShopItem::Accessory" &&
             !item.attached_shop_item_ids?.some((id) => id != null) &&
+            !goals.includes(Number(item.id)) &&
             (region && region.length > 0
               ? item.enabled?.[`enabled_${region.toLowerCase()}` as keyof typeof item.enabled]
               : true),
         )
-        .slice(0, 40)
+        .slice(0, 30)
         .map((item) => {
           const cost =
             region && region.length > 0
               ? ((item.ticket_cost as Record<string, number | undefined>)[
-                  region.toLowerCase()
-                ] ??
+                region.toLowerCase()
+              ] ??
                 item.ticket_cost?.base_cost ??
                 0)
               : (item.ticket_cost?.base_cost ?? 0);
 
-          return `• ${item.id || 0} - *${item.name ?? "Untitled"}* - ${cost} - ${item.description ?? ""}`;
+          return `• ${item.id || 0} - *${item.name ?? "Untitled"}* - ${cost} :cookie: - ${item.description ?? ""}`;
         })
         .join("\n");
+
+      const goalsResolved = goals
+        .map((goalId) => items.data.find((item) => item.id === goalId))
+        .filter(Boolean)
+        .map((item) => {
+          const cost =
+            region && region.length > 0
+              ? ((item!.ticket_cost as Record<string, number | undefined>)[
+                region.toLowerCase()
+              ] ??
+                item!.ticket_cost?.base_cost ??
+                0)
+              : item!.ticket_cost?.base_cost ?? 0;
+
+          return {
+            id: item!.id,
+            name: item!.name ?? "Untitled",
+            cost,
+            desc: item!.description ?? "",
+          };
+        });
+
+      const goalsText =
+        "*Goals*:\n" +
+        goalsResolved
+          .map(
+            (g) => `• ${g.id} - *${g.name}* - ${g.cost} :cookie: - ${g.desc}`
+          )
+          .join("\n");
+
 
       return respond({
         blocks: [
           {
-            type: "header",
+            type: "section",
             text: {
-              type: "plain_text",
+              type: "mrkdwn",
               text: region?.length
-                ? "Flavortown Store with " + region.toUpperCase() + "'s Prices"
-                : "Flavortown Store",
+                ? "*Flavortown Store with " + region.toUpperCase() + "'s Prices*"
+                : "*Flavortown Store*",
             },
           },
+          ...(goals.length > 0 ? [{
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: goalsText,
+            }
+          }] as {
+            type: "section";
+            text: {
+              type: "mrkdwn";
+              text: string;
+            }
+          }[] : []),
           {
             type: "section",
             text: {

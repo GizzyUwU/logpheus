@@ -53,6 +53,7 @@ export default {
     if (!goalsRaw) {
       goalsRaw = "[]";
     }
+    
     const match = goalsRaw.match(/\[(.*?)\]/);
     const goals = match?.[1]
       ? match[1]
