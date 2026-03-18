@@ -178,26 +178,29 @@ export default {
           });
 
         return respond({
-          unfurl_links: false,
-          unfurl_media: false,
-          blocks: [
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `:woah-dino: <https://flavortown.hackclub.com/projects/${Number(projectId)}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
+            unfurl_links: false,
+            unfurl_media: false,
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `:woah-dino: <https://flavortown.hackclub.com/projects/${Number(projectId)}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
+                },
               },
-            },
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `> ${freshProject.data.description}`,
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: String(freshProject.data.description)
+                    .split("\n")
+                    .map((line: string) => `> ${line}`)
+                    .join("\n"),
+                },
               },
-            },
-          ],
-          response_type: "in_channel"
-        });
+            ],
+            response_type: "in_channel"
+          });
       }
     } catch (error: any) {
       if (
