@@ -18,6 +18,7 @@
         "drizzle-kit": "^0.31.8",
         "drizzle-orm": "^0.45.1",
         "https": "^1.0.0",
+        "node-vikunja": "^0.4.0",
         "orval": "^8.5.1",
         "pg": "^8.16.3",
         "zod": "^4.3.6",
@@ -552,6 +553,8 @@
     "ms": ["ms@2.1.3", "", {}, "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="],
 
     "negotiator": ["negotiator@1.0.0", "", {}, "sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg=="],
+
+    "node-vikunja": ["node-vikunja@0.4.0", "", {}, "sha512-AvnDYL0ZIhfcaC4MtuEZud/QJ/Hslr9Iwuda2pWT/gVokF1TS4zHkOiPNvBEfVZN4Y5Du+fOMKVWNjMEL0ZE6w=="],
 
     "npm-run-path": ["npm-run-path@6.0.0", "", { "dependencies": { "path-key": "^4.0.0", "unicorn-magic": "^0.3.0" } }, "sha512-9qny7Z9DsQU8Ou39ERsPU4OZQlSTP47ShQzuKZ6PRXpYLtIFgl/DEBYEXKlvcEa+9tHVcK8CF81Y2V72qaZhWA=="],
 

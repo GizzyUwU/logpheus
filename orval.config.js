@@ -1,14 +1,14 @@
 import { defineConfig } from "orval";
 
 export default defineConfig({
-  flavortown: {
+  vikunja: {
     output: {
       client: "zod",
       mode: "single",
-      target: "./src/lib/ft.zod.ts",
+      target: "./src/lib/vk.zod.ts",
     },
     input: {
-      target: "./api-1.yaml",
+      target: "./docs.json",
     },
   },
 });

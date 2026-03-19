@@ -31,6 +31,7 @@
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
     "https": "^1.0.0",
+    "node-vikunja": "^0.4.0",
     "orval": "^8.5.1",
     "pg": "^8.16.3",
     "zod": "^4.3.6",
