@@ -5,7 +5,7 @@ import { vikClient } from "..";
 import type { VikunjaClient } from "node-vikunja";
 
 export default {
-  name: "request",
+  name: "report",
   requireVikunja: true,
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
@@ -36,15 +36,15 @@ export default {
       const requestTitle = values["requestTitle"]?.["title"]?.value?.trim();
       const requestBody = values["requestBody"]?.["body"]?.value?.trim();
 
-      const newFeatReq = await (vikClient as VikunjaClient).tasks.createTask(Number(process.env["VIKUNJA_FEATURE_PROJECT_ID"]), {
+      const newFeatReq = await (vikClient as VikunjaClient).tasks.createTask(Number(process.env["VIKUNJA_BUG_PROJECT_ID"]), {
         title: String(requestTitle) + " - " + userId,
         description: String(requestBody),
-        project_id: Number(process.env["VIKUNJA_FEATURE_PROJECT_ID"])
+        project_id: Number(process.env["VIKUNJA_BUG_PROJECT_ID"])
       });
 
       await (vikClient as VikunjaClient).tasks.addLabelToTask(Number(newFeatReq.id), {
         task_id: Number(newFeatReq.id),
-        label_id: Number(process.env["VIKUNJA_FEATURE_LABEL_ID"])
+        label_id: Number(process.env["VIKUNJA_BUG_LABEL_ID"])
       });
       
       await client.chat.postEphemeral({

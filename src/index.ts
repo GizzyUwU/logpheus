@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 import runMigrations from "./migrate";
 import { PGlite } from "@electric-sql/pglite";
+import { VikunjaClient } from "node-vikunja";
 import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -170,6 +171,17 @@ function checkEnvs(name: string, optional: boolean): string {
   } else {
     return "";
   }
+}
+
+export let vikClient: VikunjaClient | undefined = undefined;
+if (checkEnvs("VIKUNJA_URL", false) && 
+  checkEnvs("VIKUNJA_TOKEN", false) && 
+  checkEnvs("VIKUNJA_BUG_PROJECT_ID", false) && 
+  checkEnvs("VIKUNJA_FEATURE_PROJECT_ID", false) &&
+  checkEnvs("VIKUNJA_BUG_LABEL_ID", false) &&
+  checkEnvs("VIKUNJA_FEATURE_LABEL_ID", false)
+) {
+  vikClient = new VikunjaClient(String(process.env["VIKUNJA_URL"]), String(process.env["VIKUNJA_TOKEN"]));
 }
 
 const document = createDocument(openapiSpecification);
@@ -398,9 +410,9 @@ const app = new App({
                 const match = existGoals.match(/\[(.*?)\]/);
                 const parsedGoals = match?.[1]
                   ? match[1]
-                      .split(",")
-                      .map((v) => parseInt(v.trim()))
-                      .filter((v) => !isNaN(v))
+                    .split(",")
+                    .map((v) => parseInt(v.trim()))
+                    .filter((v) => !isNaN(v))
                   : [];
 
                 mergedGoals = Array.from(new Set([...parsedGoals, ...goals]));
@@ -445,9 +457,9 @@ const app = new App({
               const match = existGoalsStr.match(/\[(.*?)\]/);
               const parsedGoals = match?.[1]
                 ? match[1]
-                    .split(",")
-                    .map((v) => parseInt(v.trim()))
-                    .filter((v) => !isNaN(v))
+                  .split(",")
+                  .map((v) => parseInt(v.trim()))
+                  .filter((v) => !isNaN(v))
                 : [];
 
               const remainingGoals = parsedGoals.filter(
@@ -494,9 +506,9 @@ const app = new App({
               const match = goalsRaw.match(/\[(.*?)\]/);
               const goals = match?.[1]
                 ? match[1]
-                    .split(",")
-                    .map((v) => parseInt(v.trim()))
-                    .filter((v) => !isNaN(v))
+                  .split(",")
+                  .map((v) => parseInt(v.trim()))
+                  .filter((v) => !isNaN(v))
                 : [];
 
               res.writeHead(200, {
@@ -556,6 +568,7 @@ function loadRequestHandlers(
     const importFile = await import(path.join(folderPath, file));
     const module = importFile.default ?? importFile;
     if (!module?.name || typeof module.execute !== "function") return;
+    if (module.requireVikunja === true && !vikClient) return;
     if (type === "command") {
       commands.push({
         name: module.name,
@@ -594,11 +607,11 @@ function loadRequestHandlers(
               "channel_id" in args.body
                 ? args.body.channel_id
                 : (args.body.view.private_metadata.length > 0
-                    ? (JSON.parse(args.body.view.private_metadata) as {
-                        channel: string;
-                      })
-                    : { channel: "" }
-                  ).channel,
+                  ? (JSON.parse(args.body.view.private_metadata) as {
+                    channel: string;
+                  })
+                  : { channel: "" }
+                ).channel,
             triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
           },
         });
@@ -731,7 +744,7 @@ async function loadHandlers() {
       console.log(port)
       await app.start({
         port
-    });
+      });
       console.info("[Logpheus] Running on port:", port);
     }
 

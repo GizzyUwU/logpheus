@@ -6,9 +6,9 @@ import { vikClient } from "..";
 import type { VikunjaClient } from "node-vikunja";
 
 export default {
-  name: "request",
+  name: "report",
   requireVikunja: true,
-  desc: "Want something added to logpheus? Request it here!",
+  desc: "Oopsie. Did I do a silly? Let me know by reporting the silly issue.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, client, callbackId, prefix }: RequestHandler,
@@ -27,12 +27,12 @@ export default {
           text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
           response_type: "ephemeral",
         });
-      if(!channel?.channel.id) {
+      if (!channel?.channel.id) {
         logger.error("There is no channel id for this channel?");
         return;
       }
 
-      const tasksList = await (vikClient as VikunjaClient).tasks.getProjectTasks(Number(process.env["VIKUNJA_FEATURE_PROJECT_ID"]));
+      const tasksList = await (vikClient as VikunjaClient).tasks.getProjectTasks(Number(process.env["VIKUNJA_BUG_PROJECT_ID"]));
       const userTasks = tasksList?.filter(
         (task) =>
           task.title.includes(command.user_id) &&
@@ -42,7 +42,7 @@ export default {
       if (userTasks && userTasks?.length >= 3) {
         return await respond({
           text:
-            "We restrict feature requests to 3 open requests per user",
+            "We restrict bug reports to 3 open issues per user",
           response_type: "ephemeral",
         });
       }
@@ -56,7 +56,7 @@ export default {
       if (existingCount === 0)
         return await respond({
           text:
-            "We restrict feature requests to users only. Run /" +
+            "We restrict bug reports to users only. Run /" +
             prefix +
             "-register to get started.",
           response_type: "ephemeral",
@@ -95,7 +95,7 @@ export default {
               block_id: "requestBody",
               label: {
                 type: "plain_text",
-                text: "Now explain your idea!",
+                text: "Now explain the silly little issue!",
               },
               element: {
                 type: "plain_text_input",
