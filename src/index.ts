@@ -19,12 +19,7 @@ import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
-import checkAPIKey from "./lib/apiKeyCheck";
-import { users } from "./schema/users";
-import { eq } from "drizzle-orm";
-import { getGenericErrorMessage } from "./lib/genericError";
-import { createDocument } from "zod-openapi";
-import openapiSpecification from "./oapiDocument";
+import loadAPI from "./api/index"
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
@@ -67,6 +62,7 @@ const sentryAdapter = redactByField(
     action: () => "[REDACTED]",
   },
 );
+
 const consoleAdapter = redactByField(getConsoleSink(), {
   fieldPatterns: [
     /api[-_]?key/i,
@@ -160,6 +156,7 @@ if (process.env["PGLITE"] === "false") {
   });
 }
 
+
 function checkEnvs(name: string, optional: boolean): string {
   const value = process.env[name];
   if (!value && !optional) {
@@ -184,20 +181,6 @@ if (checkEnvs("VIKUNJA_URL", true) &&
   vikClient = new VikunjaClient(String(process.env["VIKUNJA_URL"]), String(process.env["VIKUNJA_TOKEN"]));
 }
 
-const document = createDocument(openapiSpecification);
-
-async function readJson<T>(req: any): Promise<T | null> {
-  try {
-    const chunks: Buffer[] = [];
-    for await (const chunk of req) {
-      chunks.push(chunk);
-    }
-    return JSON.parse(Buffer.concat(chunks).toString());
-  } catch {
-    return null;
-  }
-}
-
 const app = new App({
   signingSecret: checkEnvs("SIGNING_SECRET", false),
   token: checkEnvs("BOT_TOKEN", false),
@@ -205,337 +188,7 @@ const app = new App({
   socketMode: process.env["APP_TOKEN"]
     ? process.env["SOCKET_MODE"] === "true"
     : false,
-  customRoutes: [
-    {
-      path: "/healthcheck",
-      method: ["GET"],
-      handler: (_, res) => {
-        res.writeHead(200);
-        res.end("I'm ogay!");
-      },
-    },
-    {
-      path: "/api/v1/docs",
-      method: ["GET"],
-      handler: async (req, res) => {
-        const url = req.url as string;
-
-        if (url.endsWith("/openapi.json")) {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(document));
-          return;
-        }
-
-        const html = Bun.file("src/swagger.html");
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(await html.text());
-      },
-    },
-    {
-      path: "/api/v1/docs/:asset",
-      method: ["GET"],
-      handler: async (req, res) => {
-        const url = req.url as string;
-        if (url.endsWith("/openapi.json")) {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(document));
-          return;
-        } else {
-          res.writeHead(404);
-          res.end();
-          return;
-        }
-      },
-    },
-    {
-      path: "/api/v1/goals",
-      method: ["GET", "POST", "PUT", "DELETE"],
-      handler: async (req, res) => {
-        try {
-          const preReplaceAPIKey = req.headers["authorization"];
-          if (!preReplaceAPIKey?.startsWith("Bearer ")) {
-            res.writeHead(401);
-            res.end("Failed authentication, please provide your api key.");
-            return;
-          }
-
-          const checkKey = preReplaceAPIKey.replace(/^Bearer\s+/i, "");
-          const working = await checkAPIKey({
-            db: pg,
-            apiKey: checkKey,
-            logger,
-          });
-          if (!working.works) {
-            res.writeHead(401);
-            res.end(
-              "Failed authentication check! Check if the api key is correct and you are registered to logpheus.",
-            );
-            return;
-          }
-
-          const apiKey = checkKey!;
-          switch (req.method) {
-            case "POST": {
-              const body = await readJson<{ goals: number[] }>(req);
-              const goals = body?.goals ?? [];
-              if (goals.length === 0) {
-                res.writeHead(200, { "content-type": "application/json" });
-                res.end(JSON.stringify({ goals: [] }));
-                return;
-              }
-
-              let ftClient: FT | undefined = clients[apiKey];
-              if (!ftClient) {
-                ftClient = new FT(apiKey, logger);
-              }
-              const shop = await ftClient.shop();
-              if (!shop || !shop.status) {
-                res.writeHead(500, {
-                  "content-type": "application/json",
-                });
-                res.end(
-                  JSON.stringify({
-                    msg: "Unexpected error has occurred",
-                  }),
-                );
-                return;
-              }
-
-              if (!shop.ok || !shop.data?.length) {
-                switch (shop.status) {
-                  default:
-                    const msg = getGenericErrorMessage(shop.status, prefix!);
-                    res.writeHead(shop.status, {
-                      "content-type": "application/json",
-                    });
-                    res.end(
-                      JSON.stringify({
-                        msg: msg ?? "Unexpected error has occurred ",
-                      }),
-                    );
-                    return;
-                }
-              }
-
-              const validGoalIds = goals.filter((id) =>
-                shop.data.some((item) => item.id === id),
-              );
-
-              if (validGoalIds.length === 0) {
-                res.writeHead(200, { "content-type": "application/json" });
-                res.end(JSON.stringify({ goals: [] }));
-                return;
-              }
-
-              let metaArr = working.row![0]?.meta ?? [];
-              metaArr = metaArr.filter((item) => !item.startsWith("Goals::"));
-              metaArr.push("Goals::[" + goals.join(",") + "]");
-
-              await pg
-                .update(users)
-                .set({
-                  meta: metaArr,
-                })
-                .where(eq(users.apiKey, apiKey));
-
-              res.writeHead(200, {
-                "content-type": "application/json",
-              });
-
-              res.end(JSON.stringify({ goals }));
-              return;
-            }
-
-            case "PUT": {
-              const body = await readJson<{ goals: number[] }>(req);
-              const goals = body?.goals ?? [];
-              if (goals.length === 0) {
-                res.writeHead(200, { "content-type": "application/json" });
-                res.end(JSON.stringify({ goals: [] }));
-                return;
-              }
-
-              let ftClient: FT | undefined = clients[apiKey];
-              if (!ftClient) {
-                ftClient = new FT(apiKey, logger);
-              }
-              const shop = await ftClient.shop();
-              if (!shop || !shop.status) {
-                res.writeHead(500, {
-                  "content-type": "application/json",
-                });
-                res.end(
-                  JSON.stringify({
-                    msg: "Unexpected error has occurred",
-                  }),
-                );
-                return;
-              }
-
-              if (!shop.ok || !shop.data?.length) {
-                switch (shop.status) {
-                  default:
-                    const msg = getGenericErrorMessage(shop.status, prefix!);
-                    res.writeHead(shop.status, {
-                      "content-type": "application/json",
-                    });
-                    res.end(
-                      JSON.stringify({
-                        msg: msg ?? "Unexpected error has occurred ",
-                      }),
-                    );
-                    return;
-                }
-              }
-
-              const validGoalIds = goals.filter((id) =>
-                shop.data.some((item) => item.id === id),
-              );
-
-              if (validGoalIds.length === 0) {
-                res.writeHead(200, { "content-type": "application/json" });
-                res.end(JSON.stringify({ goals: [] }));
-                return;
-              }
-
-              let metaArr = working.row![0]?.meta ?? [];
-              const existGoals = metaArr.find((item) =>
-                item.startsWith("Goals::"),
-              );
-
-              let mergedGoals: number[] = [];
-              if (!existGoals) {
-                mergedGoals = goals;
-              } else {
-                const match = existGoals.match(/\[(.*?)\]/);
-                const parsedGoals = match?.[1]
-                  ? match[1]
-                    .split(",")
-                    .map((v) => parseInt(v.trim()))
-                    .filter((v) => !isNaN(v))
-                  : [];
-
-                mergedGoals = Array.from(new Set([...parsedGoals, ...goals]));
-              }
-              metaArr = metaArr.filter((item) => !item.startsWith("Goals::"));
-              metaArr.push("Goals::[" + mergedGoals.join(",") + "]");
-
-              await pg
-                .update(users)
-                .set({
-                  meta: metaArr,
-                })
-                .where(eq(users.apiKey, apiKey));
-
-              res.writeHead(200, {
-                "content-type": "application/json",
-              });
-
-              res.end(JSON.stringify({ goals: mergedGoals }));
-              return;
-            }
-
-            case "DELETE": {
-              const body = await readJson<{ goals: number[] }>(req);
-              const goals = body?.goals ?? [];
-              if (goals.length === 0) {
-                res.writeHead(200, { "content-type": "application/json" });
-                res.end(JSON.stringify({ goals: [] }));
-                return;
-              }
-              let metaArr = working.row![0]?.meta ?? [];
-              const existGoalsStr = metaArr.find((item) =>
-                item.startsWith("Goals::"),
-              );
-
-              if (!existGoalsStr) {
-                res.writeHead(200, { "content-type": "application/json" });
-                res.end(JSON.stringify({ goals: [] }));
-                return;
-              }
-
-              const match = existGoalsStr.match(/\[(.*?)\]/);
-              const parsedGoals = match?.[1]
-                ? match[1]
-                  .split(",")
-                  .map((v) => parseInt(v.trim()))
-                  .filter((v) => !isNaN(v))
-                : [];
-
-              const remainingGoals = parsedGoals.filter(
-                (id) => !goals.includes(id),
-              );
-
-              if (remainingGoals.length === parsedGoals.length) {
-                res.writeHead(200, { "content-type": "application/json" });
-                res.end(JSON.stringify({ goals: remainingGoals }));
-                return;
-              }
-
-              metaArr = metaArr.filter((item) => !item.startsWith("Goals::["));
-              if (remainingGoals.length > 0) {
-                metaArr.push(`Goals::[${remainingGoals.join(",")}]`);
-              }
-
-              await pg
-                .update(users)
-                .set({ meta: metaArr })
-                .where(eq(users.apiKey, apiKey));
-
-              res.writeHead(200, { "content-type": "application/json" });
-              res.end(JSON.stringify({ goals: remainingGoals }));
-              return;
-            }
-
-            default: {
-              let metaArr = working.row![0]?.meta ?? [];
-              const goalsRaw = metaArr.find((item) =>
-                item.startsWith("Goals::"),
-              );
-              if (!goalsRaw) {
-                res.writeHead(200, {
-                  "content-type": "application/json",
-                });
-                res.end(
-                  JSON.stringify({
-                    goals: [],
-                  }),
-                );
-                return;
-              }
-              const match = goalsRaw.match(/\[(.*?)\]/);
-              const goals = match?.[1]
-                ? match[1]
-                  .split(",")
-                  .map((v) => parseInt(v.trim()))
-                  .filter((v) => !isNaN(v))
-                : [];
-
-              res.writeHead(200, {
-                "content-type": "application/json",
-              });
-
-              res.end(JSON.stringify({ goals }));
-              return;
-            }
-          }
-        } catch (err) {
-          const ctx = logger.with({
-            error: err,
-            method: req.method,
-            endpoint: req.url,
-          });
-
-          ctx.error("Unexpected error has occured with the API");
-          res.writeHead(500, {
-            "content-type": "application/json",
-          });
-
-          res.end(JSON.stringify({ msg: "Internal server error" }));
-        }
-      },
-    },
-  ],
+  customRoutes: await loadAPI(),
 });
 
 let clients: Record<string, FT> = {};
@@ -556,6 +209,15 @@ export const commands: {
   hideFromHelp?: boolean;
   params?: string;
 }[] = [];
+
+const main = {
+  pg,
+  client: app.client,
+  logger,
+  clients,
+  Sentry,
+  prefix: "",
+};
 
 function loadRequestHandlers(
   app: App,
@@ -728,6 +390,8 @@ async function loadHandlers() {
         throw new Error("No username or user id for prefix");
       prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
     }
+    
+    main.prefix = prefix;
 
     loadRequestHandlers(app, "commands", "command");
     loadRequestHandlers(app, "views", "view");
@@ -768,3 +432,5 @@ process.on("SIGTERM", async () => {
   await app.stop();
   process.exit(0);
 });
+
+export default main;
