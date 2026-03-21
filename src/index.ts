@@ -174,12 +174,12 @@ function checkEnvs(name: string, optional: boolean): string {
 }
 
 export let vikClient: VikunjaClient | undefined = undefined;
-if (checkEnvs("VIKUNJA_URL", false) && 
-  checkEnvs("VIKUNJA_TOKEN", false) && 
-  checkEnvs("VIKUNJA_BUG_PROJECT_ID", false) && 
-  checkEnvs("VIKUNJA_FEATURE_PROJECT_ID", false) &&
-  checkEnvs("VIKUNJA_BUG_LABEL_ID", false) &&
-  checkEnvs("VIKUNJA_FEATURE_LABEL_ID", false)
+if (checkEnvs("VIKUNJA_URL", true) && 
+  checkEnvs("VIKUNJA_TOKEN", true) && 
+  checkEnvs("VIKUNJA_BUG_PROJECT_ID", true) && 
+  checkEnvs("VIKUNJA_FEATURE_PROJECT_ID", true) &&
+  checkEnvs("VIKUNJA_BUG_LABEL_ID", true) &&
+  checkEnvs("VIKUNJA_FEATURE_LABEL_ID", true)
 ) {
   vikClient = new VikunjaClient(String(process.env["VIKUNJA_URL"]), String(process.env["VIKUNJA_TOKEN"]));
 }
