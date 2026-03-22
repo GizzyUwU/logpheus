@@ -189,6 +189,7 @@ const app = new App({
     ? process.env["SOCKET_MODE"] === "true"
     : false,
   customRoutes: await loadAPI(),
+  logLevel: LogLevel.ERROR,
 });
 
 let clients: Record<string, FT> = {};
@@ -379,7 +380,6 @@ async function loadHandlers() {
   try {
     await runMigrations(pg);
     app.logger.setName("[Logpheus]");
-    app.logger.setLevel("error" as LogLevel);
     const self = await app.client.auth.test();
     if (self.user_id === "U0AF4V5V04V") {
       prefix = "devpheus";

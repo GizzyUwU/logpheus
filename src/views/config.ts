@@ -79,14 +79,13 @@ export default {
       }
 
       if (region) {
-        updateFields.meta = [...(updateFields.meta ?? []), "Region::" + region.toLowerCase()];
+        const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("Region::"));
+        updateFields.meta = [...filteredMeta, "Region::" + region.toLowerCase()];
       }
 
       if (pingGroupId) {
-        updateFields.meta = [
-          ...(updateFields.meta ?? []),
-          "PingGroup::" + pingGroupId,
-        ];
+        const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("PingGroup::"));
+        updateFields.meta = [...filteredMeta, "PingGroup::" + pingGroupId];
       }
 
       if (Object.keys(updateFields).length > 0) {
