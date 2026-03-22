@@ -2,8 +2,6 @@ import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsInc
 import type { ServerResponse, IncomingMessage } from "node:http";
 import main from "..";
 import checkAPIKey from "../lib/apiKeyCheck";
-import FT from "../lib/ft";
-import { getGenericErrorMessage } from "../lib/genericError";
 import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -26,7 +24,7 @@ async function readJson<T>(req: any): Promise<T | null> {
 export default [
   {
     path: "/api/v1/multiplier",
-    method: ["GET", "POST", "PUT", "DELETE"],
+    method: ["GET", "POST"],
     handler: async (
       req: ParamsIncomingMessage,
       res: ServerResponse<IncomingMessage>,

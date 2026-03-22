@@ -5,6 +5,7 @@ import {
   GoalsPutPostDelete,
   GoalsResponse,
 } from "./apiSchema/goals";
+import { MultiplierError, MultiplierPostGet } from "./apiSchema/multiplier";
 
 const openapiSpecification = {
   openapi: "3.1.1",
@@ -25,6 +26,7 @@ const openapiSpecification = {
   paths: {
     "/api/v1/goals": {
       post: {
+        tags: ["Goals"],
         requestParams: {
           header: z.object({
             Authorization: z.string().meta({
@@ -111,6 +113,7 @@ const openapiSpecification = {
         },
       },
       put: {
+        tags: ["Goals"],
         requestParams: {
           header: z.object({
             Authorization: z.string().meta({
@@ -197,6 +200,7 @@ const openapiSpecification = {
         },
       },
       delete: {
+        tags: ["Goals"],
         requestParams: {
           header: z.object({
             Authorization: z.string().meta({
@@ -283,6 +287,7 @@ const openapiSpecification = {
         },
       },
       get: {
+        tags: ["Goals"],
         requestParams: {
           header: z.object({
             Authorization: z.string().meta({
@@ -356,6 +361,175 @@ const openapiSpecification = {
             content: {
               "application/json": {
                 schema: GoalsError,
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/multiplier": {
+      post: {
+        tags: ["Multiplier"],
+        requestParams: {
+          header: z.object({
+            Authorization: z.string().meta({
+              description: "JWT token in format: Bearer <token>",
+              example: "Bearer ft_sk_",
+              param: {
+                required: true,
+              },
+            }),
+          }),
+        },
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: GoalsPutPostDelete,
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "200 OK",
+            content: {
+              "application/json": {
+                schema: MultiplierPostGet,
+              },
+            },
+          },
+          "401": {
+            description: "401 Unauthorised",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "408": {
+            description: "408 Request Timeout",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "429": {
+            description: "429 Too Many Requests",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "500": {
+            description: "500 Internal Server Error",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "502": {
+            description: "502 Bad Gateway",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "503": {
+            description: "503 Service Unavailable",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "504": {
+            description: "504 Gateway Timeout",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+        },
+      },
+      get: {
+        tags: ["Multiplier"],
+        requestParams: {
+          header: z.object({
+            Authorization: z.string().meta({
+              description: "JWT token in format: Bearer <token>",
+              example: "Bearer ft_sk_",
+              param: {
+                required: true,
+              },
+            }),
+          }),
+        },
+        responses: {
+          "200": {
+            description: "200 OK",
+            content: {
+              "application/json": {
+                schema: MultiplierPostGet,
+              },
+            },
+          },
+          "401": {
+            description: "401 Unauthorised",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "408": {
+            description: "408 Request Timeout",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "429": {
+            description: "429 Too Many Requests",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "500": {
+            description: "500 Internal Server Error",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "502": {
+            description: "502 Bad Gateway",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "503": {
+            description: "503 Service Unavailable",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
+              },
+            },
+          },
+          "504": {
+            description: "504 Gateway Timeout",
+            content: {
+              "application/json": {
+                schema: MultiplierError,
               },
             },
           },
