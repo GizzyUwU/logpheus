@@ -291,3 +291,23 @@ export function containsMarkdown(text: string): boolean {
   if (!text) return false;
   return MARKDOWN_PATTERNS.some((pattern) => pattern.test(text));
 }
+
+export function htmlToMarkdown(html: string): string {
+  if (!html) return "";
+
+  return html
+    .replace(/<\/p>/g, "\n\n")
+    .replace(/<p>/g, "")
+    .replace(/<br\s*\/?>/g, "\n")
+    .replace(/<(strong|b)>(.*?)<\/\1>/g, "**$2**")
+    .replace(/<(em|i)>(.*?)<\/\1>/g, "*$2*")
+    .replace(/<u>(.*?)<\/u>/g, "<u>$1</u>")
+    .replace(/<(s|del)>(.*?)<\/\1>/g, "~~$2~~")
+    .replace(/<code>(.*?)<\/code>/g, "`$1`")
+    .replace(/<a href="(.*?)".*?>(.*?)<\/a>/g, "[$2]($1)")
+    .replace(/<li>(.*?)<\/li>/g, "- $1\n")
+    .replace(/<\/ul>/g, "\n")
+    .replace(/<\/ol>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .trim();
+}
