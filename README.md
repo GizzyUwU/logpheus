@@ -137,4 +137,4 @@ The current set out commands for the bot that need to be added manually when usi
 - (prefix)-shop
 - (prefix)-stats
 - (prefix)-user
-- (prefix)-views
+- (prefix)-view

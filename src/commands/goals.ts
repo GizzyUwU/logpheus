@@ -8,6 +8,7 @@ import FT from "../lib/ft";
 
 export default {
   name: "goals",
+  params: "[add/remove] [id]",
   desc: "Look at your goals and perhaps remove or add one!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
