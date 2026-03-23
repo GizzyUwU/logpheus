@@ -23,7 +23,7 @@ async function readJson<T>(req: any): Promise<T | null> {
 // S B O  I  H L I G M  A  G N O N  T  M K  T I  E D O N  S N H L
 export default [
   {
-    path: "/api/v1/:projectId/multiplier/",
+    path: "/api/v1/:projectId/multiplier",
     method: ["GET", "POST"],
     handler: async (
       req: ParamsIncomingMessage,
@@ -58,17 +58,13 @@ export default [
           return;
         }
         
-        const projectIdInUser =
-          working.rows[0]?.projects?.includes(Number(projectId));
-        
-        if (!working.rows[0]?.projects?.includes(Number(projectId))) {
+        if (!working.row![0]?.projects?.includes(Number(projectId))) {
           res.writeHead(400);
           res.end(JSON.stringify({ msg: "Prject ID doesn't exist under your account." }) );
           return;
         }
 
         const updateFields: Partial<ProjectRow> = {};
-        const apiKey = checkKey!;
         switch (req.method) {
           case "POST": {
             const unparsedBody =
@@ -84,8 +80,25 @@ export default [
               return;
             }
 
-            const existingMultiplier = updateFields.multiplier;
-
+            const project = await main.pg
+              .select({
+                multiplier: projects.multiplier
+              })
+              .from(projects)
+              .limit(1)
+              .where(eq(projects.id, projectId));
+            
+            if (!project || project.length === 0) {
+              res.writeHead(400, { "content-type": "application/json" });
+              res.end(
+                JSON.stringify({
+                  msg: "This project doesn't exist in the database",
+                } as z.infer<typeof MultiplierError>),
+              );
+              return;
+            }
+            
+            const existingMultiplier = project[0]?.multiplier
             if (Number(existingMultiplier) === body.multiplier) {
               res.writeHead(200, { "content-type": "application/json" });
               res.end(
@@ -96,7 +109,6 @@ export default [
               return;
             }
 
- 
             updateFields.multiplier = body.multiplier;
 
             if (Object.keys(updateFields).length > 0) {
@@ -116,8 +128,25 @@ export default [
           }
 
           default: {
-            const existingMultiplier = updateFields.multiplier;
-
+            const project = await main.pg
+              .select({
+                multiplier: projects.multiplier
+              })
+              .from(projects)
+              .limit(1)
+              .where(eq(projects.id, projectId));
+            
+            if (!project || project.length === 0) {
+              res.writeHead(400, { "content-type": "application/json" });
+              res.end(
+                JSON.stringify({
+                  msg: "This project doesn't exist in the database",
+                } as z.infer<typeof MultiplierError>),
+              );
+              return;
+            }
+            
+            const existingMultiplier = project[0]?.multiplier
             if (!existingMultiplier) {
               res.writeHead(200, { "content-type": "application/json" });
               res.end(

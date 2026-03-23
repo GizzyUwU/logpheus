@@ -367,7 +367,14 @@ const openapiSpecification = {
         },
       },
     },
-    "/api/v1/multiplier": {
+    "/api/v1/{projectId}/multiplier": {
+      parameters: [
+        {
+          in: "path",
+          name: "projectId",
+          description: "The project's identifier",
+        },
+      ],
       post: {
         tags: ["Multiplier"],
         requestParams: {
@@ -384,7 +391,7 @@ const openapiSpecification = {
         requestBody: {
           content: {
             "application/json": {
-              schema: GoalsPutPostDelete,
+              schema: MultiplierPostGet,
             },
           },
         },
