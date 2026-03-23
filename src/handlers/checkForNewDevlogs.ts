@@ -179,30 +179,21 @@ async function getNewDevlogs(params: {
       }
 
       const totalSeconds = (devlogS ?? []).reduce((sum, item) => sum + item, 0);
-      const predictedCookies = Math.round(10 * (totalSeconds / 3600));
+      const predictedCookies = Math.round(
+        (row[0]?.multiplier ?? 10) * (totalSeconds / 3600),
+      );
       const userRow = params.userByAPIKey.get(params.apiKey);
-      const previousPredicted =
-        userRow?.meta
-          ?.find((s) => s.startsWith("PredictedCookies::"))
-          ?.split("::")[1] ?? "0";
+      const previousPredicted = row[0]?.predictedCookies ?? 0
 
       let nextGoalItem = "";
       let distanceFromGoal = 0;
-      let metaArr = userRow?.meta ?? [];
       let additionCookies = 0;
 
       const meUser = await client.user({ id: "me" });
       if (meUser.ok && Object.keys(meUser.data)?.length) {
         if (previousPredicted) {
-          additionCookies = predictedCookies - Number(previousPredicted);
+          additionCookies = Math.max(0, predictedCookies - previousPredicted);
         }
-        metaArr = metaArr.filter(
-          (item) => !item.startsWith("PredictedCookies::"),
-        );
-        metaArr.push(
-          "PredictedCookies::" +
-            (predictedCookies + Number(meUser.data.cookies)),
-        );
 
         const goals =
           userRow?.meta?.find((s) => s.startsWith("Goals::"))?.split("::")[1] ??
@@ -258,14 +249,10 @@ async function getNewDevlogs(params: {
       }
 
       await params.db
-        .update(users)
-        .set({ meta: metaArr })
-        .where(eq(users.userId, String(userRow?.userId)));
-
-      await params.db
         .update(projects)
         .set({
           devlogIds: Array.from(new Set([...cachedIds, ...newIds])),
+          predictedCookies,
         })
         .where(eq(projects.id, Number(params.projectId)));
 
@@ -394,7 +381,10 @@ export default {
                   .filter(
                     (m) => m.content_type && m.content_type.startsWith("video"),
                   )
-                  .map((m, i) => `<https://flavortown.hackclub.com${m.url}|Video ${i + 1}`);
+                  .map(
+                    (m, i) =>
+                      `<https://flavortown.hackclub.com${m.url}|Video ${i + 1}`,
+                  );
 
                 const pingGroupId =
                   row?.meta
