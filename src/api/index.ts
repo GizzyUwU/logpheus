@@ -27,3 +27,20 @@ export default async function loadAPI() {
   await loadDir(__dirname, routes);
   return routes;
 }
+
+const limiterMap = new Map<string, { count: number; start: number }>();
+
+export function rateLimit(ip: string) {
+  const now = Date.now();
+  const entry = limiterMap.get(ip) || { count: 0, start: now };
+
+  if (now - entry.start > 60 * 1000) {
+    entry.count = 0;
+    entry.start = now;
+  }
+
+  entry.count++;
+  limiterMap.set(ip, entry);
+
+  return entry.count <= 10;
+}

@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { MultiplierError, MultiplierPostGet } from "../apiSchema/multiplier";
 import { projects } from "../schema/projects";
+import { rateLimit } from ".";
 type ProjectRow = typeof projects.$inferSelect;
 
 async function readJson<T>(req: any): Promise<T | null> {
@@ -30,13 +31,25 @@ export default [
       res: ServerResponse<IncomingMessage>,
     ) => {
       try {
-        if (!req.params!['projectId']) {
-          res.writeHead(400);
-          res.end(JSON.stringify({ msg: "Provide project id like /api/v1/projectIdHere/multiplier" }));
+        const ip = req.socket.remoteAddress || "unknown";
+        if (!rateLimit(ip)) {
+          res.writeHead(429, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({ msg: "Too many requests, try again later." }),
+          );
           return;
         }
-        
-        const projectId = Number(req.params!['projectId']);
+        if (!req.params!["projectId"]) {
+          res.writeHead(400);
+          res.end(
+            JSON.stringify({
+              msg: "Provide project id like /api/v1/projectIdHere/multiplier",
+            }),
+          );
+          return;
+        }
+
+        const projectId = Number(req.params!["projectId"]);
         const preReplaceAPIKey = req.headers["authorization"];
         if (!preReplaceAPIKey?.startsWith("Bearer ")) {
           res.writeHead(401);
@@ -57,10 +70,14 @@ export default [
           );
           return;
         }
-        
+
         if (!working.row![0]?.projects?.includes(Number(projectId))) {
           res.writeHead(400);
-          res.end(JSON.stringify({ msg: "Prject ID doesn't exist under your account." }) );
+          res.end(
+            JSON.stringify({
+              msg: "Prject ID doesn't exist under your account.",
+            }),
+          );
           return;
         }
 
@@ -82,12 +99,12 @@ export default [
 
             const project = await main.pg
               .select({
-                multiplier: projects.multiplier
+                multiplier: projects.multiplier,
               })
               .from(projects)
               .limit(1)
               .where(eq(projects.id, projectId));
-            
+
             if (!project || project.length === 0) {
               res.writeHead(400, { "content-type": "application/json" });
               res.end(
@@ -97,8 +114,8 @@ export default [
               );
               return;
             }
-            
-            const existingMultiplier = project[0]?.multiplier
+
+            const existingMultiplier = project[0]?.multiplier;
             if (Number(existingMultiplier) === body.multiplier) {
               res.writeHead(200, { "content-type": "application/json" });
               res.end(
@@ -130,12 +147,12 @@ export default [
           default: {
             const project = await main.pg
               .select({
-                multiplier: projects.multiplier
+                multiplier: projects.multiplier,
               })
               .from(projects)
               .limit(1)
               .where(eq(projects.id, projectId));
-            
+
             if (!project || project.length === 0) {
               res.writeHead(400, { "content-type": "application/json" });
               res.end(
@@ -145,8 +162,8 @@ export default [
               );
               return;
             }
-            
-            const existingMultiplier = project[0]?.multiplier
+
+            const existingMultiplier = project[0]?.multiplier;
             if (!existingMultiplier) {
               res.writeHead(200, { "content-type": "application/json" });
               res.end(

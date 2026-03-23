@@ -6,6 +6,7 @@ import FT from "../lib/ft";
 import { getGenericErrorMessage } from "../lib/genericError";
 import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
+import { rateLimit } from ".";
 async function readJson<T>(req: any): Promise<T | null> {
   try {
     const chunks: Buffer[] = [];
@@ -22,8 +23,20 @@ export default [
   {
     path: "/api/v1/goals",
     method: ["GET", "POST", "PUT", "DELETE"],
-    handler: async (req: ParamsIncomingMessage, res: ServerResponse<IncomingMessage>) => {
+    handler: async (
+      req: ParamsIncomingMessage,
+      res: ServerResponse<IncomingMessage>,
+    ) => {
       try {
+        const ip = req.socket.remoteAddress || "unknown";
+        if (!rateLimit(ip)) {
+          res.writeHead(429, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({ msg: "Too many requests, try again later." }),
+          );
+          return;
+        }
+
         const preReplaceAPIKey = req.headers["authorization"];
         if (!preReplaceAPIKey?.startsWith("Bearer ")) {
           res.writeHead(401);
@@ -182,9 +195,9 @@ export default [
               const match = existGoals.match(/\[(.*?)\]/);
               const parsedGoals = match?.[1]
                 ? match[1]
-                  .split(",")
-                  .map((v) => parseInt(v.trim()))
-                  .filter((v) => !isNaN(v))
+                    .split(",")
+                    .map((v) => parseInt(v.trim()))
+                    .filter((v) => !isNaN(v))
                 : [];
 
               mergedGoals = Array.from(new Set([...parsedGoals, ...goals]));
@@ -229,9 +242,9 @@ export default [
             const match = existGoalsStr.match(/\[(.*?)\]/);
             const parsedGoals = match?.[1]
               ? match[1]
-                .split(",")
-                .map((v) => parseInt(v.trim()))
-                .filter((v) => !isNaN(v))
+                  .split(",")
+                  .map((v) => parseInt(v.trim()))
+                  .filter((v) => !isNaN(v))
               : [];
 
             const remainingGoals = parsedGoals.filter(
@@ -261,9 +274,7 @@ export default [
 
           default: {
             let metaArr = working.row![0]?.meta ?? [];
-            const goalsRaw = metaArr.find((item) =>
-              item.startsWith("Goals::"),
-            );
+            const goalsRaw = metaArr.find((item) => item.startsWith("Goals::"));
             if (!goalsRaw) {
               res.writeHead(200, {
                 "content-type": "application/json",
@@ -275,13 +286,13 @@ export default [
               );
               return;
             }
-            
+
             const match = goalsRaw.match(/\[(.*?)\]/);
             const goals = match?.[1]
               ? match[1]
-                .split(",")
-                .map((v) => parseInt(v.trim()))
-                .filter((v) => !isNaN(v))
+                  .split(",")
+                  .map((v) => parseInt(v.trim()))
+                  .filter((v) => !isNaN(v))
               : [];
 
             res.writeHead(200, {
@@ -306,6 +317,6 @@ export default [
 
         res.end(JSON.stringify({ msg: "Internal server error" }));
       }
-    }
-  }
-]
+    },
+  },
+];
