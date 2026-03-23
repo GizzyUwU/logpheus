@@ -2,11 +2,11 @@ import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsInc
 import type { ServerResponse, IncomingMessage } from "node:http";
 import main from "..";
 import checkAPIKey from "../lib/apiKeyCheck";
-import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { MultiplierError, MultiplierPostGet } from "../apiSchema/multiplier";
-type UserRow = typeof users._.inferSelect;
+import { projects } from "../schema/projects";
+type ProjectRow = typeof projects.$inferSelect;
 
 async function readJson<T>(req: any): Promise<T | null> {
   try {
@@ -23,13 +23,20 @@ async function readJson<T>(req: any): Promise<T | null> {
 // S B O  I  H L I G M  A  G N O N  T  M K  T I  E D O N  S N H L
 export default [
   {
-    path: "/api/v1/multiplier",
+    path: "/api/v1/:projectId/multiplier/",
     method: ["GET", "POST"],
     handler: async (
       req: ParamsIncomingMessage,
       res: ServerResponse<IncomingMessage>,
     ) => {
       try {
+        if (!req.params!['projectId']) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ msg: "Provide project id like /api/v1/projectIdHere/multiplier" }));
+          return;
+        }
+        
+        const projectId = Number(req.params!['projectId']);
         const preReplaceAPIKey = req.headers["authorization"];
         if (!preReplaceAPIKey?.startsWith("Bearer ")) {
           res.writeHead(401);
@@ -50,8 +57,17 @@ export default [
           );
           return;
         }
+        
+        const projectIdInUser =
+          working.rows[0]?.projects?.includes(Number(projectId));
+        
+        if (!working.rows[0]?.projects?.includes(Number(projectId))) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ msg: "Prject ID doesn't exist under your account." }) );
+          return;
+        }
 
-        const updateFields: Partial<UserRow> = {};
+        const updateFields: Partial<ProjectRow> = {};
         const apiKey = checkKey!;
         switch (req.method) {
           case "POST": {
@@ -68,9 +84,7 @@ export default [
               return;
             }
 
-            const existingMultiplier = (updateFields.meta ?? []).find(
-              (entry: string) => entry.startsWith("Multiplier::"),
-            );
+            const existingMultiplier = updateFields.multiplier;
 
             if (Number(existingMultiplier) === body.multiplier) {
               res.writeHead(200, { "content-type": "application/json" });
@@ -82,19 +96,14 @@ export default [
               return;
             }
 
-            const filteredMeta = (updateFields.meta ?? []).filter(
-              (entry) => !entry.startsWith("Region::"),
-            );
-            updateFields.meta = [
-              ...filteredMeta,
-              "Multiplier::" + body.multiplier,
-            ];
+ 
+            updateFields.multiplier = body.multiplier;
 
             if (Object.keys(updateFields).length > 0) {
               await main.pg
-                .update(users)
+                .update(projects)
                 .set(updateFields)
-                .where(eq(users.apiKey, apiKey));
+                .where(eq(projects.id, projectId));
             }
 
             res.writeHead(200, { "content-type": "application/json" });
@@ -107,13 +116,10 @@ export default [
           }
 
           default: {
-            const existingMultiplier = (updateFields.meta ?? []).find(
-              (entry: string) => entry.startsWith("Multiplier::"),
-            );
+            const existingMultiplier = updateFields.multiplier;
 
             if (!existingMultiplier) {
               res.writeHead(200, { "content-type": "application/json" });
-
               res.end(
                 JSON.stringify({
                   multiplier: 0,

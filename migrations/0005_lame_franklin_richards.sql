@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "multiplier" integer DEFAULT 0;
