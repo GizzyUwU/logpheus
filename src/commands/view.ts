@@ -157,7 +157,7 @@ export default {
                   text: {
                     type: "mrkdwn",
                     text:
-                      "*Feature Requests*:\n" +
+                      "*Bug Reports*:\n" +
                       (tasksList.length
                         ? tasksList
                             .map(
@@ -165,7 +165,7 @@ export default {
                                 `• ${String(item.identifier).slice(1)} - ${item.title} - ${item.done}`,
                             )
                             .join("\n")
-                        : "There is no feature reqeusts."),
+                        : "There is no bug reports."),
                   },
                 },
                 {
