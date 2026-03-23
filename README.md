@@ -43,13 +43,19 @@ If you don't want to give your api key to me then self host it yourself! This pr
 The environment variables needed for it to run are:
 
 ```env
-APP_TOKEN= # String
+APP_TOKEN= # Optional String
 BOT_TOKEN= # String
 SIGNING_SECRET= # String
 SOCKET_MODE= # Boolean
-PGLITE= # Boolean - Optional
-SENTRY_DSN= # String - Optional
-DB_URL= # String - Optional (Missing = Use PGLite)
+PGLITE= # Optional Boolean
+DB_URL= # Optional String (Missing = Use PGLite)
+KEEP_PORT_USAGE= # Optional Boolean
+VIKUNJA_BUG_LABEL_ID= # Optional Integer
+VIKUNJA_FEATURE_LABEL_ID= # Optional Integer
+VIKUNJA_BUG_PROJECT_ID= # Optional Integer
+VIKUNJA_FEATURE_PROJECT_ID= # Optional Integer
+VIKUNJA_TOKEN= # Optional String
+VIKUNJA_URL= # Optional String
 ```
 
 If you don't make use of Socket Mode the endpoints needed to set on the dashboard are
@@ -116,7 +122,19 @@ The current set out commands for the bot that need to be added manually when usi
 
 - (prefix)-add
 - (prefix)-config
+- (prefix)-data
+- (prefix)-devlog
+- (prefix)-goals
+- (prefix)-help
+- (prefix)-project
+- (prefix)-projects
+- (prefix)-reactivate
+- (prefix)-register
 - (prefix)-remove
+- (prefix)-report
+- (prefix)-request
+- (prefix)-revoke
+- (prefix)-shop
 - (prefix)-stats
-- (prefx)-register
 - (prefix)-user
+- (prefix)-views

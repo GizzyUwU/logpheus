@@ -405,7 +405,6 @@ async function loadHandlers() {
       console.info("[Logpheus] Running as Socket Mode");
     } else {
       const port = process.env["PORT"] ? parseInt(process.env["PORT"]) : 3000;
-      console.log(port)
       await app.start({
         port
       });
