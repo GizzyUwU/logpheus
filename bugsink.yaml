@@ -1,0 +1,1040 @@
+openapi: 3.0.3
+info:
+  title: Bugsink
+  version: 1.0.0
+  description: Bugsink API Documentation
+paths:
+  /api/canonical/0/events/:
+    get:
+      operationId: events_list
+      description: |-
+        LIST requires: ?issue=<uuid>
+        Optional: ?order=asc|desc   (default: desc)
+        LIST omits `data`, ordered by digest_order
+        RETRIEVE includes `data` (pure PK lookup; no filters/order applied)
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: issue
+        schema:
+          type: string
+          format: uuid
+        description: Filter events by issue UUID (required).
+        required: true
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+        description: 'Sort order of digest_order (default: desc).'
+      tags:
+      - events
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventListList'
+          description: ''
+  /api/canonical/0/events/{id}/:
+    get:
+      operationId: events_retrieve
+      description: |-
+        LIST requires: ?issue=<uuid>
+        Optional: ?order=asc|desc   (default: desc)
+        LIST omits `data`, ordered by digest_order
+        RETRIEVE includes `data` (pure PK lookup; no filters/order applied)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Bugsink-internal
+        required: true
+      tags:
+      - events
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+          description: ''
+  /api/canonical/0/events/{id}/stacktrace/:
+    get:
+      operationId: events_stacktrace_retrieve
+      description: Render the event's stacktrace (frames, source, locals) as Markdown-like
+        text.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Bugsink-internal
+        required: true
+      tags:
+      - events
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            text/markdown:
+              schema:
+                type: string
+          description: Stacktrace as Markdown
+  /api/canonical/0/issues/:
+    get:
+      operationId: issues_list
+      description: |-
+        LIST requires: ?project=<uuid>
+        Optional: ?order=asc|desc        (default: desc)
+        LIST ordered by last_seen
+        RETRIEVE is a pure PK lookup (soft-deletes implied)
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+        description: 'Sort order (default: asc).'
+      - in: query
+        name: project
+        schema:
+          type: integer
+        description: Filter issues by project id (required).
+        required: true
+      - in: query
+        name: sort
+        schema:
+          type: string
+          enum:
+          - digest_order
+          - last_seen
+        description: 'Sort mode (default: digest_order).'
+      tags:
+      - issues
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedIssueList'
+          description: ''
+  /api/canonical/0/issues/{id}/:
+    get:
+      operationId: issues_retrieve
+      description: |-
+        LIST requires: ?project=<uuid>
+        Optional: ?order=asc|desc        (default: desc)
+        LIST ordered by last_seen
+        RETRIEVE is a pure PK lookup (soft-deletes implied)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this issue.
+        required: true
+      tags:
+      - issues
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+          description: ''
+  /api/canonical/0/projects/:
+    get:
+      operationId: projects_list
+      description: |-
+        /api/canonical/0/projects/
+        GET /projects/           → list ordered by name ASC, hides soft-deleted, optional ?team=<uuid> filter
+        GET /projects/{pk}/      → detail (pure PK)
+        POST /projects/          → create {team, name, visibility?}
+        PATCH /projects/{pk}/    → minimal updates
+        DELETE                   → 405
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: team
+        schema:
+          type: string
+          format: uuid
+        description: Optional filter by team UUID.
+      tags:
+      - projects
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectListList'
+          description: ''
+    post:
+      operationId: projects_create
+      description: |-
+        /api/canonical/0/projects/
+        GET /projects/           → list ordered by name ASC, hides soft-deleted, optional ?team=<uuid> filter
+        GET /projects/{pk}/      → detail (pure PK)
+        POST /projects/          → create {team, name, visibility?}
+        PATCH /projects/{pk}/    → minimal updates
+        DELETE                   → 405
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateUpdate'
+        required: true
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCreateUpdate'
+          description: ''
+  /api/canonical/0/projects/{id}/:
+    get:
+      operationId: projects_retrieve
+      description: |-
+        /api/canonical/0/projects/
+        GET /projects/           → list ordered by name ASC, hides soft-deleted, optional ?team=<uuid> filter
+        GET /projects/{pk}/      → detail (pure PK)
+        POST /projects/          → create {team, name, visibility?}
+        PATCH /projects/{pk}/    → minimal updates
+        DELETE                   → 405
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this project.
+        required: true
+      tags:
+      - projects
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetail'
+          description: ''
+    patch:
+      operationId: projects_partial_update
+      description: |-
+        /api/canonical/0/projects/
+        GET /projects/           → list ordered by name ASC, hides soft-deleted, optional ?team=<uuid> filter
+        GET /projects/{pk}/      → detail (pure PK)
+        POST /projects/          → create {team, name, visibility?}
+        PATCH /projects/{pk}/    → minimal updates
+        DELETE                   → 405
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this project.
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectCreateUpdate'
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCreateUpdate'
+          description: ''
+  /api/canonical/0/releases/:
+    get:
+      operationId: releases_list
+      description: |-
+        LIST requires: ?project=<id>
+        Ordered by sort_epoch.
+        CREATE allowed. DELETE potential TODO.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: project
+        schema:
+          type: integer
+        description: Filter releases by project id (required).
+        required: true
+      tags:
+      - releases
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReleaseListList'
+          description: ''
+    post:
+      operationId: releases_create
+      description: |-
+        LIST requires: ?project=<id>
+        Ordered by sort_epoch.
+        CREATE allowed. DELETE potential TODO.
+      tags:
+      - releases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCreate'
+        required: true
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseCreate'
+          description: ''
+  /api/canonical/0/releases/{id}/:
+    get:
+      operationId: releases_retrieve
+      description: |-
+        LIST requires: ?project=<id>
+        Ordered by sort_epoch.
+        CREATE allowed. DELETE potential TODO.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this release.
+        required: true
+      tags:
+      - releases
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseDetail'
+          description: ''
+  /api/canonical/0/teams/:
+    get:
+      operationId: teams_list
+      description: |-
+        /api/canonical/0/teams/
+        GET /teams/           → list ordered by name ASC
+        GET /teams/{pk}/      → detail (pure PK)
+        POST /teams/          → create {name, visibility?}
+        PATCH /teams/{pk}/    → minimal updates
+        DELETE                → 405
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      tags:
+      - teams
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeamListList'
+          description: ''
+    post:
+      operationId: teams_create
+      description: |-
+        /api/canonical/0/teams/
+        GET /teams/           → list ordered by name ASC
+        GET /teams/{pk}/      → detail (pure PK)
+        POST /teams/          → create {name, visibility?}
+        PATCH /teams/{pk}/    → minimal updates
+        DELETE                → 405
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamCreateUpdate'
+        required: true
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamCreateUpdate'
+          description: ''
+  /api/canonical/0/teams/{id}/:
+    get:
+      operationId: teams_retrieve
+      description: |-
+        /api/canonical/0/teams/
+        GET /teams/           → list ordered by name ASC
+        GET /teams/{pk}/      → detail (pure PK)
+        POST /teams/          → create {name, visibility?}
+        PATCH /teams/{pk}/    → minimal updates
+        DELETE                → 405
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this team.
+        required: true
+      tags:
+      - teams
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDetail'
+          description: ''
+    patch:
+      operationId: teams_partial_update
+      description: |-
+        /api/canonical/0/teams/
+        GET /teams/           → list ordered by name ASC
+        GET /teams/{pk}/      → detail (pure PK)
+        POST /teams/          → create {name, visibility?}
+        PATCH /teams/{pk}/    → minimal updates
+        DELETE                → 405
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this team.
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamCreateUpdate'
+      security:
+      - BearerAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamCreateUpdate'
+          description: ''
+components:
+  schemas:
+    EventDetail:
+      type: object
+      description: 'Detail view: includes full `data` payload.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Bugsink-internal
+        ingested_at:
+          type: string
+          format: date-time
+        digested_at:
+          type: string
+          format: date-time
+        issue:
+          type: string
+          format: uuid
+        grouping:
+          type: integer
+        event_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: As per the sent data
+        project:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        digest_order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        data:
+          readOnly: true
+        stacktrace_md:
+          type: string
+          readOnly: true
+      required:
+      - data
+      - digest_order
+      - digested_at
+      - event_id
+      - grouping
+      - id
+      - ingested_at
+      - issue
+      - project
+      - stacktrace_md
+      - timestamp
+    EventList:
+      type: object
+      description: 'Lightweight list view: excludes the (potentially large) `data`
+        field.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Bugsink-internal
+        ingested_at:
+          type: string
+          format: date-time
+        digested_at:
+          type: string
+          format: date-time
+        issue:
+          type: string
+          format: uuid
+        grouping:
+          type: integer
+        event_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: As per the sent data
+        project:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        digest_order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - digest_order
+      - digested_at
+      - event_id
+      - grouping
+      - id
+      - ingested_at
+      - issue
+      - project
+      - timestamp
+    Issue:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        project:
+          type: integer
+        digest_order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        last_seen:
+          type: string
+          format: date-time
+        first_seen:
+          type: string
+          format: date-time
+        digested_event_count:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        stored_event_count:
+          type: integer
+          readOnly: true
+        calculated_type:
+          type: string
+          maxLength: 128
+        calculated_value:
+          type: string
+          maxLength: 1024
+        transaction:
+          type: string
+          maxLength: 200
+        is_resolved:
+          type: boolean
+        is_resolved_by_next_release:
+          type: boolean
+        is_muted:
+          type: boolean
+      required:
+      - digest_order
+      - digested_event_count
+      - first_seen
+      - id
+      - last_seen
+      - project
+      - stored_event_count
+    PaginatedEventListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventList'
+    PaginatedIssueList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
+    PaginatedProjectListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectList'
+    PaginatedReleaseListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReleaseList'
+    PaginatedTeamListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamList'
+    PatchedProjectCreateUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        team:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        visibility:
+          $ref: '#/components/schemas/ProjectVisibilityEnum'
+        alert_on_new_issue:
+          type: boolean
+        alert_on_regression:
+          type: boolean
+        alert_on_unmute:
+          type: boolean
+        retention_max_event_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+    PatchedTeamCreateUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        visibility:
+          $ref: '#/components/schemas/TeamVisibilityEnum'
+    ProjectCreateUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        team:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        visibility:
+          $ref: '#/components/schemas/ProjectVisibilityEnum'
+        alert_on_new_issue:
+          type: boolean
+        alert_on_regression:
+          type: boolean
+        alert_on_unmute:
+          type: boolean
+        retention_max_event_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - id
+      - name
+      - team
+    ProjectDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        team:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        dsn:
+          type: string
+          readOnly: true
+        digested_event_count:
+          type: integer
+          readOnly: true
+        stored_event_count:
+          type: integer
+          readOnly: true
+        alert_on_new_issue:
+          type: boolean
+        alert_on_regression:
+          type: boolean
+        alert_on_unmute:
+          type: boolean
+        visibility:
+          $ref: '#/components/schemas/ProjectVisibilityEnum'
+        retention_max_event_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - digested_event_count
+      - dsn
+      - id
+      - name
+      - slug
+      - stored_event_count
+      - visibility
+    ProjectList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        team:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        dsn:
+          type: string
+          readOnly: true
+        digested_event_count:
+          type: integer
+          readOnly: true
+        stored_event_count:
+          type: integer
+          readOnly: true
+        alert_on_new_issue:
+          type: boolean
+        alert_on_regression:
+          type: boolean
+        alert_on_unmute:
+          type: boolean
+        visibility:
+          $ref: '#/components/schemas/ProjectVisibilityEnum'
+        retention_max_event_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - digested_event_count
+      - dsn
+      - id
+      - name
+      - slug
+      - stored_event_count
+      - visibility
+    ProjectVisibilityEnum:
+      enum:
+      - joinable
+      - discoverable
+      - team_members
+      type: string
+      description: |-
+        * `joinable` - joinable
+        * `discoverable` - discoverable
+        * `team_members` - team_members
+    ReleaseCreate:
+      type: object
+      properties:
+        project:
+          type: integer
+        version:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+      - project
+      - version
+    ReleaseDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        project:
+          type: integer
+        version:
+          type: string
+          maxLength: 250
+        date_released:
+          type: string
+          format: date-time
+        semver:
+          type: string
+          readOnly: true
+        is_semver:
+          type: boolean
+          readOnly: true
+        sort_epoch:
+          type: integer
+          readOnly: true
+      required:
+      - id
+      - is_semver
+      - project
+      - semver
+      - sort_epoch
+      - version
+    ReleaseList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        project:
+          type: integer
+        version:
+          type: string
+          maxLength: 250
+        date_released:
+          type: string
+          format: date-time
+      required:
+      - id
+      - project
+      - version
+    TeamCreateUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        visibility:
+          $ref: '#/components/schemas/TeamVisibilityEnum'
+      required:
+      - id
+      - name
+    TeamDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        visibility:
+          $ref: '#/components/schemas/TeamVisibilityEnum'
+      required:
+      - id
+      - name
+      - visibility
+    TeamList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        visibility:
+          $ref: '#/components/schemas/TeamVisibilityEnum'
+      required:
+      - id
+      - name
+      - visibility
+    TeamVisibilityEnum:
+      enum:
+      - joinable
+      - discoverable
+      - hidden
+      type: string
+      description: |-
+        * `joinable` - joinable
+        * `discoverable` - discoverable
+        * `hidden` - hidden
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token

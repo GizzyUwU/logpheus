@@ -11,4 +11,14 @@ export default defineConfig({
       target: "./docs.json",
     },
   },
+  bugsink: {
+    output: {
+      client: "zod",
+      mode: "single",
+      target: "./src/lib/bs.zod.ts",
+    },
+    input: {
+      target: "./bugsink.yaml",
+    },
+  },
 });
