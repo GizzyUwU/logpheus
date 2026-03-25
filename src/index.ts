@@ -10,6 +10,7 @@ import path from "path";
 import runMigrations from "./migrate";
 import { PGlite } from "@electric-sql/pglite";
 import { VikunjaClient } from "node-vikunja";
+import { BugsinkClient } from "./lib/bugsink";
 import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -156,7 +157,6 @@ if (process.env["PGLITE"] === "false") {
   });
 }
 
-
 function checkEnvs(name: string, optional: boolean): string {
   const value = process.env[name];
   if (!value && !optional) {
@@ -179,6 +179,17 @@ if (checkEnvs("VIKUNJA_URL", true) &&
   checkEnvs("VIKUNJA_FEATURE_LABEL_ID", true)
 ) {
   vikClient = new VikunjaClient(String(process.env["VIKUNJA_URL"]), String(process.env["VIKUNJA_TOKEN"]));
+}
+
+export let bugClient: BugsinkClient | undefined = undefined;
+if (checkEnvs("BUGSINK_URL", true) && 
+  checkEnvs("BUGSINK_TOKEN", true) &&
+  checkEnvs("BUGSINK_PROJECT_ID", true)
+) {
+  bugClient = new BugsinkClient({
+    baseUrl: String(process.env["BUGSINK_URL"]),
+    apiToken: String(process.env["BUGSINK_TOKEN"])
+  });
 }
 
 const app = new App({
@@ -232,6 +243,7 @@ function loadRequestHandlers(
     const module = importFile.default ?? importFile;
     if (!module?.name || typeof module.execute !== "function") return;
     if (module.requireVikunja === true && !vikClient) return;
+    if (module.requireBugsink === true && !bugClient) return;
     if (type === "command") {
       commands.push({
         name: module.name,
