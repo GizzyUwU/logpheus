@@ -3,39 +3,57 @@ import FT from "../lib/ft";
 import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import type { RequestHandler } from "..";
-import type { RichTextBlock } from "@slack/web-api";
 import checkAPIKey from "../lib/apiKeyCheck";
 import { getGenericErrorMessage } from "../lib/genericError";
 
+function parseProjectCommand(text: string) {
+  const tokens = text.trim().split(/\s+/);
+
+  let queryParts: string[] = [];
+  let page: number | undefined;
+  let limit = 30;
+
+  const clamp = (num: number, min: number, max: number) =>
+    Math.min(Math.max(num, min), max);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+
+    if (token === "--page") {
+      const val = Number(tokens[i + 1]);
+      if (Number.isInteger(val) && val > 0) {
+        page = val;
+        i++;
+      }
+    } else if (token === "--limit") {
+      const val = Number(tokens[i + 1]);
+      if (Number.isInteger(val) && val > 0) {
+        limit = clamp(val, 1, 70);
+        i++;
+      }
+    } else {
+      queryParts.push(String(token));
+    }
+  }
+
+  return {
+    query: queryParts.length ? queryParts.join(" ") : undefined,
+    page,
+    limit,
+  };
+}
+
 export default {
   name: "projects",
-  params: "[projectName]",
+  params: "[projectName] [--page (integer)] [--limit (integer >= 70)]",
   desc: "Search through all the projects on flavortown.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,
   ) => {
-    const parts = command.text.trim().split(" ").filter(Boolean);
-
-    let actualQuery: string | undefined;
-    let actualPage: number | undefined;
-
-    if (parts.length > 0) {
-      if (parts.length >= 2) {
-        const maybePage = Number(parts[1]);
-        if (Number.isInteger(maybePage) && maybePage > 0) {
-          actualPage = maybePage;
-          actualQuery = [parts[0], ...parts.slice(2)].join(" ").trim();
-          if (actualQuery.length === 0) {
-            actualQuery = parts[0];
-          }
-        } else {
-          actualQuery = parts.join(" ");
-        }
-      } else {
-        actualQuery = parts[0];
-      }
-    }
+    const { query: actualQuery, page: actualPage, limit } =
+      parseProjectCommand(command.text);
+    
     const userData = await pg
       .select()
       .from(users)
@@ -71,6 +89,7 @@ export default {
     const projects = await ftClient.projects({
       ...(actualQuery !== undefined ? { query: actualQuery } : {}),
       ...(actualPage !== undefined ? { page: actualPage } : {}),
+      limit,
     });
 
     if (!projects || !projects.status) {
@@ -96,115 +115,28 @@ export default {
       }
     }
 
-    const projectRows: RichTextBlock[][] = (projects.data.projects ?? [])
-      .slice(0, 99)
-      .flatMap((project) => [
-        [
-          {
-            type: "rich_text" as const,
-            elements: [
-              {
-                type: "rich_text_section",
-                elements: [{ type: "text", text: project.title ?? "Untitled" }],
-              },
-            ],
-          },
-          {
-            type: "rich_text" as const,
-            elements: [
-              {
-                type: "rich_text_section",
-                elements: [{ type: "text", text: String(project.id ?? "—") }],
-              },
-            ],
-          },
-          {
-            type: "rich_text" as const,
-            elements: [
-              {
-                type: "rich_text_section",
-                elements: [{ type: "text", text: project.ship_status ?? "—" }],
-              },
-            ],
-          },
-          {
-            type: "rich_text" as const,
-            elements: [
-              {
-                type: "rich_text_section",
-                elements: [
-                  { type: "text", text: project.ai_declaration || "No" },
-                ],
-              },
-            ],
-          },
-        ] as RichTextBlock[],
-      ]);
-
     return respond({
       blocks: [
         {
-          type: "table",
-          rows: [
-            [
-              {
-                type: "rich_text",
-                elements: [
-                  {
-                    type: "rich_text_section",
-                    elements: [
-                      {
-                        type: "text",
-                        text: "Project Name",
-                        style: { bold: true },
-                      },
-                    ],
-                  },
-                ],
-              },
-              {
-                type: "rich_text",
-                elements: [
-                  {
-                    type: "rich_text_section",
-                    elements: [
-                      {
-                        type: "text",
-                        text: "Project ID",
-                        style: { bold: true },
-                      },
-                    ],
-                  },
-                ],
-              },
-              {
-                type: "rich_text",
-                elements: [
-                  {
-                    type: "rich_text_section",
-                    elements: [
-                      {
-                        type: "text",
-                        text: "Ship Status",
-                        style: { bold: true },
-                      },
-                    ],
-                  },
-                ],
-              },
-              {
-                type: "rich_text",
-                elements: [
-                  {
-                    type: "rich_text_section",
-                    elements: [
-                      { type: "text", text: "Used AI", style: { bold: true } },
-                    ],
-                  },
-                ],
-              },
-            ],
-            ...projectRows,
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text:
+              "*Projects*:\n" +
+              ( (projects.data.projects ?? []).length
+                ?  (projects.data.projects ?? [])
+                    .map((item) => `• ${item.id} - ${item.title} - ${item.ship_status} - ${item.ai_declaration || "No"}`)
+                    .join("\n")
+                : "No projects exist here."),
+          },
+        },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "plain_text",
+              text: "Format as 'ID - Title - Ship Status - AI Declaration'",
+            },
           ],
         },
       ],

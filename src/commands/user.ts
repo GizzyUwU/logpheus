@@ -5,6 +5,8 @@ import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
 import FT from "../lib/ft";
 import { getGenericErrorMessage } from "../lib/genericError";
+import type { GetUserResponse } from "../lib/ft.zod";
+import { z } from "zod";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -202,6 +204,21 @@ export default {
                     .map(
                       (id: string | number) =>
                         `<https://flavortown.hackclub.com/projects/${id}|${id}>`,
+                    )
+                    .join(", ")
+                : "No projects",
+          },
+          {
+            label: "Achievements",
+            value:
+              targetUser.data.achievements &&
+              targetUser.data.achievements.length > 0
+                ? targetUser.data.achievements
+                    .map(
+                      (item:  NonNullable<
+                       z.infer<typeof GetUserResponse>["achievements"]
+                     >[number]) =>
+                        item.name,
                     )
                     .join(", ")
                 : "No projects",
