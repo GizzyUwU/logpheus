@@ -100,12 +100,12 @@ export default class FT {
     );
   }
 
-  devlogs(param: z.infer<typeof ZTypes.ListProjectDevlogsParams>, query?: z.infer<typeof ZTypes.ListDevlogsQueryParams>) {
+  devlogs(param: z.infer<typeof ZTypes.ListProjectDevlogsParams>, query?: z.infer<typeof ZTypes.ListProjectDevlogsQueryParams>) {
     const parsedParam = param
       ? ZTypes.ListProjectDevlogsParams.parse(param)
       : undefined;
     const parsedQuery = query
-      ? ZTypes.ListDevlogsQueryParams.parse(query)
+      ? ZTypes.ListProjectDevlogsQueryParams.parse(query)
       : undefined;
 
     if (!parsedParam) throw new Error("Missing Params");

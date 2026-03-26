@@ -293,7 +293,13 @@ export const ListStoreItemsResponseItem = zod.object({
   type: zod.string().nullish(),
   show_in_carousel: zod.boolean().nullish(),
   accessory_tag: zod.string().nullish(),
-  agh_contents: zod.string().nullish(),
+  agh_contents: zod
+    .union([
+      zod.string(),
+      zod.array(zod.unknown()),
+      zod.record(zod.string(), zod.unknown()),
+    ])
+    .nullish(),
   attached_shop_item_ids: zod.array(zod.unknown()).nullish(),
   buyable_by_self: zod.boolean().nullish(),
   long_description: zod.string().nullish(),
@@ -345,7 +351,13 @@ export const GetStoreItemResponse = zod.object({
   type: zod.string().nullish(),
   show_in_carousel: zod.boolean().nullish(),
   accessory_tag: zod.string().nullish(),
-  agh_contents: zod.string().nullish(),
+  agh_contents: zod
+    .union([
+      zod.string(),
+      zod.array(zod.unknown()),
+      zod.record(zod.string(), zod.unknown()),
+    ])
+    .nullish(),
   attached_shop_item_ids: zod.array(zod.unknown()).nullish(),
   buyable_by_self: zod.boolean().nullish(),
   long_description: zod.string().nullish(),
