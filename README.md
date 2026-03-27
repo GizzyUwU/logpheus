@@ -56,6 +56,9 @@ VIKUNJA_BUG_PROJECT_ID= # Optional Integer
 VIKUNJA_FEATURE_PROJECT_ID= # Optional Integer
 VIKUNJA_TOKEN= # Optional String
 VIKUNJA_URL= # Optional String
+BUGSINK_URL= # Optional String
+BUGSINK_TOKEN= # Optional String
+BUGSINK_PROJECT_ID= # Optional Integer
 ```
 
 If you don't make use of Socket Mode the endpoints needed to set on the dashboard are
@@ -67,15 +70,20 @@ https://example.com/slack/events # For Slash Commands and Interactivity & Shortc
 The bot also requires these OAUTH Bot Token Scopes:
 
 ```
+channels:join
 channels:read
 chat:write
 chat:write_public
 commands
 group:read
 groups:write
+im:history
 im:read
+mprim:history
 mpim:read
 ```
+
+All this configuration could be easily done to by using (modifying slightly) the provided manifest.json
 
 ### Self Hosted - Docker
 

@@ -1,0 +1,166 @@
+{
+    "display_information": {
+        "name": "Logpheus",
+        "description": "Logpheus the generic flavourtown bot",
+        "background_color": "#212d4f",
+        "long_description": "Logpheus - The generic FLAVOURTOWN not flavortown as we need the CORRECT spelling anyway, It's a generic flavourtown bot for the slack allowing you to get devlogs posted directly to your channel but also run ft based commands to see user stats and other stuff"
+    },
+    "features": {
+        "bot_user": {
+            "display_name": "Logpheus",
+            "always_online": false
+        },
+        "slash_commands": [
+            {
+                "command": "/logpheus-stats",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Stats of Logpheus!",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-config",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Configure Logpheus",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-remove",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Remove a project or all projects from being subscribed to your channel",
+                "usage_hint": "[projectId]",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-user",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Checkout someone's FT profile",
+                "should_escape": true
+            },
+            {
+                "command": "/logpheus-data",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Checkout what data Logpheus has on you",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-add",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Add logpheus to your channel!",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-projects",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Look through flavortown's project page and search by a term",
+                "usage_hint": "[search]",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-project",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Look at a project's data by id",
+                "usage_hint": "[projectId]",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-register",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Setup logpheus to your account",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-shop",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "View the Flavortown shop!",
+                "usage_hint": "[itemId]",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-revoke",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Revoke Logpheus from having your data!",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-help",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Look at the logpheus commands!",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-devlog",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "See a devlog's contents",
+                "usage_hint": "[devlogId]",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-request",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Want something added to logpheus? Request it here!",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-report",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Oopsie. Did I do a silly? Let me know by reporting the silly issue.",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-goals",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Look at your goals and perhaps remove or add one!",
+                "usage_hint": "[add/remove] [id",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-views",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Let's take a peek into the open feature requests/bug reports or maybe look at a specific one :3",
+                "usage_hint": "[feature/bug] [optional id]",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-reactivate",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "Got deactivated because of a bad config? Run this get reactivated!",
+                "should_escape": false
+            },
+            {
+                "command": "/logpheus-error",
+                "url": "https://logpheus.gizzy.gay/slack/events",
+                "description": "View errors in Logpheus's sink of bugs!",
+                "usage_hint": "[issueId]",
+                "should_escape": false
+            }
+        ]
+    },
+    "oauth_config": {
+        "scopes": {
+            "bot": [
+                "channels:join",
+                "channels:read",
+                "chat:write",
+                "chat:write.public",
+                "commands",
+                "groups:write",
+                "im:history",
+                "incoming-webhook",
+                "mpim:history",
+                "im:read",
+                "mpim:read",
+                "groups:read"
+            ]
+        },
+        "pkce_enabled": false
+    },
+    "settings": {
+        "interactivity": {
+            "is_enabled": true,
+            "request_url": "https://logpheus.gizzy.gay/slack/events"
+        },
+        "org_deploy_enabled": false,
+        "socket_mode_enabled": true,
+        "token_rotation_enabled": false
+    }
+}
