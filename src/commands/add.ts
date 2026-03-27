@@ -1,7 +1,7 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "..";
 import { users } from "../schema/users";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { projects } from "../schema/projects";
 import checkAPIKey from "../lib/apiKeyCheck";
 import FT from "../lib/ft";
@@ -14,7 +14,7 @@ export default {
   desc: "Subscribe a project to get automated devlogs posts to your channel!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { callbackId, logger, client, pg, prefix }: RequestHandler,
+    { logger, client, pg, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({

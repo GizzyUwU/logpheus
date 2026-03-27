@@ -183,7 +183,7 @@ async function getNewDevlogs(params: {
         (row[0]?.multiplier ?? 10) * (totalSeconds / 3600),
       );
       const userRow = params.userByAPIKey.get(params.apiKey);
-      const previousPredicted = row[0]?.predictedCookies ?? 0
+      const previousPredicted = row[0]?.predictedCookies ?? 0;
 
       let nextGoalItem = "";
       let distanceFromGoal = 0;
@@ -306,6 +306,9 @@ export default {
       const userByAPIKey = new Map(
         userRows.filter((u) => u.apiKey).map((u) => [String(u.apiKey), u]),
       );
+      const projectsMap = new Map(
+        (await pg.select().from(projects)).map((r) => [r.id, r]),
+      );
       for (const row of userRows) {
         if (!row || !row.apiKey || !row.channel || !row.projects) continue;
         if (!clients[row.apiKey])
@@ -313,9 +316,6 @@ export default {
         const userProjectIds = Array.isArray(row.projects)
           ? row.projects.map(Number)
           : [];
-        const projectsMap = new Map(
-          (await pg.select().from(projects)).map((r) => [r.id, r]),
-        );
         for (const projectId of userProjectIds) {
           const projData = await getNewDevlogs({
             apiKey: String(row.apiKey),
