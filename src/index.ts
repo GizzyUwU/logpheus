@@ -7,7 +7,6 @@ import {
 import FT from "./lib/ft";
 import fs from "fs";
 import path from "path";
-import runMigrations from "./migrate";
 import { PGlite } from "@electric-sql/pglite";
 import { VikunjaClient } from "node-vikunja";
 import { BugsinkClient } from "./lib/bugsink";
@@ -390,7 +389,6 @@ async function loadHandlers() {
 
 (async () => {
   try {
-    await runMigrations(pg);
     app.logger.setName("[Logpheus]");
     const self = await app.client.auth.test();
     if (self.user_id === "U0AF4V5V04V") {
