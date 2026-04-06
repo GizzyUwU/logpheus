@@ -383,7 +383,7 @@ export default {
                   )
                   .map(
                     (m, i) =>
-                      `<https://flavortown.hackclub.com${m.url}|Video ${i + 1}`,
+                      `<https://flavortown.hackclub.com${m.url}|Video ${i + 1}>`,
                   );
 
                 const pingGroupId =
