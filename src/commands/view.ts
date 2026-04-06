@@ -126,7 +126,7 @@ export default {
                   type: "header",
                   text: {
                     type: "plain_text",
-                    text: task[0]?.title ?? "Unknown",
+                    text: (task[0]?.title?.split('-')[0]?.trim()) ?? "Unknown",
                   },
                 },
                 {
@@ -224,7 +224,7 @@ export default {
                   type: "header",
                   text: {
                     type: "plain_text",
-                    text: task[0]?.title ?? "Unknown",
+                    text: (task[0]?.title?.split('-')[0]?.trim()) ?? "Unknown",
                   },
                 },
                 {
