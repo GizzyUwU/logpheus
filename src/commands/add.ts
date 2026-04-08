@@ -251,16 +251,26 @@ export default {
                 text: `:woah-dino: <https://flavortown.hackclub.com/projects/${Number(projectId)}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
               },
             },
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: String(freshProject.data.description)
-                  .split("\n")
-                  .map((line: string) => `> ${line}`)
-                  .join("\n"),
-              },
-            },
+            ...(freshProject.data.description
+              ? [
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: String(freshProject.data.description)
+                        .split("\n")
+                        .map((line: string) => `> ${line}`)
+                        .join("\n"),
+                    },
+                  }
+                ] as {
+                  type: "section";
+                  text: {
+                    type: "mrkdwn";
+                    text: string;
+                  }
+                }[]
+              : []),
           ],
           response_type: "in_channel"
         });
