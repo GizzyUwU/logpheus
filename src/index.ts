@@ -359,6 +359,7 @@ async function loadHandlers() {
             pg,
             logger: ctxLogger,
             client: app.client,
+            prefix: prefix,
             clients,
             Sentry,
           } satisfies RequestHandler);
