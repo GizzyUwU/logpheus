@@ -87,6 +87,7 @@ async function getNewDevlogs(params: {
           channel: row?.channel,
           text: `Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /${params.prefix}-config to get it re-enabled.`,
         });
+        return;
       } else if (project.status === 404) {
         delete params.clients[params.apiKey];
         await params.db
@@ -101,6 +102,7 @@ async function getNewDevlogs(params: {
           channel: row?.channel,
           text: `Hey! You got disabled because of ${params.projectId} no longer exist and is 404ing. To get re-enabled run /${params.prefix}-remove ${params.projectId} and then /${params.prefix}-reactivate.`,
         });
+        return;
       } else if (
         project.status &&
         project.status >= 500 &&
@@ -113,8 +115,8 @@ async function getNewDevlogs(params: {
             id: params.projectId,
           },
         });
+        return;
       }
-      return;
     }
 
     const devlogIds = Array.isArray(project?.data.devlog_ids)
@@ -190,7 +192,6 @@ async function getNewDevlogs(params: {
       const predictedCookies = Math.round(
         (row[0]?.multiplier ?? 10) * (totalSeconds / 3600),
       );
-      const userRow = params.userByAPIKey.get(params.apiKey);
       const previousPredicted = row[0]?.predictedCookies ?? 0;
 
       let nextGoalItem = "";
@@ -336,6 +337,7 @@ export default {
             userByAPIKey,
             projectsMap,
           });
+          if (!clients[row.apiKey]) break;
           if (!projData) continue;
           if (projData.devlogs.length > 0) {
             for (const devlog of projData.devlogs) {
