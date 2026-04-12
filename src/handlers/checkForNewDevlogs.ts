@@ -192,6 +192,7 @@ async function getNewDevlogs(params: {
       const predictedCookies = Math.round(
         (row[0]?.multiplier ?? 10) * (totalSeconds / 3600),
       );
+      const userRow = params.userByAPIKey.get(params.apiKey);
       const previousPredicted = row[0]?.predictedCookies ?? 0;
 
       let nextGoalItem = "";
