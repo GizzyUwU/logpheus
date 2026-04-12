@@ -88,10 +88,18 @@ async function getNewDevlogs(params: {
           text: `Hey! You're project has been disabled from devlog tracking because of the api key returning 401! Setup the API Key again in /${params.prefix}-config to get it re-enabled.`,
         });
       } else if (project.status === 404) {
-        params.logger.error("No project exists at id", {
-          project: {
-            id: params.projectId,
-          },
+        delete params.clients[params.apiKey];
+        await params.db
+          .update(users)
+          .set({
+            disabled: true,
+          })
+          .where(eq(users.apiKey, params.apiKey));
+
+        if (!row?.channel) return;
+        await params.app.chat.postMessage({
+          channel: row?.channel,
+          text: `Hey! You got disabled because of ${params.projectId} no longer exist and is 404ing. To get re-enabled run /${params.prefix}-remove ${params.projectId} and then /${params.prefix}-reactivate.`,
         });
       } else if (
         project.status &&
