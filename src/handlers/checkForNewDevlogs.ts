@@ -572,6 +572,8 @@ export default {
                     "Unexpected error occured when trying to post the automated message.",
                     {
                       error: err,
+                      projectId,
+                      devlogId: devlog.id
                     },
                   );
                 }
