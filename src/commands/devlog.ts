@@ -17,18 +17,26 @@ const utcFormatter = new Intl.DateTimeFormat("en-GB", {
 
 export default {
   name: "devlog",
-  params: "[devlogId]",
+  params: "[devlogId || latest [projectId]",
   desc: "Read a devlog's content!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,
   ) => {
-    const devlogIdRaw = command.text.trim();
-    const devlogId = Number(devlogIdRaw);
+    const [actionOrId, id] = command.text.trim().split(" ").filter(Boolean);
 
-    if (!devlogIdRaw || !Number.isInteger(devlogId) || devlogId <= 0)
+    if (!actionOrId)
       return respond({
-        text: "Devlog ID must be a positive whole number.",
+        text: "'Latest [projectId' or Devlog Id needs to be provided",
+        response_type: "ephemeral",
+      });
+
+    if (
+      actionOrId.toLowerCase() !== "latest" &&
+      !Number.isInteger(Number(actionOrId))
+    )
+      return respond({
+        text: "Devlog ID needs to be positive whole number",
         response_type: "ephemeral",
       });
 
@@ -64,153 +72,312 @@ export default {
       ftClient = new FT(apiKey, logger);
     }
 
-    const devlog = await ftClient.devlog({
-      id: devlogId,
-    });
-
-    if (!devlog || !devlog.status) {
-      return respond({
-        text: "Unexpected error has occurred.",
-        response_type: "ephemeral",
+    if (actionOrId.toLowerCase() !== "latest") {
+      const devlog = await ftClient.devlog({
+        id: Number(actionOrId),
       });
-    }
 
-    if (!devlog.ok || !Object.keys(devlog.data)?.length) {
-      switch (devlog.status) {
-        case 404:
-          return respond({
-            text: "Project doesn't exist.",
-            response_type: "ephemeral",
-          });
-        default:
-          const msg = getGenericErrorMessage(devlog.status, prefix!);
-          return respond({
-            text: msg ?? "Unexpected error has occurred!",
-            response_type: "ephemeral",
-          });
+      if (!devlog || !devlog.status) {
+        return respond({
+          text: "Unexpected error has occurred.",
+          response_type: "ephemeral",
+        });
       }
-    }
 
-    const createdAt = devlog.data.created_at
-      ? new Date(devlog.data.created_at)
-      : new Date();
-    const seconds = devlog.data.duration_seconds;
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    const year = createdAt.getUTCFullYear();
-    const month = pad(createdAt.getUTCMonth() + 1);
-    const day = pad(createdAt.getUTCDate());
-    const hours = pad(createdAt.getUTCHours());
-    const minutes = pad(createdAt.getUTCMinutes());
-    const cs50Timestamp = `${year}${month}${day}T${hours}${minutes}+0000`;
-    const timestamp = utcFormatter.format(createdAt);
+      if (!devlog.ok || !Object.keys(devlog.data)?.length) {
+        switch (devlog.status) {
+          case 404:
+            return respond({
+              text: "Project doesn't exist.",
+              response_type: "ephemeral",
+            });
+          default:
+            const msg = getGenericErrorMessage(devlog.status, prefix!);
+            return respond({
+              text: msg ?? "Unexpected error has occurred!",
+              response_type: "ephemeral",
+            });
+        }
+      }
 
-    const durationString = ([86400, 3600, 60] as const)
-      .map((sec, i) => {
-        const val =
-          Math.floor((seconds || 0) / sec) %
-          (i === 0 ? Infinity : i === 1 ? 24 : 60);
-        const labels = ["day", "hour", "minute"];
-        return val > 0 ? `${val} ${labels[i]}${val > 1 ? "s" : ""}` : null;
-      })
-      .filter(Boolean)
-      .join(" ");
+      const createdAt = devlog.data.created_at
+        ? new Date(devlog.data.created_at)
+        : new Date();
+      const seconds = devlog.data.duration_seconds;
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const year = createdAt.getUTCFullYear();
+      const month = pad(createdAt.getUTCMonth() + 1);
+      const day = pad(createdAt.getUTCDate());
+      const hours = pad(createdAt.getUTCHours());
+      const minutes = pad(createdAt.getUTCMinutes());
+      const cs50Timestamp = `${year}${month}${day}T${hours}${minutes}+0000`;
+      const timestamp = utcFormatter.format(createdAt);
 
-    type Block =
-      | { type: "image"; image_url: string; alt_text: string }
-      | {
-          type: "video";
-          video_url: string;
-          thumbnail_url: string;
-          title: string;
-          alt_text: string;
-        };
+      const durationString = ([86400, 3600, 60] as const)
+        .map((sec, i) => {
+          const val =
+            Math.floor((seconds || 0) / sec) %
+            (i === 0 ? Infinity : i === 1 ? 24 : 60);
+          const labels = ["day", "hour", "minute"];
+          return val > 0 ? `${val} ${labels[i]}${val > 1 ? "s" : ""}` : null;
+        })
+        .filter(Boolean)
+        .join(" ");
 
-    const mediaBlocks: Block[] = (devlog.data.media || [])
-      .map((m, i): Block | null => {
-        const url = "https://flavortown.hackclub.com" + m.url;
-        const alt = String(i + 1);
-
-        if (m.content_type && m.content_type.startsWith("video")) {
-          return {
-            type: "video",
-            video_url: url,
-            alt_text: alt,
-            title: devlog.data.id + "Video" + " " + i,
-            thumbnail_url:
-              "https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg",
+      type Block =
+        | { type: "image"; image_url: string; alt_text: string }
+        | {
+            type: "video";
+            video_url: string;
+            thumbnail_url: string;
+            title: string;
+            alt_text: string;
           };
-        }
 
-        if (m.content_type && m.content_type.startsWith("image")) {
-          return { type: "image", image_url: url, alt_text: alt };
-        }
+      const mediaBlocks: Block[] = (devlog.data.media || [])
+        .map((m, i): Block | null => {
+          const url = "https://flavortown.hackclub.com" + m.url;
+          const alt = String(i + 1);
 
-        return null;
-      })
-      .filter((b): b is Block => b !== null);
+          if (m.content_type && m.content_type.startsWith("video")) {
+            return {
+              type: "video",
+              video_url: url,
+              alt_text: alt,
+              title: devlog.data.id + "Video" + " " + i,
+              thumbnail_url:
+                "https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg",
+            };
+          }
 
-    if (devlog.data.body && !containsMarkdown(devlog.data.body)) {
-      return await respond({
-        blocks: [
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `Devlog ${devlog.data.id}`,
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `> ${devlog.data.body}`,
-            },
-          },
-          {
-            type: "divider",
-          },
-          {
-            type: "context",
-            elements: [
-              {
+          if (m.content_type && m.content_type.startsWith("image")) {
+            return { type: "image", image_url: url, alt_text: alt };
+          }
+
+          return null;
+        })
+        .filter((b): b is Block => b !== null);
+
+      if (devlog.data.body && !containsMarkdown(devlog.data.body)) {
+        return await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
                 type: "mrkdwn",
-                text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}`,
+                text: `Devlog ${devlog.data.id}`,
               },
-            ],
-          },
-          ...mediaBlocks,
-        ],
-        response_type: "ephemeral",
-      });
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `> ${devlog.data.body}`,
+              },
+            },
+            {
+              type: "divider",
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}`,
+                },
+              ],
+            },
+            ...mediaBlocks,
+          ],
+          response_type: "ephemeral",
+        });
+      } else {
+        await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `Devlog ${devlog.data.id}`,
+              },
+            },
+            ...(devlog.data.body
+              ? parseMarkdownToSlackBlocks(devlog.data.body)
+              : []),
+            {
+              type: "divider",
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                },
+              ],
+            },
+            ...mediaBlocks,
+          ],
+          response_type: "ephemeral",
+        });
+      }
     } else {
-      await respond({
-        blocks: [
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `Devlog ${devlog.data.id}`,
-            },
-          },
-          ...(devlog.data.body
-            ? parseMarkdownToSlackBlocks(devlog.data.body)
-            : []),
-          {
-            type: "divider",
-          },
-          {
-            type: "context",
-            elements: [
-              {
-                type: "mrkdwn",
-                text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
-              },
-            ],
-          },
-          ...mediaBlocks,
-        ],
-        response_type: "ephemeral",
+      if (!id || Number.isInteger(id))
+        return respond({
+          text: "Project ID needs to be positive whole number",
+          response_type: "ephemeral",
+        });
+
+      const projectDevlogs = await ftClient.devlogs({
+        project_id: Number(id),
       });
+
+      if (!projectDevlogs || !projectDevlogs.status) {
+        return respond({
+          text: "Unexpected error has occurred.",
+          response_type: "ephemeral",
+        });
+      }
+
+      if (
+        !projectDevlogs.ok ||
+        !Object.keys(projectDevlogs.data)?.length ||
+        !projectDevlogs.data.devlogs ||
+        projectDevlogs.data.devlogs.length === 0
+      ) {
+        switch (projectDevlogs.status) {
+          default:
+            const msg = getGenericErrorMessage(projectDevlogs.status, prefix!);
+            return respond({
+              text: msg ?? "Unexpected error has occured!",
+              response_type: "ephemeral",
+            });
+        }
+      }
+
+      const devlog = projectDevlogs.data.devlogs.reduce((max, current) => {
+        return Number(current.id) > Number(max.id) ? current : max;
+      });
+
+      const createdAt = devlog.created_at
+        ? new Date(devlog.created_at)
+        : new Date();
+      const seconds = devlog.duration_seconds;
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const year = createdAt.getUTCFullYear();
+      const month = pad(createdAt.getUTCMonth() + 1);
+      const day = pad(createdAt.getUTCDate());
+      const hours = pad(createdAt.getUTCHours());
+      const minutes = pad(createdAt.getUTCMinutes());
+      const cs50Timestamp = `${year}${month}${day}T${hours}${minutes}+0000`;
+      const timestamp = utcFormatter.format(createdAt);
+
+      const durationString = ([86400, 3600, 60] as const)
+        .map((sec, i) => {
+          const val =
+            Math.floor((seconds || 0) / sec) %
+            (i === 0 ? Infinity : i === 1 ? 24 : 60);
+          const labels = ["day", "hour", "minute"];
+          return val > 0 ? `${val} ${labels[i]}${val > 1 ? "s" : ""}` : null;
+        })
+        .filter(Boolean)
+        .join(" ");
+
+      type Block =
+        | { type: "image"; image_url: string; alt_text: string }
+        | {
+            type: "video";
+            video_url: string;
+            thumbnail_url: string;
+            title: string;
+            alt_text: string;
+          };
+
+      const mediaBlocks: Block[] = (devlog.media || [])
+        .map((m, i): Block | null => {
+          const url = "https://flavortown.hackclub.com" + m.url;
+          const alt = String(i + 1);
+
+          if (m.content_type && m.content_type.startsWith("video")) {
+            return {
+              type: "video",
+              video_url: url,
+              alt_text: alt,
+              title: devlog.id + "Video" + " " + i,
+              thumbnail_url:
+                "https://wallpapers.com/images/hd/total-black-solid-color-deskop-otljrvlhh4rl1zy9.jpg",
+            };
+          }
+
+          if (m.content_type && m.content_type.startsWith("image")) {
+            return { type: "image", image_url: url, alt_text: alt };
+          }
+
+          return null;
+        })
+        .filter((b): b is Block => b !== null);
+
+      if (devlog.body && !containsMarkdown(devlog.body)) {
+        return await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `Devlog ${devlog.id}`,
+              },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `> ${devlog.body}`,
+              },
+            },
+            {
+              type: "divider",
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}`,
+                },
+              ],
+            },
+            ...mediaBlocks,
+          ],
+          response_type: "ephemeral",
+        });
+      } else {
+        await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `Devlog ${devlog.id}`,
+              },
+            },
+            ...(devlog.body ? parseMarkdownToSlackBlocks(devlog.body) : []),
+            {
+              type: "divider",
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}.`,
+                },
+              ],
+            },
+            ...mediaBlocks,
+          ],
+          response_type: "ephemeral",
+        });
+      }
     }
   },
 };
