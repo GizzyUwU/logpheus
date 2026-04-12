@@ -44,114 +44,158 @@ export default {
           response_type: "ephemeral",
         });
 
-      const projectId = command.text.trim()
+      const projectId = command.text.trim();
       if (!projectId) {
-        // const checkKey = String(userData[0]?.apiKey);
+        const checkKey = String(userData[0]?.apiKey);
 
-        // const working = await checkAPIKey({
-        //   db: pg,
-        //   apiKey: checkKey,
-        //   logger,
-        // });
-        // if (!working.works)
-        //   return respond({
-        //     text: "Flavortown API Key is invalid, provide a valid one.",
-        //     response_type: "ephemeral",
-        //   });
+        const working = await checkAPIKey({
+          db: pg,
+          apiKey: checkKey,
+          logger,
+        });
+        if (!working.works)
+          return respond({
+            text: "Flavortown API Key is invalid, provide a valid one.",
+            response_type: "ephemeral",
+          });
 
-        // const apiKey = checkKey!;
-        // const ftClient = new FT(apiKey, logger);
-        // const projectsArr = Array.isArray(userData[0]?.projects)
-        //   ? Array.from(
-        //     new Set(
-        //       userData[0]?.projects.filter(
-        //         (p): p is number => Number.isInteger(p) && p > 0,
-        //       ),
-        //     ),
-        //   )
-        //   : [];
+        const apiKey = checkKey!;
+        const ftClient = new FT(apiKey, logger);
+        const allProjects = await ftClient.userProjects({
+          id: "me",
+        });
 
-        // const arrOfProjects: any[] = [];
-        // let page: number | null = 1;
-        // while (page) {
-        //   const res = await ftClient.projects({
-        //     page
-        //   })
-        //   if (!res || !res.ok) break;
-        //   const data = res.data;
-        //   if (data?.projects) {
-        //     for (const project of data.projects) {
-        //       if (projectsArr.includes(Number(project.id))) continue;
-        //       projectsArr.push(Number(project.id))
-        //       arrOfProjects.push(project);
-        //     }
-        //   }
-        //   page = data?.pagination?.next_page ?? null;
-        // }
+        if (!allProjects || !allProjects.status) {
+          return respond({
+            text: "Unexpected error has occurred.",
+            response_type: "ephemeral",
+          });
+        }
 
-        // if (!userData[0]?.userId) {
-        //   updateFields.userId = command.user_id;
-        // }
+        if (!allProjects.ok || !Object.keys(allProjects.data)?.length || !allProjects.data.projects || allProjects.data.projects.length === 0) {
+          switch (allProjects.status) {
+            default:
+              const msg = getGenericErrorMessage(allProjects.status, prefix!);
+              return respond({
+                text: msg ?? "Unexpected error has occured!",
+                response_type: "ephemeral",
+              });
+          }
+        }
 
-        // if (!userData[0]?.channel) {
-        //   updateFields.channel = command.channel_id;
-        // }
+        const projectsArr = Array.isArray(userData[0]?.projects)
+          ? Array.from(
+              new Set(
+                userData[0]?.projects.filter(
+                  (p): p is number => Number.isInteger(p) && p > 0,
+                ),
+              ),
+            )
+          : [];
 
-        // updateFields.projects = projectsArr;
-        // await pg.update(users).set(updateFields).where(eq(users.userId, command.user_id));
+        const newProjects = allProjects.data.projects.filter(
+          (p) => !projectsArr.includes(Number(p.id)),
+        );
 
+        if (newProjects.length === 0) {
+          return respond({
+            text: "YOU SILLY GOOSE! All these projects are already subscribed.",
+            response_type: "ephemeral",
+          });
+        }
 
-        // const projectRows = arrOfProjects.map((project) => ({
-        //   id: Number(project.id),
-        //   devlogIds: Array.isArray(project.devlog_ids)
-        //     ? project.devlog_ids
-        //     : [],
-        // }));
+        updateFields.projects = [
+          ...projectsArr,
+          ...newProjects.map((p) => p.id),
+        ];
 
-        // const existing = await pg
-        //   .select({ id: projects.id })
-        //   .from(projects)
-        //   .where(inArray(
-        //     projects.id,
-        //     projectRows.map((p) => p.id)
-        //   ));
+        if (!userData[0]?.userId) {
+          updateFields.userId = command.user_id;
+        }
 
-        // const existingIds = new Set(existing.map((e) => e.id));
+        if (!userData[0]?.channel) {
+          updateFields.channel = command.channel_id;
+        }
 
-        // const toInsert = projectRows.filter((p) => !existingIds.has(p.id));
-        // const toUpdate = projectRows.filter((p) => existingIds.has(p.id));
+        updateFields.projects = projectsArr;
+        await pg
+          .update(users)
+          .set(updateFields)
+          .where(eq(users.userId, command.user_id));
 
-        // if (toInsert.length) {
-        //   await pg.insert(projects).values(toInsert);
-        // }
+        for (const project of newProjects) {
+          const devlogIds = Array.isArray(project.devlog_ids)
+            ? project.devlog_ids
+            : [];
 
-        // const chunkSize = 100;
+          await pg
+            .insert(projects)
+            .values({
+              id: project.id,
+              devlogIds,
+            })
+            .onConflictDoUpdate({
+              target: projects.id,
+              set: {
+                devlogIds,
+              },
+            });
+        }
 
-        // for (let i = 0; i < toUpdate.length; i += chunkSize) {
-        //   const chunk = toUpdate.slice(i, i + chunkSize);
+        const shownProjects = newProjects.slice(0, 5);
+        const remainingCount = newProjects.length - shownProjects.length;
 
-        //   await Promise.all(
-        //     chunk.map((p) =>
-        //       pg
-        //         .update(projects)
-        //         .set({ devlogIds: p.devlogIds })
-        //         .where(eq(projects.id, p.id))
-        //     )
-        //   );
-        // }
-        // return respond({
-        //   text: "All projects from user have been added.",
-        //   response_type: "ephemeral",
-        // });
         return respond({
-          text: "Provide an id.",
-          response_type: "ephemeral",
+          unfurl_links: false,
+          unfurl_media: false,
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `:woah-dino: Subscribed to *${newProjects.length}* new project(s)! :yay:`,
+              },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: shownProjects
+                  .map(
+                    (p) =>
+                      `• <https://flavortown.hackclub.com/projects/${p.id}|${p.title}>`
+                  )
+                  .join("\n"),
+              },
+            },
+            ...(remainingCount > 0
+              ? ([
+                  {
+                    type: "context",
+                    elements: [
+                      {
+                        type: "mrkdwn",
+                        text: `…and *${remainingCount} more* project(s).`,
+                      },
+                    ],
+                  },
+                ] as {
+                  type: string;
+                  elements: {
+                    type: string;
+                    text: string;
+                  }[];
+                }[])
+              : []),
+          ],
+          response_type: "in_channel",
         });
       } else {
-        if (!Number.isInteger(Number(projectId))) return respond({
-          text: `Project ID has to be a integer`,
-          response_type: "ephemeral",
-        })
+        if (!Number.isInteger(Number(projectId)))
+          return respond({
+            text: `Project ID has to be a integer`,
+            response_type: "ephemeral",
+          });
         const checkKey = String(userData[0]?.apiKey);
 
         const working = await checkAPIKey({
@@ -170,19 +214,18 @@ export default {
         const ftClient = new FT(apiKey, logger);
         const projectsArr = Array.isArray(userData[0]?.projects)
           ? Array.from(
-            new Set(
-              userData[0]?.projects.filter(
-                (p): p is number => Number.isInteger(p) && p > 0,
+              new Set(
+                userData[0]?.projects.filter(
+                  (p): p is number => Number.isInteger(p) && p > 0,
+                ),
               ),
-            ),
-          )
+            )
           : [];
 
         if (projectsArr.includes(Number(projectId))) {
           return respond({
             text: "Project already registered",
             response_type: "ephemeral",
-
           });
         }
 
@@ -196,13 +239,16 @@ export default {
         }
 
         updateFields.projects = projectsArr;
-        await pg.update(users).set(updateFields).where(eq(users.userId, command.user_id));
+        await pg
+          .update(users)
+          .set(updateFields)
+          .where(eq(users.userId, command.user_id));
 
         const freshProject = await ftClient.project({ id: Number(projectId) });
         if (!freshProject || !freshProject.status) {
           return respond({
             text: "Unexpected error has occurred.",
-            response_type: "ephemeral"
+            response_type: "ephemeral",
           });
         }
 
@@ -211,14 +257,13 @@ export default {
             case 404:
               return respond({
                 text: "Project doesn't exist.",
-                response_type: "ephemeral"
-                ,
+                response_type: "ephemeral",
               });
             default:
               const msg = getGenericErrorMessage(freshProject.status, prefix!);
               return respond({
                 text: msg ?? "Unexpected error has occured!",
-                response_type: "ephemeral"
+                response_type: "ephemeral",
               });
           }
         }
@@ -252,7 +297,7 @@ export default {
               },
             },
             ...(freshProject.data.description
-              ? [
+              ? ([
                   {
                     type: "section",
                     text: {
@@ -262,17 +307,17 @@ export default {
                         .map((line: string) => `> ${line}`)
                         .join("\n"),
                     },
-                  }
+                  },
                 ] as {
                   type: "section";
                   text: {
                     type: "mrkdwn";
                     text: string;
-                  }
-                }[]
+                  };
+                }[])
               : []),
           ],
-          response_type: "in_channel"
+          response_type: "in_channel",
         });
       }
     } catch (error: any) {

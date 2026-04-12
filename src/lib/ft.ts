@@ -45,6 +45,7 @@ export default class FT {
       } catch (error) {
         if (error instanceof z.ZodError) {
           this.logger.error("Zod validation failed", {
+            schemaDesc: schema.description,
             error: error.issues,
           });
           return { ok: false, status: res.status, msg: error.issues };
@@ -59,7 +60,10 @@ export default class FT {
       if (axios.isAxiosError(err)) {
         let status = err.response?.status ?? err.status ?? null;
 
-        if (!status && err.code === "ECONNABORTED" || !status && err.message === "timeout of 10000ms exceeded") {
+        if (
+          (!status && err.code === "ECONNABORTED") ||
+          (!status && err.message === "timeout of 10000ms exceeded")
+        ) {
           status = 408;
         }
         this.lastCode = status;
@@ -100,7 +104,10 @@ export default class FT {
     );
   }
 
-  devlogs(param: z.infer<typeof ZTypes.ListProjectDevlogsParams>, query?: z.infer<typeof ZTypes.ListProjectDevlogsQueryParams>) {
+  devlogs(
+    param: z.infer<typeof ZTypes.ListProjectDevlogsParams>,
+    query?: z.infer<typeof ZTypes.ListProjectDevlogsQueryParams>,
+  ) {
     const parsedParam = param
       ? ZTypes.ListProjectDevlogsParams.parse(param)
       : undefined;
@@ -117,7 +124,7 @@ export default class FT {
           "/projects/" +
           parsedParam.project_id +
           "/devlogs" +
-          (parsedQuery?.page ? "?page=" + parsedQuery.page : "")
+          (parsedQuery?.page ? "?page=" + parsedQuery.page : ""),
       },
       ZTypes.ListProjectDevlogsResponse,
     );
@@ -169,6 +176,20 @@ export default class FT {
         url: "/users/" + parsedParam.id,
       },
       ZTypes.GetUserResponse,
+    );
+  }
+
+  userProjects(param: z.infer<typeof ZTypes.ListUserProjectsQueryParams>) {
+    const parsedParam = param
+      ? ZTypes.ListUserProjectsQueryParams.parse(param)
+      : undefined;
+    if (!parsedParam) throw new Error("Missing Params");
+    return this.request(
+      {
+        method: "GET",
+        url: "/users/" + parsedParam.id + "/projects",
+      },
+      ZTypes.ListUserProjectsResponse,
     );
   }
 

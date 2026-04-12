@@ -13,162 +13,180 @@ import * as zod from "zod";
  */
 export const listProjectsQueryLimitMax = 100;
 
-export const ListProjectsQueryParams = zod.object({
-  page: zod.number().nullish().describe("Page number for pagination"),
-  limit: zod
-    .number()
-    .max(listProjectsQueryLimitMax)
-    .nullish()
-    .describe("Number of results per page (max 100)"),
-  query: zod
-    .string()
-    .nullish()
-    .describe("Search projects by title or description"),
-});
+export const ListProjectsQueryParams = zod
+  .object({
+    page: zod.number().nullish().describe("Page number for pagination"),
+    limit: zod
+      .number()
+      .max(listProjectsQueryLimitMax)
+      .nullish()
+      .describe("Number of results per page (max 100)"),
+    query: zod
+      .string()
+      .nullish()
+      .describe("Search projects by title or description"),
+  })
+  .describe("ListProjectsQueryParams");
 
-export const ListProjectsResponse = zod.object({
-  projects: zod
-    .array(
-      zod.object({
-        id: zod.number().nullish(),
-        title: zod.string().nullish(),
-        description: zod.string().nullish(),
-        repo_url: zod.string().nullish(),
-        demo_url: zod.string().nullish(),
-        readme_url: zod.string().nullish(),
-        ai_declaration: zod.string().nullish(),
-        ship_status: zod.string().nullish(),
-        devlog_ids: zod.array(zod.number()).nullish(),
-        banner_url: zod.string().nullish(),
-        created_at: zod.iso.datetime({}).nullish(),
-        updated_at: zod.iso.datetime({}).nullish(),
-      }),
-    )
-    .nullish(),
-  pagination: zod
-    .object({
-      current_page: zod.number().nullish(),
-      total_pages: zod.number().nullish(),
-      total_count: zod.number().nullish(),
-      next_page: zod.number().nullish(),
-    })
-    .nullish(),
-});
+export const ListProjectsResponse = zod
+  .object({
+    projects: zod
+      .array(
+        zod.object({
+          id: zod.number().nullish(),
+          title: zod.string().nullish(),
+          description: zod.string().nullish(),
+          repo_url: zod.string().nullish(),
+          demo_url: zod.string().nullish(),
+          readme_url: zod.string().nullish(),
+          ai_declaration: zod.string().nullish(),
+          ship_status: zod.string().nullish(),
+          devlog_ids: zod.array(zod.number()).nullish(),
+          banner_url: zod.string().nullish(),
+          created_at: zod.iso.datetime({}).nullish(),
+          updated_at: zod.iso.datetime({}).nullish(),
+        }),
+      )
+      .nullish(),
+    pagination: zod
+      .object({
+        current_page: zod.number().nullish(),
+        total_pages: zod.number().nullish(),
+        total_count: zod.number().nullish(),
+        next_page: zod.number().nullish(),
+      })
+      .nullish(),
+  })
+  .describe("ListProjectsResponse");
 
 /**
  * Fetch a specific project by ID. Ratelimit: 30 reqs/min.
  * @summary Get a project
  */
-export const GetProjectParams = zod.object({
-  id: zod.number(),
-});
+export const GetProjectParams = zod
+  .object({
+    id: zod.number(),
+  })
+  .describe("GetProjectParams");
 
-export const GetProjectResponse = zod.object({
-  id: zod.number().nullish(),
-  title: zod.string().nullish(),
-  description: zod.string().nullish(),
-  repo_url: zod.string().nullish(),
-  demo_url: zod.string().nullish(),
-  readme_url: zod.string().nullish(),
-  ai_declaration: zod.string().nullish(),
-  ship_status: zod.string().nullish(),
-  devlog_ids: zod.array(zod.number()).nullish(),
-  banner_url: zod.string().nullish(),
-  created_at: zod.iso.datetime({}).nullish(),
-  updated_at: zod.iso.datetime({}).nullish(),
-});
+export const GetProjectResponse = zod
+  .object({
+    id: zod.number().nullish(),
+    title: zod.string().nullish(),
+    description: zod.string().nullish(),
+    repo_url: zod.string().nullish(),
+    demo_url: zod.string().nullish(),
+    readme_url: zod.string().nullish(),
+    ai_declaration: zod.string().nullish(),
+    ship_status: zod.string().nullish(),
+    devlog_ids: zod.array(zod.number()).nullish(),
+    banner_url: zod.string().nullish(),
+    created_at: zod.iso.datetime({}).nullish(),
+    updated_at: zod.iso.datetime({}).nullish(),
+  })
+  .describe("GetProjectResponse");
 
 /**
  * Update an existing project.
  * @summary Update a project
  */
-export const UpdateProjectParams = zod.object({
-  id: zod.number(),
-});
+export const UpdateProjectParams = zod
+  .object({
+    id: zod.number(),
+  })
+  .describe("UpdateProjectParams");
 
-export const UpdateProjectResponse = zod.object({
-  id: zod.number().nullish(),
-  title: zod.string().nullish(),
-  description: zod.string().nullish(),
-  repo_url: zod.string().nullish(),
-  demo_url: zod.string().nullish(),
-  readme_url: zod.string().nullish(),
-  ai_declaration: zod.string().nullish(),
-  ship_status: zod.string().nullish(),
-  devlog_ids: zod.array(zod.number()).nullish(),
-  banner_url: zod.string().nullish(),
-  created_at: zod.iso.datetime({}).nullish(),
-  updated_at: zod.iso.datetime({}).nullish(),
-});
+export const UpdateProjectResponse = zod
+  .object({
+    id: zod.number().nullish(),
+    title: zod.string().nullish(),
+    description: zod.string().nullish(),
+    repo_url: zod.string().nullish(),
+    demo_url: zod.string().nullish(),
+    readme_url: zod.string().nullish(),
+    ai_declaration: zod.string().nullish(),
+    ship_status: zod.string().nullish(),
+    devlog_ids: zod.array(zod.number()).nullish(),
+    banner_url: zod.string().nullish(),
+    created_at: zod.iso.datetime({}).nullish(),
+    updated_at: zod.iso.datetime({}).nullish(),
+  })
+  .describe("UpdateProjectResponse");
 
 /**
  * Fetch all devlogs for a specific project.
  * @summary List project devlogs
  */
-export const ListProjectDevlogsParams = zod.object({
-  project_id: zod.number(),
-});
+export const ListProjectDevlogsParams = zod
+  .object({
+    project_id: zod.number(),
+  })
+  .describe("ListProjectDevlogsParams");
 
 export const listProjectDevlogsQueryLimitMax = 100;
 
-export const ListProjectDevlogsQueryParams = zod.object({
-  page: zod.number().nullish().describe("Page number for pagination"),
-  limit: zod
-    .number()
-    .max(listProjectDevlogsQueryLimitMax)
-    .nullish()
-    .describe("Number of results per page (max 100)"),
-});
+export const ListProjectDevlogsQueryParams = zod
+  .object({
+    page: zod.number().nullish().describe("Page number for pagination"),
+    limit: zod
+      .number()
+      .max(listProjectDevlogsQueryLimitMax)
+      .nullish()
+      .describe("Number of results per page (max 100)"),
+  })
+  .describe("ListProjectDevlogsQueryParams");
 
-export const ListProjectDevlogsResponse = zod.object({
-  devlogs: zod
-    .array(
-      zod.object({
-        id: zod.number().nullish(),
-        body: zod.string().nullish(),
-        comments_count: zod.number().nullish(),
-        duration_seconds: zod.number().nullish(),
-        likes_count: zod.number().nullish(),
-        scrapbook_url: zod.string().nullish(),
-        created_at: zod.iso.datetime({}).nullish(),
-        updated_at: zod.iso.datetime({}).nullish(),
-        media: zod
-          .array(
-            zod.object({
-              url: zod.string().nullish(),
-              content_type: zod.string().nullish(),
-            }),
-          )
-          .nullish(),
-        comments: zod
-          .array(
-            zod.object({
-              id: zod.number().nullish(),
-              author: zod
-                .object({
-                  id: zod.number().nullish(),
-                  display_name: zod.string().nullish(),
-                  avatar: zod.string().nullish(),
-                })
-                .nullish(),
-              body: zod.string().nullish(),
-              created_at: zod.iso.datetime({}).nullish(),
-              updated_at: zod.iso.datetime({}).nullish(),
-            }),
-          )
-          .nullish(),
-      }),
-    )
-    .nullish(),
-  pagination: zod
-    .object({
-      current_page: zod.number().nullish(),
-      total_pages: zod.number().nullish(),
-      total_count: zod.number().nullish(),
-      next_page: zod.number().nullish(),
-    })
-    .nullish(),
-});
+export const ListProjectDevlogsResponse = zod
+  .object({
+    devlogs: zod
+      .array(
+        zod.object({
+          id: zod.number().nullish(),
+          body: zod.string().nullish(),
+          comments_count: zod.number().nullish(),
+          duration_seconds: zod.number().nullish(),
+          likes_count: zod.number().nullish(),
+          scrapbook_url: zod.string().nullish(),
+          created_at: zod.iso.datetime({}).nullish(),
+          updated_at: zod.iso.datetime({}).nullish(),
+          media: zod
+            .array(
+              zod.object({
+                url: zod.string().nullish(),
+                content_type: zod.string().nullish(),
+              }),
+            )
+            .nullish(),
+          comments: zod
+            .array(
+              zod.object({
+                id: zod.number().nullish(),
+                author: zod
+                  .object({
+                    id: zod.number().nullish(),
+                    display_name: zod.string().nullish(),
+                    avatar: zod.string().nullish(),
+                  })
+                  .nullish(),
+                body: zod.string().nullish(),
+                created_at: zod.iso.datetime({}).nullish(),
+                updated_at: zod.iso.datetime({}).nullish(),
+              }),
+            )
+            .nullish(),
+        }),
+      )
+      .nullish(),
+    pagination: zod
+      .object({
+        current_page: zod.number().nullish(),
+        total_pages: zod.number().nullish(),
+        total_count: zod.number().nullish(),
+        next_page: zod.number().nullish(),
+      })
+      .nullish(),
+  })
+  .describe("ListProjectDevlogsResponse");
 
 /**
  * Fetch all devlogs across all projects.
@@ -176,219 +194,236 @@ export const ListProjectDevlogsResponse = zod.object({
  */
 export const listDevlogsQueryLimitMax = 100;
 
-export const ListDevlogsQueryParams = zod.object({
-  page: zod.number().nullish().describe("Page number for pagination"),
-  limit: zod
-    .number()
-    .max(listDevlogsQueryLimitMax)
-    .nullish()
-    .describe("Number of results per page (max 100)"),
-});
+export const ListDevlogsQueryParams = zod
+  .object({
+    page: zod.number().nullish().describe("Page number for pagination"),
+    limit: zod
+      .number()
+      .max(listDevlogsQueryLimitMax)
+      .nullish()
+      .describe("Number of results per page (max 100)"),
+  })
+  .describe("ListDevlogsQueryParams");
 
-export const ListDevlogsResponse = zod.object({
-  devlogs: zod
-    .array(
-      zod.object({
-        id: zod.number().nullish(),
-        body: zod.string().nullish(),
-        comments_count: zod.number().nullish(),
-        duration_seconds: zod.number().nullish(),
-        likes_count: zod.number().nullish(),
-        scrapbook_url: zod.string().nullish(),
-        created_at: zod.iso.datetime({}).nullish(),
-        updated_at: zod.iso.datetime({}).nullish(),
-        media: zod
-          .array(
-            zod.object({
-              url: zod.string().nullish(),
-              content_type: zod.string().nullish(),
-            }),
-          )
-          .nullish(),
-        comments: zod
-          .array(
-            zod.object({
-              id: zod.number().nullish(),
-              author: zod
-                .object({
-                  id: zod.number().nullish(),
-                  display_name: zod.string().nullish(),
-                  avatar: zod.string().nullish(),
-                })
-                .nullish(),
-              body: zod.string().nullish(),
-              created_at: zod.iso.datetime({}).nullish(),
-              updated_at: zod.iso.datetime({}).nullish(),
-            }),
-          )
-          .nullish(),
-      }),
-    )
-    .nullish(),
-  pagination: zod
-    .object({
-      current_page: zod.number().nullish(),
-      total_pages: zod.number().nullish(),
-      total_count: zod.number().nullish(),
-      next_page: zod.number().nullish(),
-    })
-    .nullish(),
-});
+export const ListDevlogsResponse = zod
+  .object({
+    devlogs: zod
+      .array(
+        zod.object({
+          id: zod.number().nullish(),
+          body: zod.string().nullish(),
+          comments_count: zod.number().nullish(),
+          duration_seconds: zod.number().nullish(),
+          likes_count: zod.number().nullish(),
+          scrapbook_url: zod.string().nullish(),
+          created_at: zod.iso.datetime({}).nullish(),
+          updated_at: zod.iso.datetime({}).nullish(),
+          media: zod
+            .array(
+              zod.object({
+                url: zod.string().nullish(),
+                content_type: zod.string().nullish(),
+              }),
+            )
+            .nullish(),
+          comments: zod
+            .array(
+              zod.object({
+                id: zod.number().nullish(),
+                author: zod
+                  .object({
+                    id: zod.number().nullish(),
+                    display_name: zod.string().nullish(),
+                    avatar: zod.string().nullish(),
+                  })
+                  .nullish(),
+                body: zod.string().nullish(),
+                created_at: zod.iso.datetime({}).nullish(),
+                updated_at: zod.iso.datetime({}).nullish(),
+              }),
+            )
+            .nullish(),
+        }),
+      )
+      .nullish(),
+    pagination: zod
+      .object({
+        current_page: zod.number().nullish(),
+        total_pages: zod.number().nullish(),
+        total_count: zod.number().nullish(),
+        next_page: zod.number().nullish(),
+      })
+      .nullish(),
+  })
+  .describe("ListDevlogsResponse");
 
 /**
  * Fetch a devlog by ID.
  * @summary Get a devlog
  */
-export const GetDevlogParams = zod.object({
-  id: zod.number(),
-});
+export const GetDevlogParams = zod
+  .object({
+    id: zod.number(),
+  })
+  .describe("GetDevlogParams");
 
-export const GetDevlogResponse = zod.object({
-  id: zod.number().nullish(),
-  body: zod.string().nullish(),
-  comments_count: zod.number().nullish(),
-  duration_seconds: zod.number().nullish(),
-  likes_count: zod.number().nullish(),
-  scrapbook_url: zod.string().nullish(),
-  created_at: zod.iso.datetime({}).nullish(),
-  updated_at: zod.iso.datetime({}).nullish(),
-  media: zod
-    .array(
-      zod.object({
-        url: zod.string().nullish(),
-        content_type: zod.string().nullish(),
-      }),
-    )
-    .nullish(),
-  comments: zod
-    .array(
-      zod.object({
-        id: zod.number().nullish(),
-        author: zod
-          .object({
-            id: zod.number().nullish(),
-            display_name: zod.string().nullish(),
-            avatar: zod.string().nullish(),
-          })
-          .nullish(),
-        body: zod.string().nullish(),
-        created_at: zod.iso.datetime({}).nullish(),
-        updated_at: zod.iso.datetime({}).nullish(),
-      }),
-    )
-    .nullish(),
-});
+export const GetDevlogResponse = zod
+  .object({
+    id: zod.number().nullish(),
+    body: zod.string().nullish(),
+    comments_count: zod.number().nullish(),
+    duration_seconds: zod.number().nullish(),
+    likes_count: zod.number().nullish(),
+    scrapbook_url: zod.string().nullish(),
+    created_at: zod.iso.datetime({}).nullish(),
+    updated_at: zod.iso.datetime({}).nullish(),
+    media: zod
+      .array(
+        zod.object({
+          url: zod.string().nullish(),
+          content_type: zod.string().nullish(),
+        }),
+      )
+      .nullish(),
+    comments: zod
+      .array(
+        zod.object({
+          id: zod.number().nullish(),
+          author: zod
+            .object({
+              id: zod.number().nullish(),
+              display_name: zod.string().nullish(),
+              avatar: zod.string().nullish(),
+            })
+            .nullish(),
+          body: zod.string().nullish(),
+          created_at: zod.iso.datetime({}).nullish(),
+          updated_at: zod.iso.datetime({}).nullish(),
+        }),
+      )
+      .nullish(),
+  })
+  .describe("GetDevlogResponse");
 
 /**
  * Fetch a list of store items. Ratelimit: 5 reqs/min.
  * @summary List store items
  */
-export const ListStoreItemsResponseItem = zod.object({
-  id: zod.number().nullish(),
-  name: zod.string().nullish(),
-  description: zod.string().nullish(),
-  old_prices: zod.array(zod.unknown()).nullish(),
-  limited: zod.boolean().nullish(),
-  stock: zod.number().nullish(),
-  type: zod.string().nullish(),
-  show_in_carousel: zod.boolean().nullish(),
-  accessory_tag: zod.string().nullish(),
-  agh_contents: zod
-    .union([
-      zod.string(),
-      zod.array(zod.unknown()),
-      zod.record(zod.string(), zod.unknown()),
-    ])
-    .nullish(),
-  attached_shop_item_ids: zod.array(zod.unknown()).nullish(),
-  buyable_by_self: zod.boolean().nullish(),
-  long_description: zod.string().nullish(),
-  max_qty: zod.number().nullish(),
-  one_per_person_ever: zod.boolean().nullish(),
-  sale_percentage: zod.number().nullish(),
-  image_url: zod.string().nullish(),
-  enabled: zod
-    .object({
-      enabled_au: zod.boolean().nullish(),
-      enabled_ca: zod.boolean().nullish(),
-      enabled_eu: zod.boolean().nullish(),
-      enabled_in: zod.boolean().nullish(),
-      enabled_uk: zod.boolean().nullish(),
-      enabled_us: zod.boolean().nullish(),
-      enabled_xx: zod.boolean().nullish(),
-    })
-    .nullish(),
-  ticket_cost: zod
-    .object({
-      base_cost: zod.number().nullish(),
-      au: zod.number().nullish(),
-      ca: zod.number().nullish(),
-      eu: zod.number().nullish(),
-      in: zod.number().nullish(),
-      uk: zod.number().nullish(),
-      us: zod.number().nullish(),
-      xx: zod.number().nullish(),
-    })
-    .nullish(),
-});
-export const ListStoreItemsResponse = zod.array(ListStoreItemsResponseItem);
+export const ListStoreItemsResponseItem = zod
+  .object({
+    id: zod.number().nullish(),
+    name: zod.string().nullish(),
+    description: zod.string().nullish(),
+    old_prices: zod.array(zod.unknown()).nullish(),
+    limited: zod.boolean().nullish(),
+    stock: zod.number().nullish(),
+    type: zod.string().nullish(),
+    show_in_carousel: zod.boolean().nullish(),
+    accessory_tag: zod.string().nullish(),
+    agh_contents: zod
+      .union([
+        zod.string(),
+        zod.array(zod.unknown()),
+        zod.record(zod.string(), zod.unknown()),
+      ])
+      .nullish(),
+    attached_shop_item_ids: zod.array(zod.unknown()).nullish(),
+    buyable_by_self: zod.boolean().nullish(),
+    long_description: zod.string().nullish(),
+    max_qty: zod.number().nullish(),
+    one_per_person_ever: zod.boolean().nullish(),
+    sale_percentage: zod.number().nullish(),
+    image_url: zod.string().nullish(),
+    enabled: zod
+      .object({
+        enabled_au: zod.boolean().nullish(),
+        enabled_ca: zod.boolean().nullish(),
+        enabled_eu: zod.boolean().nullish(),
+        enabled_in: zod.boolean().nullish(),
+        enabled_uk: zod.boolean().nullish(),
+        enabled_us: zod.boolean().nullish(),
+        enabled_xx: zod.boolean().nullish(),
+      })
+      .nullish(),
+    ticket_cost: zod
+      .object({
+        base_cost: zod.number().nullish(),
+        au: zod.number().nullish(),
+        ca: zod.number().nullish(),
+        eu: zod.number().nullish(),
+        in: zod.number().nullish(),
+        uk: zod.number().nullish(),
+        us: zod.number().nullish(),
+        xx: zod.number().nullish(),
+      })
+      .nullish(),
+  })
+  .describe("ListStoreItemsResponseItem");
+
+export const ListStoreItemsResponse = zod
+  .array(ListStoreItemsResponseItem)
+  .describe("ListStoreItemsResponse");
 
 /**
  * Fetch a specific store item by ID. Ratelimit: 30 reqs/min.
  * @summary Get a store item
  */
-export const GetStoreItemParams = zod.object({
-  id: zod.number(),
-});
+export const GetStoreItemParams = zod
+  .object({
+    id: zod.number(),
+  })
+  .describe("GetStoreItemParams");
 
-export const GetStoreItemResponse = zod.object({
-  id: zod.number().nullish(),
-  name: zod.string().nullish(),
-  description: zod.string().nullish(),
-  old_prices: zod.array(zod.unknown()).nullish(),
-  limited: zod.boolean().nullish(),
-  stock: zod.number().nullish(),
-  type: zod.string().nullish(),
-  show_in_carousel: zod.boolean().nullish(),
-  accessory_tag: zod.string().nullish(),
-  agh_contents: zod
-    .union([
-      zod.string(),
-      zod.array(zod.unknown()),
-      zod.record(zod.string(), zod.unknown()),
-    ])
-    .nullish(),
-  attached_shop_item_ids: zod.array(zod.unknown()).nullish(),
-  buyable_by_self: zod.boolean().nullish(),
-  long_description: zod.string().nullish(),
-  max_qty: zod.number().nullish(),
-  one_per_person_ever: zod.boolean().nullish(),
-  sale_percentage: zod.number().nullish(),
-  image_url: zod.string().nullish(),
-  enabled: zod
-    .object({
-      enabled_au: zod.boolean().nullish(),
-      enabled_ca: zod.boolean().nullish(),
-      enabled_eu: zod.boolean().nullish(),
-      enabled_in: zod.boolean().nullish(),
-      enabled_uk: zod.boolean().nullish(),
-      enabled_us: zod.boolean().nullish(),
-      enabled_xx: zod.boolean().nullish(),
-    })
-    .nullish(),
-  ticket_cost: zod
-    .object({
-      base_cost: zod.number().nullish(),
-      au: zod.number().nullish(),
-      ca: zod.number().nullish(),
-      eu: zod.number().nullish(),
-      in: zod.number().nullish(),
-      uk: zod.number().nullish(),
-      us: zod.number().nullish(),
-      xx: zod.number().nullish(),
-    })
-    .nullish(),
-});
+export const GetStoreItemResponse = zod
+  .object({
+    id: zod.number().nullish(),
+    name: zod.string().nullish(),
+    description: zod.string().nullish(),
+    old_prices: zod.array(zod.unknown()).nullish(),
+    limited: zod.boolean().nullish(),
+    stock: zod.number().nullish(),
+    type: zod.string().nullish(),
+    show_in_carousel: zod.boolean().nullish(),
+    accessory_tag: zod.string().nullish(),
+    agh_contents: zod
+      .union([
+        zod.string(),
+        zod.array(zod.unknown()),
+        zod.record(zod.string(), zod.unknown()),
+      ])
+      .nullish(),
+    attached_shop_item_ids: zod.array(zod.unknown()).nullish(),
+    buyable_by_self: zod.boolean().nullish(),
+    long_description: zod.string().nullish(),
+    max_qty: zod.number().nullish(),
+    one_per_person_ever: zod.boolean().nullish(),
+    sale_percentage: zod.number().nullish(),
+    image_url: zod.string().nullish(),
+    enabled: zod
+      .object({
+        enabled_au: zod.boolean().nullish(),
+        enabled_ca: zod.boolean().nullish(),
+        enabled_eu: zod.boolean().nullish(),
+        enabled_in: zod.boolean().nullish(),
+        enabled_uk: zod.boolean().nullish(),
+        enabled_us: zod.boolean().nullish(),
+        enabled_xx: zod.boolean().nullish(),
+      })
+      .nullish(),
+    ticket_cost: zod
+      .object({
+        base_cost: zod.number().nullish(),
+        au: zod.number().nullish(),
+        ca: zod.number().nullish(),
+        eu: zod.number().nullish(),
+        in: zod.number().nullish(),
+        uk: zod.number().nullish(),
+        us: zod.number().nullish(),
+        xx: zod.number().nullish(),
+      })
+      .nullish(),
+  })
+  .describe("GetStoreItemResponse");
 
 /**
  * Fetch a list of users. Ratelimit: 5 reqs/min.
@@ -396,49 +431,55 @@ export const GetStoreItemResponse = zod.object({
  */
 export const listUsersQueryLimitMax = 100;
 
-export const ListUsersQueryParams = zod.object({
-  page: zod.number().nullish().describe("Page number for pagination"),
-  limit: zod
-    .number()
-    .max(listUsersQueryLimitMax)
-    .nullish()
-    .describe("Number of results per page (max 100)"),
-  query: zod
-    .string()
-    .nullish()
-    .describe("Search users by display name or slack ID"),
-});
+export const ListUsersQueryParams = zod
+  .object({
+    page: zod.number().nullish().describe("Page number for pagination"),
+    limit: zod
+      .number()
+      .max(listUsersQueryLimitMax)
+      .nullish()
+      .describe("Number of results per page (max 100)"),
+    query: zod
+      .string()
+      .nullish()
+      .describe("Search users by display name or slack ID"),
+  })
+  .describe("ListUsersQueryParams");
 
-export const ListUsersResponse = zod.object({
-  users: zod
-    .array(
-      zod.object({
-        id: zod.number().nullish(),
-        slack_id: zod.string().nullish(),
-        display_name: zod.string().nullish(),
-        avatar: zod.string().nullish(),
-        project_ids: zod.array(zod.number()).nullish(),
-        cookies: zod.number().nullish(),
-      }),
-    )
-    .nullish(),
-  pagination: zod
-    .object({
-      current_page: zod.number().nullish(),
-      total_pages: zod.number().nullish(),
-      total_count: zod.number().nullish(),
-      next_page: zod.number().nullish(),
-    })
-    .nullish(),
-});
+export const ListUsersResponse = zod
+  .object({
+    users: zod
+      .array(
+        zod.object({
+          id: zod.number().nullish(),
+          slack_id: zod.string().nullish(),
+          display_name: zod.string().nullish(),
+          avatar: zod.string().nullish(),
+          project_ids: zod.array(zod.number()).nullish(),
+          cookies: zod.number().nullish(),
+        }),
+      )
+      .nullish(),
+    pagination: zod
+      .object({
+        current_page: zod.number().nullish(),
+        total_pages: zod.number().nullish(),
+        total_count: zod.number().nullish(),
+        next_page: zod.number().nullish(),
+      })
+      .nullish(),
+  })
+  .describe("ListUsersResponse");
 
 /**
  * Fetch a specific user by ID. Use "me" as the ID to fetch the authenticated user.
  * @summary Get a user
  */
-export const GetUserParams = zod.object({
-  id: zod.string().describe('User ID or \"me\" for the authenticated user'),
-});
+export const GetUserParams = zod
+  .object({
+    id: zod.string().describe('User ID or \"me\" for the authenticated user'),
+  })
+  .describe("GetUserParams");
 
 export const GetUserResponse = zod
   .object({
@@ -465,4 +506,50 @@ export const GetUserResponse = zod
         )
         .nullish(),
     }),
-  );
+  )
+  .describe("GetUserResponse");
+
+/**
+ * Fetch a paginated list of projects belonging to a specific user. Use "me" as the user ID to fetch projects for the authenticated user.
+ * @summary List projects for a user
+ */
+export const ListUserProjectsQueryParams = zod
+  .object({
+    id: zod.string().describe('User ID or \"me\" for the authenticated user'),
+    page: zod.number().nullish().describe("Page number for pagination"),
+    limit: zod
+      .number()
+      .max(100)
+      .nullish()
+      .describe("Number of results per page (max 100)"),
+  })
+  .describe("ListUserProjectsQueryParams");
+
+export const ListUserProjectsResponse = zod
+  .object({
+    projects: zod.array(
+      zod.object({
+        id: zod.number(),
+        title: zod.string(),
+        description: zod.string(),
+        repo_url: zod.string(),
+        demo_url: zod.string(),
+        readme_url: zod.string(),
+        ai_declaration: zod.string().nullish(),
+        ship_status: zod.string(),
+        devlog_ids: zod.array(zod.number()),
+        banner_url: zod.string().nullish(),
+        created_at: zod.string(),
+        updated_at: zod.string(),
+      }),
+    ),
+    pagination: zod
+      .object({
+        current_page: zod.number().nullish(),
+        total_pages: zod.number().nullish(),
+        total_count: zod.number().nullish(),
+        next_page: zod.number().nullish(),
+      })
+      .nullish(),
+  })
+  .describe("ListUserProjectsResponse");
