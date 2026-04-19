@@ -432,7 +432,10 @@ async function loadHandlers() {
     );
 
     app.message(
-      new RegExp(`\\b(?:hi+|hii+)\\b|\\b(?:${prefix}\\s*(?:hi+|hii+))\\b`, "i"),
+      new RegExp(
+        `(?=.*\\b${prefix}\\b)\\b(?:hi+|hii+)\\b|(?=.*\\b${prefix}\\b)\\b(?:${prefix}\\s*(?:hi+|hii+))\\b`,
+        "i"
+      ),
       async ({ message, say }) => {
         var threadTs;
         if ("thread_ts" in message && message.thread_ts) {
@@ -441,11 +444,14 @@ async function loadHandlers() {
           threadTs = message.ts;
         }
         await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      },
+      }
     );
     
     app.message(
-      new RegExp(`\\b(?:he+l+o+|helllo+|helo+)\\b|\\b(?:${prefix}\\s*(?:he+l+o+|helllo+|helo+))\\b`, "i"),
+      new RegExp(
+        `(?=.*\\b${prefix}\\b)\\b(?:he+l+o+|helllo+|helo+)\\b|(?=.*\\b${prefix}\\b)\\b(?:${prefix}\\s*(?:he+l+o+|helllo+|helo+))\\b`,
+        "i"
+      ),
       async ({ message, say }) => {
         var threadTs;
         if ("thread_ts" in message && message.thread_ts) {
@@ -454,11 +460,14 @@ async function loadHandlers() {
           threadTs = message.ts;
         }
         await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      },
+      }
     );
     
     app.message(
-      new RegExp(`\\b(?:ha+i+|haii+)\\b|\\b(?:${prefix}\\s*(?:ha+i+|haii+))\\b`, "i"),
+      new RegExp(
+        `(?=.*\\b${prefix}\\b)\\b(?:ha+i+|haii+)\\b|(?=.*\\b${prefix}\\b)\\b(?:${prefix}\\s*(?:ha+i+|haii+))\\b`,
+        "i"
+      ),
       async ({ message, say }) => {
         var threadTs;
         if ("thread_ts" in message && message.thread_ts) {
@@ -467,11 +476,14 @@ async function loadHandlers() {
           threadTs = message.ts;
         }
         await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      },
+      }
     );
     
     app.message(
-      new RegExp(`\\b(?:he+w+o+|hewwo+)\\b|\\b(?:${prefix}\\s*(?:he+w+o+|hewwo+))\\b`, "i"),
+      new RegExp(
+        `(?=.*\\b${prefix}\\b)\\b(?:he+w+o+|hewwo+)\\b|(?=.*\\b${prefix}\\b)\\b(?:${prefix}\\s*(?:he+w+o+|hewwo+))\\b`,
+        "i"
+      ),
       async ({ message, say }) => {
         var threadTs;
         if ("thread_ts" in message && message.thread_ts) {
@@ -480,7 +492,7 @@ async function loadHandlers() {
           threadTs = message.ts;
         }
         await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      },
+      }
     );
 
     app.message(
