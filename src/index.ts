@@ -403,7 +403,51 @@ async function loadHandlers() {
     }
     
     main.prefix = prefix;
-
+    console.log(prefix)
+    app.message(new RegExp(`^${prefix}$`, "i"), async ({ message, say }) => {
+      await say("meow");
+    });
+    
+    app.message(new RegExp(`thanks ${prefix}`, "i"), async ({ message, say }) => {
+      await say("happy to help! :aww:");
+    });
+    
+    app.message(new RegExp(`fuck you ${prefix}`, "i"), async ({ say }) => {
+      await say("NO FUCK YOU :angry-3d-emoji:");
+    });
+    
+    app.message(new RegExp(`fuck ${prefix}`, "i"), async ({ say }) => {
+      await say("FUCK YOU :angry-3d-emoji:");
+    });
+    
+    app.message(new RegExp(`${prefix} sucks`, "i"), async ({ say }) => {
+      await say("NO YOU SUCK STINKY PANTS :angry-3d-emoji:");
+    });
+    
+    app.message(new RegExp(`love you ${prefix}`, "i"), async ({ say }) => {
+      await say("i dont swing that way i'm a asexual bot :asexual-parrot:");
+    });
+    
+    app.message(new RegExp(`${prefix} my beloved`, "i"), async ({ say }) => {
+      await say("i dont swing that way i'm a asexual bot :asexual-parrot:");
+    });
+    
+    app.message(new RegExp(`i hate ${prefix}`, "i"), async ({ say }) => {
+      await say("don't worry bud i hate you too :aww:");
+    });
+    
+    app.message(new RegExp(`${prefix} is the best`, "i"), async ({ say }) => {
+      await say("aww thank you :aww:");
+    });
+    
+    app.message(new RegExp(`${prefix} is great`, "i"), async ({ say }) => {
+      await say("aww thank you :aww:");
+    });
+    
+    app.message(new RegExp(`${prefix} is stinky`, "i"), async ({ say }) => {
+      await say("YOU HAVEN'T SHOWERED IN DAYS DON'T COME HERE CALLING ME STINKY BUCKO");
+    });
+    
     loadRequestHandlers(app, "commands", "command");
     loadRequestHandlers(app, "views", "view");
 
