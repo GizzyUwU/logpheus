@@ -419,7 +419,7 @@ async function loadHandlers() {
     });
 
     app.message(
-      new RegExp(`thanks ${prefix}`, "i"),
+      new RegExp(`\\b(thanks\\s+${prefix}|${prefix}\\s+thanks)\\b`, "i"),
       async ({ message, say }) => {
         var threadTs;
         if ("thread_ts" in message && message.thread_ts) {
@@ -430,48 +430,9 @@ async function loadHandlers() {
         await say({ text: "happy to help! :aww:", thread_ts: threadTs });
       },
     );
-    
+
     app.message(
-      new RegExp(`${prefix} hi`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      },
-    );
-    
-    app.message(
-      new RegExp(`${prefix} hello`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      },
-    );
-    
-    app.message(
-      new RegExp(`${prefix} hai`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      },
-    );
-    
-    app.message(
-      new RegExp(`${prefix} hewwo`, "i"),
+      new RegExp(`\\b(hi\\s+${prefix}|${prefix}\\s+hi)\\b`, "i"),
       async ({ message, say }) => {
         var threadTs;
         if ("thread_ts" in message && message.thread_ts) {
@@ -483,85 +444,150 @@ async function loadHandlers() {
       },
     );
 
-    app.message(new RegExp(`fuck you ${prefix}`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "NO FUCK YOU :angry-3d-emoji:", thread_ts: threadTs });
-    });
+    app.message(
+      new RegExp(`\\b(hello\\s+${prefix}|${prefix}\\s+hello)\\b`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "haiiiii! :3", thread_ts: threadTs });
+      },
+    );
 
-    app.message(new RegExp(`fuck ${prefix}`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "FUCK YOU :angry-3d-emoji", thread_ts: threadTs });
-    });
+    app.message(
+      new RegExp(`\\b(hai\\s+${prefix}|${prefix}\\s+hai)\\b`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "haiiiii! :3", thread_ts: threadTs });
+      },
+    );
 
-    app.message(new RegExp(`${prefix} sucks`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "NO YOU SUCK STINKY PANTS :angry-3d-emoji:", thread_ts: threadTs });
-    });
+    app.message(
+      new RegExp(`\\b(hewwo\\s+${prefix}|${prefix}\\s+hewwo)\\b`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "haiiiii! :3", thread_ts: threadTs });
+      },
+    );
 
-    app.message(new RegExp(`love you ${prefix}`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "i dont swing that way i'm a asexual bot :asexual-parrot:", thread_ts: threadTs });
-    });
+    app.message(
+      new RegExp(`\\b(fuck you\\s+${prefix}|${prefix}\\s+fuck you)\\b`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({
+          text: "NO FUCK YOU :angry-3d-emoji:",
+          thread_ts: threadTs,
+        });
+      },
+    );
+    
+    app.message(
+      new RegExp(`${prefix} sucks`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({
+          text: "NO YOU SUCK STINKY PANTS :angry-3d-emoji:",
+          thread_ts: threadTs,
+        });
+      },
+    );
 
-    app.message(new RegExp(`${prefix} my beloved`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "i dont swing that way i'm a asexual bot :asexual-parrot:", thread_ts: threadTs });
-    });
+    app.message(
+      new RegExp(`\\b(love you\\s+${prefix}|${prefix}\\s+love you)\\b`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({
+          text: "i dont swing that way i'm a asexual bot :asexual-parrot:",
+          thread_ts: threadTs,
+        });
+      },
+    );
 
-    app.message(new RegExp(`i hate ${prefix}`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "don't worry bud i hate you too :aww:", thread_ts: threadTs });
-    });
+    app.message(
+      new RegExp(`\\b(my beloved\\s+${prefix}|${prefix}\\s+my beloved)\\b`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({
+          text: "i dont swing that way i'm a asexual bot :asexual-parrot:",
+          thread_ts: threadTs,
+        });
+      },
+    );
 
-    app.message(new RegExp(`${prefix} is the best`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "aww thank you :aww:", thread_ts: threadTs });
-    });
+    app.message(
+      new RegExp(`i hate ${prefix}`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({
+          text: "don't worry bud i hate you too :aww:",
+          thread_ts: threadTs,
+        });
+      },
+    );
 
-    app.message(new RegExp(`${prefix} is great`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "aww thank you :aww:", thread_ts: threadTs });
-    });
+    app.message(
+      new RegExp(`${prefix} is the best`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "aww thank you :aww:", thread_ts: threadTs });
+      },
+    );
+
+    app.message(
+      new RegExp(`${prefix} is great`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "aww thank you :aww:", thread_ts: threadTs });
+      },
+    );
 
     app.message(
       new RegExp(`${prefix} is stinky`, "i"),
@@ -572,7 +598,10 @@ async function loadHandlers() {
         } else {
           threadTs = message.ts;
         }
-        await say({ text: "YOU HAVEN'T SHOWERED IN DAYS DON'T COME HERE CALLING ME STINKY BUCKO", thread_ts: threadTs });
+        await say({
+          text: "YOU HAVEN'T SHOWERED IN DAYS DON'T COME HERE CALLING ME STINKY BUCKO",
+          thread_ts: threadTs,
+        });
       },
     );
 
