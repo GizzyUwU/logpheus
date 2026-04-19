@@ -430,6 +430,58 @@ async function loadHandlers() {
         await say({ text: "happy to help! :aww:", thread_ts: threadTs });
       },
     );
+    
+    app.message(
+      new RegExp(`${prefix} hi`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "haiiiii! :3", thread_ts: threadTs });
+      },
+    );
+    
+    app.message(
+      new RegExp(`${prefix} hello`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "haiiiii! :3", thread_ts: threadTs });
+      },
+    );
+    
+    app.message(
+      new RegExp(`${prefix} hai`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "haiiiii! :3", thread_ts: threadTs });
+      },
+    );
+    
+    app.message(
+      new RegExp(`${prefix} hewwo`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "haiiiii! :3", thread_ts: threadTs });
+      },
+    );
 
     app.message(new RegExp(`fuck you ${prefix}`, "i"), async ({ message, say }) => {
       var threadTs;
