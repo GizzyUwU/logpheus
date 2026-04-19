@@ -576,6 +576,11 @@ export default {
                       devlogId: devlog.id
                     },
                   );
+                  
+                  await client.chat.postMessage({
+                    channel: row.channel,
+                    text: `Hey! The latest devlog post didn't take place because an error occurred! Just wanted to keep you in the loop.`,
+                  });
                 }
               } catch (err) {
                 logger.error({ error: err, projectId });

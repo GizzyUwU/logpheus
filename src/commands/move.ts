@@ -2,10 +2,7 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "..";
 import { users } from "../schema/users";
 import { eq } from "drizzle-orm";
-import { projects } from "../schema/projects";
 import checkAPIKey from "../lib/apiKeyCheck";
-import FT from "../lib/ft";
-import { getGenericErrorMessage } from "../lib/genericError";
 type UserRow = typeof users._.inferSelect;
 
 export default {
