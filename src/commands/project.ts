@@ -139,8 +139,20 @@ export default {
       0,
     );
 
+    const avgSeconds = (devlogs.data.devlogs ?? []).length
+      ? Math.round(
+          (devlogs.data.devlogs ?? []).reduce(
+            (sum, log) => sum + (log.duration_seconds ?? 0),
+            0,
+          ) / (devlogs.data.devlogs ?? []).length,
+        )
+      : 0;
+
     const userText = [
-      { label: "Project ID", value: `<https://flavortown.hackclub.com/projects/${project.data.id}|${project.data.id}>` },
+      {
+        label: "Project ID",
+        value: `<https://flavortown.hackclub.com/projects/${project.data.id}|${project.data.id}>`,
+      },
       { label: "Description", value: project.data.description },
       {
         label: "Created at",
@@ -159,8 +171,12 @@ export default {
         value: formatDuration(totalSeconds) || "0h",
       },
       {
+        label: "Average Devlog Time",
+        value: formatDuration(avgSeconds) || "0s",
+      },
+      {
         label: "Predicted Cookies",
-        value: Math.round(10 * (totalSeconds / 3600)) + " " + ":cookie:" // Based off 10 cookies per hour average
+        value: Math.round(10 * (totalSeconds / 3600)) + " " + ":cookie:", // Based off 10 cookies per hour average
       },
       {
         label: "Ship Status",
@@ -172,10 +188,7 @@ export default {
       {
         label: "Devlog",
         value: (project.data.devlog_ids ?? [])
-          .map(
-            (id: string | number) =>
-              id,
-          )
+          .map((id: string | number) => id)
           .join(", "),
       },
     ]
@@ -210,6 +223,20 @@ export default {
             },
           ],
         },
+        ...(project.data.banner_url
+          ? ([
+              {
+                type: "image",
+                image_url:
+                  "https://flavortown.hackclub.com" + project.data.banner_url,
+                alt_text: "Project Banner",
+              },
+            ] as {
+              type: string;
+              image_url: string;
+              alt_text: string;
+            }[])
+          : []),
       ],
       response_type: "ephemeral",
     });
