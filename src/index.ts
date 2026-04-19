@@ -19,7 +19,7 @@ import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
-import loadAPI from "./api/index"
+import loadAPI from "./api/index";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
@@ -170,24 +170,29 @@ function checkEnvs(name: string, optional: boolean): string {
 }
 
 export let vikClient: VikunjaClient | undefined = undefined;
-if (checkEnvs("VIKUNJA_URL", true) && 
-  checkEnvs("VIKUNJA_TOKEN", true) && 
-  checkEnvs("VIKUNJA_BUG_PROJECT_ID", true) && 
+if (
+  checkEnvs("VIKUNJA_URL", true) &&
+  checkEnvs("VIKUNJA_TOKEN", true) &&
+  checkEnvs("VIKUNJA_BUG_PROJECT_ID", true) &&
   checkEnvs("VIKUNJA_FEATURE_PROJECT_ID", true) &&
   checkEnvs("VIKUNJA_BUG_LABEL_ID", true) &&
   checkEnvs("VIKUNJA_FEATURE_LABEL_ID", true)
 ) {
-  vikClient = new VikunjaClient(String(process.env["VIKUNJA_URL"]), String(process.env["VIKUNJA_TOKEN"]));
+  vikClient = new VikunjaClient(
+    String(process.env["VIKUNJA_URL"]),
+    String(process.env["VIKUNJA_TOKEN"]),
+  );
 }
 
 export let bugClient: BugsinkClient | undefined = undefined;
-if (checkEnvs("BUGSINK_URL", true) && 
+if (
+  checkEnvs("BUGSINK_URL", true) &&
   checkEnvs("BUGSINK_TOKEN", true) &&
   checkEnvs("BUGSINK_PROJECT_ID", true)
 ) {
   bugClient = new BugsinkClient({
     baseUrl: String(process.env["BUGSINK_URL"]),
-    apiToken: String(process.env["BUGSINK_TOKEN"])
+    apiToken: String(process.env["BUGSINK_TOKEN"]),
   });
 }
 
@@ -281,11 +286,11 @@ function loadRequestHandlers(
               "channel_id" in args.body
                 ? args.body.channel_id
                 : (args.body.view.private_metadata.length > 0
-                  ? (JSON.parse(args.body.view.private_metadata) as {
-                    channel: string;
-                  })
-                  : { channel: "" }
-                ).channel,
+                    ? (JSON.parse(args.body.view.private_metadata) as {
+                        channel: string;
+                      })
+                    : { channel: "" }
+                  ).channel,
             triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
           },
         });
@@ -401,53 +406,124 @@ async function loadHandlers() {
         throw new Error("No username or user id for prefix");
       prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
     }
-    
+
     main.prefix = prefix;
-    console.log(prefix)
     app.message(new RegExp(`^${prefix}$`, "i"), async ({ message, say }) => {
-      await say("meow");
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "meow", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`thanks ${prefix}`, "i"), async ({ message, say }) => {
-      await say("happy to help! :aww:");
+
+    app.message(
+      new RegExp(`thanks ${prefix}`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "happy to help! :aww:", thread_ts: threadTs });
+      },
+    );
+
+    app.message(new RegExp(`fuck you ${prefix}`, "i"), async ({ message, say }) => {
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "NO FUCK YOU :angry-3d-emoji:", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`fuck you ${prefix}`, "i"), async ({ say }) => {
-      await say("NO FUCK YOU :angry-3d-emoji:");
+
+    app.message(new RegExp(`fuck ${prefix}`, "i"), async ({ message, say }) => {
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "FUCK YOU :angry-3d-emoji", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`fuck ${prefix}`, "i"), async ({ say }) => {
-      await say("FUCK YOU :angry-3d-emoji:");
+
+    app.message(new RegExp(`${prefix} sucks`, "i"), async ({ message, say }) => {
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "NO YOU SUCK STINKY PANTS :angry-3d-emoji:", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`${prefix} sucks`, "i"), async ({ say }) => {
-      await say("NO YOU SUCK STINKY PANTS :angry-3d-emoji:");
+
+    app.message(new RegExp(`love you ${prefix}`, "i"), async ({ message, say }) => {
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "i dont swing that way i'm a asexual bot :asexual-parrot:", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`love you ${prefix}`, "i"), async ({ say }) => {
-      await say("i dont swing that way i'm a asexual bot :asexual-parrot:");
+
+    app.message(new RegExp(`${prefix} my beloved`, "i"), async ({ message, say }) => {
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "i dont swing that way i'm a asexual bot :asexual-parrot:", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`${prefix} my beloved`, "i"), async ({ say }) => {
-      await say("i dont swing that way i'm a asexual bot :asexual-parrot:");
+
+    app.message(new RegExp(`i hate ${prefix}`, "i"), async ({ message, say }) => {
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "don't worry bud i hate you too :aww:", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`i hate ${prefix}`, "i"), async ({ say }) => {
-      await say("don't worry bud i hate you too :aww:");
+
+    app.message(new RegExp(`${prefix} is the best`, "i"), async ({ message, say }) => {
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "aww thank you :aww:", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`${prefix} is the best`, "i"), async ({ say }) => {
-      await say("aww thank you :aww:");
+
+    app.message(new RegExp(`${prefix} is great`, "i"), async ({ message, say }) => {
+      var threadTs;
+      if ("thread_ts" in message && message.thread_ts) {
+        threadTs = message.thread_ts;
+      } else {
+        threadTs = message.ts;
+      }
+      await say({ text: "aww thank you :aww:", thread_ts: threadTs });
     });
-    
-    app.message(new RegExp(`${prefix} is great`, "i"), async ({ say }) => {
-      await say("aww thank you :aww:");
-    });
-    
-    app.message(new RegExp(`${prefix} is stinky`, "i"), async ({ say }) => {
-      await say("YOU HAVEN'T SHOWERED IN DAYS DON'T COME HERE CALLING ME STINKY BUCKO");
-    });
-    
+
+    app.message(
+      new RegExp(`${prefix} is stinky`, "i"),
+      async ({ message, say }) => {
+        var threadTs;
+        if ("thread_ts" in message && message.thread_ts) {
+          threadTs = message.thread_ts;
+        } else {
+          threadTs = message.ts;
+        }
+        await say({ text: "YOU HAVEN'T SHOWERED IN DAYS DON'T COME HERE CALLING ME STINKY BUCKO", thread_ts: threadTs });
+      },
+    );
+
     loadRequestHandlers(app, "commands", "command");
     loadRequestHandlers(app, "views", "view");
 
@@ -461,7 +537,7 @@ async function loadHandlers() {
     } else {
       const port = process.env["PORT"] ? parseInt(process.env["PORT"]) : 3000;
       await app.start({
-        port
+        port,
       });
       console.info("[Logpheus] Running on port:", port);
     }
