@@ -199,10 +199,10 @@ export default {
         await respond({
           blocks: [
             {
-              type: "section",
+              type: "header",
               text: {
-                type: "mrkdwn",
-                text: `Devlog ${devlog.data.id}`,
+                type: "plain_text",
+                text: `#${devlog.data.id}`,
               },
             },
             ...(devlog.data.body
@@ -325,10 +325,10 @@ export default {
         return await respond({
           blocks: [
             {
-              type: "section",
+              type: "header",
               text: {
-                type: "mrkdwn",
-                text: `Devlog ${devlog.id}`,
+                type: "plain_text",
+                text: `#${devlog.id}`,
               },
             },
             {
@@ -361,10 +361,10 @@ export default {
         await respond({
           blocks: [
             {
-              type: "section",
+              type: "header",
               text: {
-                type: "mrkdwn",
-                text: `Devlog ${devlog.id}`,
+                type: "plain_text",
+                text: `#${devlog.id}`,
               },
             },
             ...(devlog.body ? parseMarkdownToSlackBlocks(devlog.body) : []),
