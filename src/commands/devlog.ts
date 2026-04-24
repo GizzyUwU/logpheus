@@ -166,7 +166,7 @@ export default {
               type: "header",
               text: {
                 type: "plain_text",
-                text: `#${devlog.data.id}`,
+                text: `Devlog #${devlog.data.id}`,
               },
             },
             {
@@ -202,7 +202,7 @@ export default {
               type: "header",
               text: {
                 type: "plain_text",
-                text: `#${devlog.data.id}`,
+                text: `Devlog #${devlog.data.id}`,
               },
             },
             ...(devlog.data.body
@@ -328,7 +328,7 @@ export default {
               type: "header",
               text: {
                 type: "plain_text",
-                text: `#${devlog.id}`,
+                text: `Devlog #${devlog.id}`,
               },
             },
             {
@@ -364,7 +364,7 @@ export default {
               type: "header",
               text: {
                 type: "plain_text",
-                text: `#${devlog.id}`,
+                text: `Devlog #${devlog.id}`,
               },
             },
             ...(devlog.body ? parseMarkdownToSlackBlocks(devlog.body) : []),
