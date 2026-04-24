@@ -420,7 +420,10 @@ export default {
                           type: "section",
                           text: {
                             type: "mrkdwn",
-                            text: `> ${devlog.body}`,
+                            text: String(devlog.body)
+                              .split("\n")
+                              .map((line: string) => `> ${line}`)
+                              .join("\n"),
                           },
                         },
                         ...(pingGroupId

@@ -173,7 +173,10 @@ export default {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `> ${devlog.data.body}`,
+                text: String(devlog.data.body)
+                  .split("\n")
+                  .map((line: string) => `> ${line}`)
+                  .join("\n"),
               },
             },
             {
@@ -332,7 +335,10 @@ export default {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `> ${devlog.body}`,
+                text: String(devlog.body)
+                  .split("\n")
+                  .map((line: string) => `> ${line}`)
+                  .join("\n"),
               },
             },
             {

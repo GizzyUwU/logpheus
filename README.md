@@ -1,5 +1,8 @@
 # Logpheus
 
+![Logpheus Hackatime Tracked](https://hackatime.hackclub.com/api/v1/badge/U08D3AY7BG8/GizzyUwU/logpheus)
+
+
 Logpheus is a project built to take your FT devlogs and send them to your personal channel.
 
 # Hosted Version

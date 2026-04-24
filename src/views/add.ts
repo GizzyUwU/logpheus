@@ -178,7 +178,10 @@ export default {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `> ${freshProject.data.description}`,
+              text: String(freshProject.data.description)
+                .split("\n")
+                .map((line: string) => `> ${line}`)
+                .join("\n"),
             },
           },
         ],
