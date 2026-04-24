@@ -31,7 +31,7 @@ export default {
         return;
       }
 
-      const id = command.text.trim();
+      const id = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
       if (id) {
         if (!isValidUUID(id)) {
           console.log(id, isValidUUID(id))

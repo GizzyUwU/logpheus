@@ -26,7 +26,7 @@ export default {
           text: "You can only run this command in a channel that you are the creator of",
           response_type: "ephemeral",
         });
-      const projectId = command.text.trim();
+      const projectId = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
       const res = await pg
         .select()
         .from(users)

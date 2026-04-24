@@ -32,7 +32,7 @@ export default {
         return;
       }
 
-      const [action, id] = command.text.trim().split(" ").filter(Boolean);
+      const [action, id] = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(" ").filter(Boolean);
       if (!action)
         return await respond({
           text: "An action is required please type either feature or bug",

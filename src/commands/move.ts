@@ -14,7 +14,7 @@ export default {
     { logger, client, pg, prefix }: RequestHandler,
   ) => {
     try {
-      const channelId = command.text.trim();
+      const channelId = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
       const channel = await client.conversations.info({
         channel: command.channel_id,
       });

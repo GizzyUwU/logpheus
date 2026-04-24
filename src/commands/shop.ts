@@ -14,7 +14,7 @@ export default {
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, client, logger, clients, prefix }: RequestHandler,
   ) => {
-    const id = command.text.trim();
+    const id = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
     if (!Number.isInteger(Number(id)))
       return respond({
         text: `The shop id provided has to be a valid integer`,

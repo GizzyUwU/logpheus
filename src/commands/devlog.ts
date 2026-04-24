@@ -23,13 +23,14 @@ export default {
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,
   ) => {
-    const [actionOrId, id] = command.text.trim().split(" ").filter(Boolean);
-
+    const cleanText = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
+    const [actionOrId, id] = cleanText.split(" ").filter(Boolean);
     if (!actionOrId)
       return respond({
-        text: "'Latest [projectId' or Devlog Id needs to be provided",
+        text: "'Latest [projectId]' or Devlog Id needs to be provided",
         response_type: "ephemeral",
       });
+      
 
     if (
       actionOrId.toLowerCase() !== "latest" &&

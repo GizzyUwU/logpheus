@@ -39,7 +39,7 @@ export default {
     { command, respond }: SlackCommandMiddlewareArgs,
     { pg, logger, clients, prefix }: RequestHandler,
   ) => {
-    const projectIdRaw = command.text.trim();
+    const projectIdRaw = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
     const projectId = Number(projectIdRaw);
 
     if (!projectIdRaw || !Number.isInteger(projectId) || projectId <= 0)

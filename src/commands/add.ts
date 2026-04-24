@@ -44,7 +44,7 @@ export default {
           response_type: "ephemeral",
         });
 
-      const projectId = command.text.trim();
+      const projectId = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
       if (!projectId) {
         const checkKey = String(userData[0]?.apiKey);
 

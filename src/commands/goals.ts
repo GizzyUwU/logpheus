@@ -26,7 +26,7 @@ export default {
         response_type: "ephemeral",
       });
 
-    const [action, ...ids] = command.text.trim().split(" ").filter(Boolean);
+    const [action, ...ids] = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(" ").filter(Boolean);
 
     const checkKey = userData[0]?.apiKey;
     const working = await checkAPIKey({

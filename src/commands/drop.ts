@@ -53,7 +53,7 @@ export default {
     }
 
     const [tableName, filterColumnName, filterValue, columnName, ...values] =
-      command.text.trim().split(" ").filter(Boolean);
+      command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(" ").filter(Boolean);
     if (
       !tableName ||
       !filterColumnName ||
