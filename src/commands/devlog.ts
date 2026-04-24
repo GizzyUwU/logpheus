@@ -27,7 +27,7 @@ export default {
     const [actionOrId, id] = cleanText.split(" ").filter(Boolean);
     if (!actionOrId)
       return respond({
-        text: "'Latest [projectId]' or Devlog Id needs to be provided",
+        text: "'latest [projectId]' or Devlog Id needs to be provided",
         response_type: "ephemeral",
       });
       
@@ -163,10 +163,10 @@ export default {
         return await respond({
           blocks: [
             {
-              type: "section",
+              type: "header",
               text: {
-                type: "mrkdwn",
-                text: `Devlog ${devlog.data.id}`,
+                type: "plain_text",
+                text: `#${devlog.data.id}`,
               },
             },
             {
