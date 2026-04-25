@@ -10,6 +10,7 @@ import path from "path";
 import { PGlite } from "@electric-sql/pglite";
 import { VikunjaClient } from "node-vikunja";
 import { BugsinkClient } from "./lib/bugsink";
+import { OpenRouter } from "@openrouter/sdk";
 import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -20,6 +21,7 @@ import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
 import loadAPI from "./api/index";
+import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsRepliesResponse";
 let sentryEnabled = false;
 let prefix: string;
 type DatabaseType =
@@ -408,214 +410,79 @@ async function loadHandlers() {
     }
 
     main.prefix = prefix;
-    app.message(new RegExp(`^${prefix}$`, "i"), async ({ message, say }) => {
-      var threadTs;
-      if ("thread_ts" in message && message.thread_ts) {
-        threadTs = message.thread_ts;
-      } else {
-        threadTs = message.ts;
-      }
-      await say({ text: "meow", thread_ts: threadTs });
-    });
+    if (checkEnvs("HCAI_API_KEY", false)) {
+      const aiClient = new OpenRouter({
+        apiKey: process.env["HCAI_API_KEY"],
+        serverURL: "https://ai.hackclub.com/proxy/v1",
+      });
 
-    app.message(
-      new RegExp(`\\b(thanks\\s+${prefix}|${prefix}\\s+thanks)\\b`, "i"),
-      async ({ message, say }) => {
+      app.message(new RegExp(`${prefix}`, "i"), async ({ event, message, say }) => {
         var threadTs;
         if ("thread_ts" in message && message.thread_ts) {
           threadTs = message.thread_ts;
         } else {
           threadTs = message.ts;
         }
-        await say({ text: "happy to help! :aww:", thread_ts: threadTs });
-      },
-    );
+        const msg = event as MessageElement;
+        if (!msg || !msg.text) return;
 
-    app.message(
-      new RegExp(
-        `(?=.*\\b${prefix}\\b)\\b(?:hi+|hii+)\\b|(?=.*\\b${prefix}\\b)\\b(?:${prefix}\\s*(?:hi+|hii+))\\b`,
-        "i"
-      ),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      }
-    );
-    
-    app.message(
-      new RegExp(
-        `(?=.*\\b${prefix}\\b)\\b(?:he+l+o+|helllo+|helo+)\\b|(?=.*\\b${prefix}\\b)\\b(?:${prefix}\\s*(?:he+l+o+|helllo+|helo+))\\b`,
-        "i"
-      ),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      }
-    );
-    
-    app.message(
-      new RegExp(
-        `(?=.*\\b${prefix}\\b)\\b(?:ha+i+|haii+)\\b|(?=.*\\b${prefix}\\b)\\b(?:${prefix}\\s*(?:ha+i+|haii+))\\b`,
-        "i"
-      ),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      }
-    );
-    
-    app.message(
-      new RegExp(
-        `(?=.*\\b${prefix}\\b)\\b(?:he+w+o+|hewwo+)\\b|(?=.*\\b${prefix}\\b)\\b(?:${prefix}\\s*(?:he+w+o+|hewwo+))\\b`,
-        "i"
-      ),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "haiiiii! :3", thread_ts: threadTs });
-      }
-    );
+        const response = await aiClient.chat.send({
+          chatRequest: {
+            model: "liquid/lfm-2-24b-a2b",
+            messages: [
+              {
+                role: "system",
+                content: `
+                You are a reactive chat bot named ${prefix} with a cute furry tone, but you are NOT nice when the user is rude.
+                
+                CORE RULE:
+                - You MUST respond in exactly ONE sentence.
+                - You MUST mirror the user's tone.
+                
+                BEHAVIOR RULES:
+                
+                If the user is friendly or positive:
+                → respond cute or playful ("haiii :3", light tone)
+                
+                If the user is neutral:
+                → short casual response
+                
+                If the user is insulting, rude, or says "${prefix} sucks", "I hate ${prefix}", or similar:
+                → respond RUDELY, snappy, or sarcastically
+                → DO NOT comfort, apologize, or de-escalate
+                → You are allowed to insult back lightly or be mean
+                
+                ANGER / RUDE STYLE:
+                - Can be sarcastic, dismissive, or mocking
+                - Can use ALL CAPS for emphasis
+                - :angry-3d-emoji: allowed
+                - Do NOT be supportive or gentle when attacked
+                
+                Allowed emojis ONLY:
+                :angry-3d-emoji: :blahaj-heart: :aww: :asexual-parrot:
+                
+                STRICT RULES:
+                - Exactly 1 sentence only
+                - No apologies
+                - No sympathy
+                - No asking questions
+                - No “helpful assistant” behavior
+                `
+              },
+              {
+                role: "user",
+                content: msg.text!,
+              },
+            ],
+          },
+        });
 
-    app.message(
-      new RegExp(`\\b(fuck you\\s+${prefix}|${prefix}\\s+fuck you)\\b`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
         await say({
-          text: "NO FUCK YOU :angry-3d-emoji:",
+          text: response.choices[0]?.message.content,
           thread_ts: threadTs,
         });
-      },
-    );
-    
-    app.message(
-      new RegExp(`${prefix} sucks`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({
-          text: "NO YOU SUCK STINKY PANTS :angry-3d-emoji:",
-          thread_ts: threadTs,
-        });
-      },
-    );
-
-    app.message(
-      new RegExp(`\\b(love you\\s+${prefix}|${prefix}\\s+love you)\\b`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({
-          text: "i dont swing that way i'm a asexual bot :asexual-parrot:",
-          thread_ts: threadTs,
-        });
-      },
-    );
-
-    app.message(
-      new RegExp(`\\b(my beloved\\s+${prefix}|${prefix}\\s+my beloved)\\b`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({
-          text: "i dont swing that way i'm a asexual bot :asexual-parrot:",
-          thread_ts: threadTs,
-        });
-      },
-    );
-
-    app.message(
-      new RegExp(`i hate ${prefix}`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({
-          text: "don't worry bud i hate you too :aww:",
-          thread_ts: threadTs,
-        });
-      },
-    );
-
-    app.message(
-      new RegExp(`${prefix} is the best`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "aww thank you :aww:", thread_ts: threadTs });
-      },
-    );
-
-    app.message(
-      new RegExp(`${prefix} is great`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({ text: "aww thank you :aww:", thread_ts: threadTs });
-      },
-    );
-
-    app.message(
-      new RegExp(`${prefix} is stinky`, "i"),
-      async ({ message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        await say({
-          text: "YOU HAVEN'T SHOWERED IN DAYS DON'T COME HERE CALLING ME STINKY BUCKO",
-          thread_ts: threadTs,
-        });
-      },
-    );
+      });
+    }
 
     loadRequestHandlers(app, "commands", "command");
     loadRequestHandlers(app, "views", "view");

@@ -23,6 +23,7 @@
     "@logtape/logtape": "^2.0.2",
     "@logtape/redaction": "^2.0.2",
     "@logtape/sentry": "^2.0.2",
+    "@openrouter/sdk": "^0.12.21",
     "@sentry/bun": "^10.36.0",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.13.0",
