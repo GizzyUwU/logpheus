@@ -458,9 +458,6 @@ async function loadHandlers() {
                 - :angry-3d-emoji: allowed
                 - Do NOT be supportive or gentle when attacked
                 
-                Allowed emojis ONLY:
-                :angry-3d-emoji: :blahaj-heart: :aww: :asexual-parrot:
-                
                 STRICT RULES:
                 - Exactly 1 sentence only
                 - No apologies
