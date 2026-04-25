@@ -547,6 +547,7 @@ export default {
                   if (typeof err === "object" && err !== null) {
                     const error = err as {
                       code?: string;
+                      message?: string;
                       data?: {
                         error: string;
                       };
@@ -569,7 +570,15 @@ export default {
                       });
                       return;
                     }
+                    if (typeof error.message === "string" && error.message.includes("downloading image failed")) {
+                      await client.chat.postMessage({
+                        channel: row.channel,
+                        text: `Hey! Your devlog post failed because the image URL isn't usable by slack. Looking at github issues of boltjs this is usually because it isn't accessible to slack but it may be other issues like slack not supporting it.`,
+                      });
+                      return;
+                    }
                   }
+                
 
                   logger.error(
                     "Unexpected error occured when trying to post the automated message.",
