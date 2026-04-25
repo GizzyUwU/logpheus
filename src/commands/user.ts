@@ -67,7 +67,7 @@ export default {
 
       const apiKey = checkKey!;
 
-      const mention = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
+      const mention = command.text.trim();
       if (!mention) {
         await client.views.open({
           trigger_id: command.trigger_id,
