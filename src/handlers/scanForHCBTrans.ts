@@ -2,6 +2,7 @@ import { users } from "../schema/users";
 import { and, eq, isNull, not } from "drizzle-orm";
 import type { RequestHandler } from "..";
 import HCBInstance from "../lib/hcbscan";
+import HCB from "../lib/hcb";
 import { hcb } from "../schema/hcb";
 
 const formatKey = (key: string) =>
@@ -48,12 +49,14 @@ export default {
       );
       if (allowedUsers.length === 0) return;
       const HCBScan = new HCBInstance(logger);
+      const HCBAPI = new HCB(logger);
+
       for (const user of allowedUsers) {
         if (!user.userId || !user.meta || user.meta.length === 0) continue;
         const HCBId = user.meta
           .find((m) => m.startsWith("HCBId::"))
           ?.split("HCBId::")[1];
-        
+
         if (!HCBId) continue;
         const HCBData = await HCBScan.userActivities({
           id: HCBId,
@@ -61,7 +64,7 @@ export default {
 
         if (!HCBData.ok || !HCBData.data.ok || HCBData.data.data?.length === 0)
           continue;
-        
+
         const activities = HCBData.data.data ?? [];
         const newIds = activities.map((a: any) => a.id).filter(Boolean);
         const existing = hcbRows.find((r) => r.user_id === HCBId);
@@ -91,19 +94,52 @@ export default {
 
           if (addedActivities.length === 0) continue;
 
-          const text = addedActivities
-            .map((a) => {
-              const key = formatKey(a.key!);
-              const orgName = a.organization?.name ?? "Unknown Org";
-              return `New Transactions!\n*${key}*\nID: ${a.id}\nOrg: ${orgName}\nCreated At: ${formatDate(a.created_at!)}`;
-            })
-            .join("\n\n");
+          const enrichedActivities = await Promise.all(
+            addedActivities.map(async (a: any) => {
+              const activityData = await HCBAPI.activities({
+                activity_id: a.id,
+              });
+        
+              if (!activityData.ok) return null;
+        
+              const data = activityData?.data.transaction;
+              if (!data) return null;
+        
+              const amountUSD =
+                typeof data.amount_cents === "number"
+                  ? (data.amount_cents / 100).toFixed(2)
+                  : "0.00";
+        
+              const typeFormatted = data.type
+                ? data.type
+                    .split("_")
+                    .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
+                    .join(" ")
+                : "Unknown Type";
+        
+              const fields = [
+                { label: "Transaction", value: formatKey(a.key!) },
+                { label: "ID", value: a.id },
+                { label: "Org", value: a.organization?.name ?? "Unknown Org" },
+                { label: "Type", value: typeFormatted },
+                { label: "Amount", value: `$${amountUSD}` },
+                { label: "Memo", value: data.memo ?? "No memo" },
+                { label: "Created At", value: formatDate(a.created_at!) },
+              ];
+        
+              return fields
+                .map((f) => `*${f.label}*: ${f.value}`)
+                .join("\n");
+            }),
+          );
+
+          const text = enrichedActivities.join("\n\n");
 
           await pg
             .update(hcb)
             .set({ ids: mergedIds })
             .where(eq(hcb.user_id, HCBId));
-          
+
           await client.chat.postMessage({
             channel: user.channel ? user.channel : user.userId,
             text,

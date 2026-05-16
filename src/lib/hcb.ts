@@ -1,10 +1,10 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
 import type { ZodType } from "zod";
 import type { logger as LogType } from "..";
-import * as ZTypes from "./hcbscan.zod";
+import * as ZTypes from "./hcb.zod";
 import { z } from "zod";
 
-export default class HCBScan {
+export default class HCB {
   lastCode: number | null = null;
   private fetch: AxiosInstance;
   private ready: Promise<void>;
@@ -12,11 +12,8 @@ export default class HCBScan {
 
   constructor(logtape: typeof LogType) {
     this.fetch = axios.create({
-      baseURL: "https://hcbscan.3kh0.net/api/v1",
-      timeout: 10000,
-      headers: {
-        "Cookie": "fuck_ofcom=yup;"
-      }
+      baseURL: "https://hcb.hackclub.com/api/v3",
+      timeout: 10000
     });
     this.logger = logtape;
     this.ready = Promise.resolve();
@@ -72,24 +69,24 @@ export default class HCBScan {
     }
   }
 
-  userActivities(
-    param: z.infer<typeof ZTypes.GetUserActivitiesParams>,
-    query?: z.infer<typeof ZTypes.GetUserActivitiesQueryParams>,
+  activities(
+    param: z.infer<typeof ZTypes.GetASingleActivityParams>,
+    query?: z.infer<typeof ZTypes.GetASingleActivityQueryParams>,
   ) {
     const parsedParam = param
-      ? ZTypes.GetUserActivitiesParams.parse(param)
+      ? ZTypes.GetASingleActivityParams.parse(param)
       : undefined;
     const parsedQuery = query
-      ? ZTypes.GetUserActivitiesQueryParams.parse(query)
+      ? ZTypes.GetASingleActivityQueryParams.parse(query)
       : undefined;
     if (!parsedParam) throw new Error("Missing Params");
     return this.request(
       {
         method: "GET",
-        url: "/users/" + parsedParam.id + "/activities",
+        url: "/activities/" + parsedParam.activity_id,
         params: parsedQuery,
       },
-      ZTypes.GetUserActivitiesResponse,
+      ZTypes.GetASingleActivityResponse,
     );
   }
 }

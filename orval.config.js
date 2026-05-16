@@ -8,7 +8,7 @@ export default defineConfig({
       target: "./src/lib/ft.zod.new.ts",
     },
     input: {
-      target: "./flavortown.yaml"
+      target: "./specs/flavortown.yaml"
     },
   },
   vikunja: {
@@ -18,7 +18,7 @@ export default defineConfig({
       target: "./src/lib/vk.zod.new.ts",
     },
     input: {
-      target: "./docs.json",
+      target: "./specs/docs.json",
     },
   },
   bugsink: {
@@ -28,7 +28,7 @@ export default defineConfig({
       target: "./src/lib/bs.zod.new.ts",
     },
     input: {
-      target: "./bugsink.yaml",
+      target: "./specs/bugsink.yaml",
     },
   },
   hcbscan: {
@@ -38,7 +38,17 @@ export default defineConfig({
       target: "./src/lib/hcbscan.zod.new.ts",
     },
     input: {
-      target: "./hcbscan.yaml",
+      target: "./specs/hcbscan.yaml",
+    },
+  },
+  hcb: {
+    output: {
+      client: "zod",
+      mode: "single",
+      target: "./src/lib/hcb.zod.new.ts",
+    },
+    input: {
+      target: "./specs/hcb.json",
     },
   },
 });

@@ -1,0 +1,1949 @@
+{
+  "info": {
+    "title": "The HCB API",
+    "description": "The HCB API is an unauthenticated REST API that allows you to read public information\n                      from organizations with \u003ca href='https://blog.hcb.hackclub.com/posts/transparent-finances-optional-feature-151427'\u003eTransparency Mode\u003c/a\u003e\n                      enabled.\n                      \u003cbr\u003e\u003cbr\u003e\u003cstrong\u003eQuestions or suggestions?\u003c/strong\u003e\n                      \u003cbr\u003eReach us in the #hcb channel on the \u003ca href='https://hackclub.com/slack'\u003eHack Club Slack\u003c/a\u003e\n                      or email \u003ca href='mailto:hcb@hackclub.com'\u003ehcb@hackclub.com\u003c/a\u003e.\n                      \u003cbr\u003e\u003cbr\u003eHappy hacking! ✨",
+    "contact": { "name": "HCB", "email": "hcb@hackclub.com" },
+    "version": "3.0.0"
+  },
+  "swagger": "2.0",
+  "produces": ["application/json"],
+  "host": "hcb.hackclub.com",
+  "tags": [
+    { "name": "Organizations" },
+    { "name": "Transactions" },
+    { "name": "Card Charges" },
+    { "name": "Donations" },
+    { "name": "Invoices" },
+    { "name": "Checks" },
+    { "name": "ACH Transfers" },
+    { "name": "Transfers" },
+    { "name": "Wire Transfers" },
+    { "name": "Wise Transfers" },
+    { "name": "Check Deposits" },
+    { "name": "Reimbursed Expenses" },
+    { "name": "HCB Fees" },
+    { "name": "Cards" },
+    { "name": "Activities" }
+  ],
+  "paths": {
+    "/api/v3/organizations": {
+      "get": {
+        "summary": "Get a list of transparent organizations",
+        "description": "Returns a list of organizations in \u003ca href='https://blog.hcb.hackclub.com/posts/transparent-finances-optional-feature-151427'\u003e\u003cstrong\u003eTransparency Mode\u003c/strong\u003e\u003c/a\u003e that have opted in to public listing.",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of transparent organizations",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Organization" }
+            }
+          },
+          "404": {
+            "description": "",
+            "schema": { "$ref": "#/definitions/Organization" }
+          }
+        },
+        "tags": ["Organizations"],
+        "operationId": "list-transparent-organizations"
+      }
+    },
+    "/api/v3/organizations/{organization_id}": {
+      "get": {
+        "summary": "Get a single organization",
+        "description": "The organization must be in \u003ca href='https://blog.hcb.hackclub.com/posts/transparent-finances-optional-feature-151427'\u003e\u003cstrong\u003eTransparency Mode\u003c/strong\u003e\u003c/a\u003e.",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a transparent organization",
+            "schema": { "$ref": "#/definitions/Organization" }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Organizations"],
+        "operationId": "get-a-single-organization"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/transactions": {
+      "get": {
+        "summary": "List an organization's transactions",
+        "description": "Transaction represent a line item on an Organization's ledger. There are various \u003cem\u003etypes\u003c/em\u003e of transaction (see the \u003cem\u003etype\u003c/em\u003e below).\u003cbr/\u003e\u003cbr/\u003e",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of transactions",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Transaction" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Transactions"],
+        "operationId": "list-an-organizations-transactions"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/card_charges": {
+      "get": {
+        "summary": "List an organization's card charges",
+        "description": "Transactions created using an HCB card.",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of card charges",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Card Charge" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Card Charges"],
+        "operationId": "list-an-organizations-card-charges"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/donations": {
+      "get": {
+        "summary": "List an organization's donations",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of donations",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Donation" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Donations"],
+        "operationId": "list-an-organizations-donations"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/transfers": {
+      "get": {
+        "summary": "List an organization's transfers",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of transfers",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Transfer" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Transfers"],
+        "operationId": "list-an-organizations-transfers"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/wire_transfers": {
+      "get": {
+        "summary": "List an organization's wire transfers",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of wire transfers",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Wire Transfer" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Wire Transfers"],
+        "operationId": "list-an-organizations-wire-transfers"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/wise_transfers": {
+      "get": {
+        "summary": "List an organization's Wise transfers",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of Wise transfers",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Wise Transfer" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Wise Transfers"],
+        "operationId": "list-an-organizations-wise-transfers"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/check_deposits": {
+      "get": {
+        "summary": "List an organization's check deposits",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of check deposits",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Check Deposit" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Check Deposits"],
+        "operationId": "list-an-organizations-check-deposits"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/reimbursed_expenses": {
+      "get": {
+        "summary": "List an organization's reimbursed expenses",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of reimbursed expenses",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Reimbursed Expense" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Reimbursed Expenses"],
+        "operationId": "list-an-organizations-reimbursed-expenses"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/hcb_fees": {
+      "get": {
+        "summary": "List an organization's HCB fees",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of HCB fees",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/HCB Fee" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["HCB Fees"],
+        "operationId": "list-an-organizations-hcb-fees"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/invoices": {
+      "get": {
+        "summary": "List an organization's invoices",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of invoices",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Invoice" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Invoices"],
+        "operationId": "list-an-organizations-invoices"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/ach_transfers": {
+      "get": {
+        "summary": "List an organization's ACH transfers",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of ACH transfers",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/ACH Transfer" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["ACH Transfers"],
+        "operationId": "list-an-organizations-ach-transfers"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/checks": {
+      "get": {
+        "summary": "List an organization's checks",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of checks",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Check" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Checks"],
+        "operationId": "list-an-organizations-checks"
+      }
+    },
+    "/api/v3/organizations/{organization_id}/cards": {
+      "get": {
+        "summary": "List an organization's cards",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "description": "Organization ID or slug.",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of cards",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Card" }
+            }
+          },
+          "404": {
+            "description": "Organization not found. Check the id/slug and make sure Transparency Mode is on.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Cards"],
+        "operationId": "list-an-organizations-cards"
+      }
+    },
+    "/api/v3/card_charges/{card_charge_id}": {
+      "get": {
+        "summary": "Get a card charge",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_charge_id",
+            "description": "Card charge ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a card charge",
+            "schema": { "$ref": "#/definitions/Card Charge" }
+          },
+          "404": {
+            "description": "Card charge not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Card Charges"],
+        "operationId": "get-a-card-charge"
+      }
+    },
+    "/api/v3/donations/{donation_id}": {
+      "get": {
+        "summary": "Get a single donation",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "donation_id",
+            "description": "Donation ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single donation",
+            "schema": { "$ref": "#/definitions/Donation" }
+          },
+          "404": {
+            "description": "Donation not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Donations"],
+        "operationId": "get-a-single-donation"
+      }
+    },
+    "/api/v3/transfers/{transfer_id}": {
+      "get": {
+        "summary": "Get a single transfer",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transfer_id",
+            "description": "Transfer ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single transfer",
+            "schema": { "$ref": "#/definitions/Transfer" }
+          },
+          "404": {
+            "description": "Transfer not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Transfers"],
+        "operationId": "get-a-single-transfer"
+      }
+    },
+    "/api/v3/wire_transfers/{wire_transfer_id}": {
+      "get": {
+        "summary": "Get a single wire transfer",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wire_transfer_id",
+            "description": "Wire transfer ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single wire transfer",
+            "schema": { "$ref": "#/definitions/Wire Transfer" }
+          },
+          "404": {
+            "description": "Wire transfer not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Wire Transfers"],
+        "operationId": "get-a-single-wire-transfer"
+      }
+    },
+    "/api/v3/wise_transfers/{wise_transfer_id}": {
+      "get": {
+        "summary": "Get a single Wise transfer",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wise_transfer_id",
+            "description": "Wise transfer ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single Wise transfer",
+            "schema": { "$ref": "#/definitions/Wise Transfer" }
+          },
+          "404": {
+            "description": "Wise transfer not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Wise Transfers"],
+        "operationId": "get-a-single-wise-transfer"
+      }
+    },
+    "/api/v3/check_deposits/{check_deposit_id}": {
+      "get": {
+        "summary": "Get a single check deposit",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "check_deposit_id",
+            "description": "Check deposit ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single check deposit",
+            "schema": { "$ref": "#/definitions/Check Deposit" }
+          },
+          "404": {
+            "description": "Check deposit not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Check Deposits"],
+        "operationId": "get-a-single-check-deposit"
+      }
+    },
+    "/api/v3/reimbursed_expenses/{reimbursed_expense_id}": {
+      "get": {
+        "summary": "Get a single reimbursed expense",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reimbursed_expense_id",
+            "description": "Reimbursed expense ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single reimbursed expense",
+            "schema": { "$ref": "#/definitions/Reimbursed Expense" }
+          },
+          "404": {
+            "description": "Reimbursed expense not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Reimbursed Expenses"],
+        "operationId": "get-a-single-reimbursed-expense"
+      }
+    },
+    "/api/v3/hcb_fees/{hcb_fee_id}": {
+      "get": {
+        "summary": "Get a single HCB fee",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hcb_fee_id",
+            "description": "HCB fee ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single HCB fee",
+            "schema": { "$ref": "#/definitions/HCB Fee" }
+          },
+          "404": {
+            "description": "HCB fee not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["HCB Fees"],
+        "operationId": "get-a-single-hcb-fee"
+      }
+    },
+    "/api/v3/invoices/{invoice_id}": {
+      "get": {
+        "summary": "Get a single invoice",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "description": "Invoice ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single invoice",
+            "schema": { "$ref": "#/definitions/Invoice" }
+          },
+          "404": {
+            "description": "Invoice not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Invoices"],
+        "operationId": "get-a-single-invoice"
+      }
+    },
+    "/api/v3/ach_transfers/{ach_transfer_id}": {
+      "get": {
+        "summary": "Get a single ACH transfer",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ach_transfer_id",
+            "description": "ACH transfer ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single ACH transfer",
+            "schema": { "$ref": "#/definitions/ACH Transfer" }
+          },
+          "404": {
+            "description": "ACH transfer not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["ACH Transfers"],
+        "operationId": "get-a-single-ach-transfer"
+      }
+    },
+    "/api/v3/checks/{check_id}": {
+      "get": {
+        "summary": "Get a single check",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "check_id",
+            "description": "Check ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single check",
+            "schema": { "$ref": "#/definitions/Check" }
+          },
+          "404": {
+            "description": "Check not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Checks"],
+        "operationId": "get-a-single-check"
+      }
+    },
+    "/api/v3/cards/{card_id}": {
+      "get": {
+        "summary": "Get a single card",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "description": "Card ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single card",
+            "schema": { "$ref": "#/definitions/Card" }
+          },
+          "404": {
+            "description": "Card not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Cards"],
+        "operationId": "get-a-single-card"
+      }
+    },
+    "/api/v3/transactions/{transaction_id}": {
+      "get": {
+        "summary": "Get a single transaction",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "description": "Transaction ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single transaction",
+            "schema": { "$ref": "#/definitions/Transaction" }
+          },
+          "404": {
+            "description": "Transaction not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Transactions"],
+        "operationId": "get-a-single-transaction"
+      }
+    },
+    "/api/v3/activities": {
+      "get": {
+        "summary": "Get a list of recent activities on transparent HCB organizations",
+        "description": "Returns a list of recent activities from all HCB organizations that are in \u003ca href='https://blog.hcb.hackclub.com/posts/transparent-finances-optional-feature-151427'\u003e\u003cstrong\u003eTransparency Mode\u003c/strong\u003e\u003c/a\u003e and have opted in to public listing.",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page offset to fetch.",
+            "type": "integer",
+            "format": "int32",
+            "default": 1,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Number of results to return per page.",
+            "type": "integer",
+            "format": "int32",
+            "default": 50,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "description": "Pad a number of results.",
+            "type": "integer",
+            "format": "int32",
+            "default": 0,
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a list of recent activities",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Activity" }
+            }
+          },
+          "404": {
+            "description": "",
+            "schema": { "$ref": "#/definitions/Activity" }
+          }
+        },
+        "tags": ["Activities"],
+        "operationId": "list-activities"
+      }
+    },
+    "/api/v3/activities/{activity_id}": {
+      "get": {
+        "summary": "Get a single activity",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "description": "Activity ID",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "Object types to expand in the API response (separated by commas)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single activity",
+            "schema": { "$ref": "#/definitions/Activity" }
+          },
+          "404": {
+            "description": "Activity not found. Check the ID.",
+            "schema": { "$ref": "#/definitions/Error Response" }
+          }
+        },
+        "tags": ["Activities"],
+        "operationId": "get-a-single-activity"
+      }
+    }
+  },
+  "definitions": {
+    "Organization": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "website": { "type": "string" },
+        "category": {
+          "type": "string",
+          "enum": [
+            "hack_club_hq",
+            "robotics_team",
+            "hackathon",
+            "hack_club",
+            "climate",
+            "nonprofit"
+          ]
+        },
+        "transparent": { "type": "boolean" },
+        "demo_mode": { "type": "boolean" },
+        "financially_frozen": { "type": "boolean" },
+        "logo": { "type": "string" },
+        "donation_header": { "type": "string" },
+        "background_image": { "type": "string" },
+        "public_message": { "type": "string" },
+        "donation_link": { "type": "string" },
+        "balances": {
+          "type": "object",
+          "properties": {
+            "balance_cents": { "type": "integer", "format": "int32" },
+            "fee_balance_cents": { "type": "integer", "format": "int32" },
+            "incoming_balance_cents": { "type": "integer", "format": "int32" },
+            "total_raised": { "type": "integer", "format": "int32" }
+          }
+        },
+        "created_at": { "type": "string" },
+        "users": { "type": "array", "items": { "$ref": "#/definitions/User" } }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Organization model"
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "full_name": { "type": "string" },
+        "auditor": { "type": "boolean" },
+        "admin": { "type": "boolean" },
+        "photo": { "type": "string" }
+      },
+      "required": ["id", "object", "full_name", "auditor", "admin", "photo"]
+    },
+    "Transaction": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "memo": { "type": "string" },
+        "date": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "invoice",
+            "donation",
+            "ach_transfer",
+            "check",
+            "transfer",
+            "bank_account_transaction",
+            "card_charge",
+            "wire_transfer",
+            "wise_transfer",
+            "check_deposit",
+            "reimbursed_expense",
+            "hcb_fee"
+          ]
+        },
+        "pending": { "type": "boolean" },
+        "receipts": {
+          "type": "object",
+          "properties": {
+            "count": { "type": "integer", "format": "int32" },
+            "missing": { "type": "boolean" }
+          }
+        },
+        "comments": {
+          "type": "object",
+          "properties": { "count": { "type": "integer", "format": "int32" } }
+        },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "user": { "$ref": "#/definitions/User" },
+        "tags": { "type": "array", "items": { "$ref": "#/definitions/Tag" } },
+        "card_charge": { "$ref": "#/definitions/Card Charge" },
+        "ach_transfer": { "$ref": "#/definitions/ACH Transfer" },
+        "check": { "$ref": "#/definitions/Check" },
+        "donation": { "$ref": "#/definitions/Donation" },
+        "invoice": { "$ref": "#/definitions/Invoice" },
+        "transfer": { "$ref": "#/definitions/Transfer" },
+        "wire_transfer": { "$ref": "#/definitions/Wire Transfer" },
+        "wise_transfer": { "$ref": "#/definitions/Wise Transfer" },
+        "check_deposit": { "$ref": "#/definitions/Check Deposit" },
+        "reimbursed_expense": { "$ref": "#/definitions/Reimbursed Expense" },
+        "hcb_fee": { "$ref": "#/definitions/HCB Fee" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Transaction model"
+    },
+    "Tag": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "label": { "type": "string" }
+      },
+      "required": ["id", "object", "label"]
+    },
+    "Card Charge": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "date": { "type": "string" },
+        "card": { "$ref": "#/definitions/Card" },
+        "user": { "$ref": "#/definitions/User" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Card Charge model"
+    },
+    "Card": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["virtual", "physical"] },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "frozen", "canceled"]
+        },
+        "issued_at": { "type": "string" },
+        "owner": { "$ref": "#/definitions/User" },
+        "organization": { "$ref": "#/definitions/Organization" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Card model"
+    },
+    "ACH Transfer": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "string" },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_transit", "deposited", "rejected"]
+        },
+        "beneficiary": {
+          "type": "object",
+          "properties": { "name": { "type": "string" } }
+        },
+        "user": { "$ref": "#/definitions/User" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "ACH Transfer model"
+    },
+    "Check": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "scheduled",
+            "in_transit",
+            "in_transit_and_processed",
+            "deposited",
+            "canceled",
+            "voided",
+            "refunded"
+          ]
+        }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Check model"
+    },
+    "Donation": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "donor": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "anonymous": { "type": "boolean" },
+            "avatar": { "type": "string" }
+          }
+        },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_transit", "deposited", "failed", "refunded"]
+        },
+        "recurring": { "type": "boolean" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Donation model"
+    },
+    "Invoice": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "string" },
+        "sponsor": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "paid", "void"] }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Invoice model"
+    },
+    "Transfer": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "string" },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "fulfilled",
+            "processing",
+            "rejected",
+            "canceled",
+            "errored",
+            "under_review",
+            "pending"
+          ]
+        },
+        "source_organization": { "$ref": "#/definitions/Organization" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Transfer model"
+    },
+    "Wire Transfer": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "local_currency": { "type": "string" },
+        "local_amount_cents": { "type": "integer", "format": "int32" },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected", "deposited", "failed"]
+        },
+        "beneficiary": {
+          "type": "object",
+          "properties": { "name": { "type": "string" } }
+        },
+        "user": { "$ref": "#/definitions/User" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Wire Transfer model"
+    },
+    "Wise Transfer": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "local_currency": { "type": "string" },
+        "local_amount_cents": { "type": "integer", "format": "int32" },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected",
+            "sent",
+            "deposited",
+            "failed"
+          ]
+        },
+        "beneficiary": {
+          "type": "object",
+          "properties": { "name": { "type": "string" } }
+        },
+        "user": { "$ref": "#/definitions/User" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Wise Transfer model"
+    },
+    "Check Deposit": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "submitted",
+            "manual_submission_required",
+            "rejected",
+            "returned",
+            "deposited"
+          ]
+        },
+        "user": { "$ref": "#/definitions/User" }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Check Deposit model"
+    },
+    "Reimbursed Expense": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_transit", "settled", "reversed"]
+        }
+      },
+      "required": ["id", "object", "href"],
+      "description": "Reimbursed Expense model"
+    },
+    "HCB Fee": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "memo": { "type": "string" },
+        "transaction": { "$ref": "#/definitions/Transaction" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "amount_cents": { "type": "integer", "format": "int32" },
+        "date": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_transit", "settled"]
+        }
+      },
+      "required": ["id", "object", "href"],
+      "description": "HCB Fee model"
+    },
+    "Activity": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "object": { "type": "string" },
+        "href": { "type": "string" },
+        "key": { "type": "string" },
+        "created_at": { "type": "string" },
+        "organization": { "$ref": "#/definitions/Organization" },
+        "user": { "$ref": "#/definitions/User" },
+        "transaction": { "$ref": "#/definitions/Transaction" }
+      },
+      "required": ["id", "object", "href", "key", "created_at"],
+      "description": "Activity model"
+    },
+    "Error Response": {
+      "type": "object",
+      "properties": { "message": { "type": "string" } },
+      "required": ["message"],
+      "description": "Error Response model"
+    }
+  }
+}
