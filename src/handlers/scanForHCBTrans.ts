@@ -105,7 +105,7 @@ export default {
             .where(eq(hcb.user_id, HCBId));
           
           await client.chat.postMessage({
-            channel: user.userId,
+            channel: user.channel ? user.channel : user.userId,
             text,
           });
         }
