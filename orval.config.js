@@ -5,7 +5,7 @@ export default defineConfig({
     output: {
       client: "zod",
       mode: "single",
-      target: "./src/lib/ft.zod.ts",
+      target: "./src/lib/ft.zod.new.ts",
     },
     input: {
       target: "./flavortown.yaml"
@@ -15,7 +15,7 @@ export default defineConfig({
     output: {
       client: "zod",
       mode: "single",
-      target: "./src/lib/vk.zod.ts",
+      target: "./src/lib/vk.zod.new.ts",
     },
     input: {
       target: "./docs.json",
@@ -25,10 +25,20 @@ export default defineConfig({
     output: {
       client: "zod",
       mode: "single",
-      target: "./src/lib/bs.zod.ts",
+      target: "./src/lib/bs.zod.new.ts",
     },
     input: {
       target: "./bugsink.yaml",
+    },
+  },
+  hcbscan: {
+    output: {
+      client: "zod",
+      mode: "single",
+      target: "./src/lib/hcbscan.zod.new.ts",
+    },
+    input: {
+      target: "./hcbscan.yaml",
     },
   },
 });

@@ -34,17 +34,23 @@ export default {
       }
 
       const values = view.state.values;
-      const checkKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
       // const optOuts = values["optOuts"]?.["opt_out"]?.value?.trim().split(",");
-      const region = values["regionBlock"]?.["region"]?.value?.trim();
-      const pingGroupId =
-        values["pingGroupBlock"]?.["pingGroupId"]?.value?.trim();
 
+      const flatValues = Object.entries(values).reduce(
+        (acc, [, block]) => {
+          for (const [actionId, val] of Object.entries(block)) {
+            acc[actionId] = val.value?.trim();
+          }
+          return acc;
+        },
+        {} as Record<string, string | undefined>,
+      );
+      
       const updateFields: Partial<UserRow> = {};
-      if (checkKey) {
+      if (flatValues["api_input"]) {
         const working = await checkAPIKey({
           db: pg,
-          apiKey: checkKey,
+          apiKey: flatValues["api_input"],
           logger,
           register: true,
         });
@@ -55,7 +61,7 @@ export default {
             text: "Flavortown API Key is invalid, provide a valid one.",
           });
 
-        const apiKey = checkKey!;
+        const apiKey = flatValues["api_input"]!;
         const ftClient = new FT(apiKey, logger);
 
         const dbData = await pg
@@ -78,14 +84,19 @@ export default {
         }
       }
 
-      if (region) {
+      if (flatValues["region"]) {
         const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("Region::"));
-        updateFields.meta = [...filteredMeta, "Region::" + region.toLowerCase()];
+        updateFields.meta = [...filteredMeta, "Region::" + flatValues["region"].toLowerCase()];
       }
 
-      if (pingGroupId) {
+      if (flatValues["pingGroupId"]) {
         const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("PingGroup::"));
-        updateFields.meta = [...filteredMeta, "PingGroup::" + pingGroupId];
+        updateFields.meta = [...filteredMeta, "PingGroup::" + flatValues["pingGroupId"]];
+      }
+
+      if (flatValues["HCBId"]) {
+        const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("HCB::"));
+        updateFields.meta = [...filteredMeta, "HCBId::" + flatValues["HCBId"]];
       }
 
       if (Object.keys(updateFields).length > 0) {

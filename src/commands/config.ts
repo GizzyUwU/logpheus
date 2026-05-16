@@ -128,6 +128,28 @@ export default {
                   },
                 ] as AnyBlock[])
               : []),
+            ...(res[0]?.meta?.includes("hcb")
+              ? ([
+                  {
+                    type: "input",
+                    block_id: "HCBId",
+                    label: {
+                      type: "plain_text",
+                      text: "Want to get DM'd about transactions on your HCB account? Get your id from HCBScan!",
+                    },
+                    element: {
+                      type: "plain_text_input",
+                      action_id: "HCBId",
+                      multiline: false,
+                      initial_value:
+                        res[0]?.meta
+                          ?.find((s) => s.startsWith("HCBId::"))
+                          ?.split("::")[1] ?? "",
+                    },
+                    optional: true,
+                  },
+                ] as AnyBlock[])
+              : []),
           ],
           submit: {
             type: "plain_text",
