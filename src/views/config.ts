@@ -95,7 +95,7 @@ export default {
       }
 
       if (flatValues["HCBId"]) {
-        const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("HCB::"));
+        const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("HCBId::"));
         updateFields.meta = [...filteredMeta, "HCBId::" + flatValues["HCBId"]];
       }
 
