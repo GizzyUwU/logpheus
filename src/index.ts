@@ -244,7 +244,7 @@ function loadRequestHandlers(
 ) {
   const folderPath = path.join(__dirname, folder);
   fs.readdirSync(folderPath).forEach(async (file) => {
-    if (!file.endsWith(".ts") && !file.endsWith(".js")) return;
+    if ((!file.endsWith(".ts") && !file.endsWith(".js")) || file.includes(".disabled.")) return;
     const importFile = await import(path.join(folderPath, file));
     const module = importFile.default ?? importFile;
     if (!module?.name || typeof module.execute !== "function") return;
@@ -342,7 +342,7 @@ async function loadHandlers() {
     const handlerDir = path.resolve(__dirname, "./handlers");
     const files = fs
       .readdirSync(handlerDir)
-      .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
+      .filter((f) => (f.endsWith(".ts") || f.endsWith(".js")) && !f.includes(".disabled."));
 
     for (const file of files) {
       try {
