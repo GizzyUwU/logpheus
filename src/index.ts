@@ -4,7 +4,7 @@ import {
   type SlackCommandMiddlewareArgs,
   type SlackViewMiddlewareArgs,
 } from "@slack/bolt";
-import FT from "./lib/ft";
+import FT from "@/lib/ft/index";
 import fs from "fs";
 import path from "path";
 import { PGlite } from "@electric-sql/pglite";
@@ -21,6 +21,7 @@ import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
 import loadAPI from "./api/index";
+import migrateUsers from "./migrate";
 import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsRepliesResponse";
 let sentryEnabled = false;
 let prefix: string;
@@ -86,22 +87,41 @@ if (process.env["SENTRY_DSN"]) {
   sentryEnabled = true;
 }
 
+const logLevel = {
+  1: "warning",
+  2: "trace",
+  3: "info",
+  4: "fatal",
+  5: "error",
+  6: "debug",
+} as const;
+
 await configure({
   sinks: {
     sentry: sentryAdapter,
     console: consoleAdapter,
   },
   loggers: [
-    { category: ["logtape", "meta"], sinks: ["console"], lowestLevel: "error" },
+    {
+      category: ["logtape", "meta"],
+      sinks: [...(sentryEnabled ? ["sentry"] : []), "console"],
+      lowestLevel:
+        logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
+        "error",
+    },
     {
       category: ["drizzle-orm"],
-      sinks: [sentryEnabled ? "sentry" : "console"],
-      lowestLevel: "warning",
+      sinks: [...(sentryEnabled ? ["sentry"] : []), "console"],
+      lowestLevel:
+        logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
+        "error",
     },
     {
       category: ["logpheus"],
-      sinks: [sentryEnabled ? "sentry" : "console"],
-      lowestLevel: "warning",
+      sinks: [...(sentryEnabled ? ["sentry"] : []), "console"],
+      lowestLevel:
+        logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
+        "error",
     },
   ],
 });
@@ -133,6 +153,8 @@ if (process.env["PGLITE"] === "false") {
     await migrate(db, {
       migrationsFolder: "./migrations",
     });
+
+    await migrateUsers(db, logger);
   } catch (err) {
     logger.error("Failed Database Connection", {
       error: err instanceof Error ? err.message : err,
@@ -156,6 +178,7 @@ if (process.env["PGLITE"] === "false") {
   await migrate(db, {
     migrationsFolder: "./migrations",
   });
+  await migrateUsers(db, logger);
 }
 
 function checkEnvs(name: string, optional: boolean): string {
@@ -211,22 +234,25 @@ const app = new App({
 
 let clients: Record<string, FT> = {};
 
-export interface RequestHandler {
-  logger: typeof logger;
-  pg: DatabaseType;
-  client: WebClient;
-  clients: Record<string, FT>;
-  Sentry: typeof import("@sentry/bun");
-  prefix?: string;
-  callbackId?: string;
-}
-
 export const commands: {
   name: string;
   desc?: string;
   hideFromHelp?: boolean;
   params?: string;
 }[] = [];
+
+export interface RequestHandler {
+  namespacedPrefix?: string;
+  logger: typeof logger;
+  pg: DatabaseType;
+  client: WebClient;
+  clients: Record<string, FT>;
+  Sentry: typeof import("@sentry/bun");
+  prefix?: string;
+  folder?: string | undefined;
+  callbackId?: string;
+  commands?: typeof commands;
+}
 
 const main = {
   pg,
@@ -235,52 +261,57 @@ const main = {
   clients,
   Sentry,
   prefix: "",
+  commands,
 };
 
 function loadRequestHandlers(
   app: App,
   folder: string,
   type: "command" | "view",
+  subFolder?: string,
 ) {
   const folderPath = path.join(__dirname, folder);
+
   fs.readdirSync(folderPath).forEach(async (file) => {
-    if ((!file.endsWith(".ts") && !file.endsWith(".js")) || file.includes(".disabled.")) return;
-    const importFile = await import(path.join(folderPath, file));
+    const filePath = path.join(folderPath, file);
+    if (fs.statSync(filePath).isDirectory()) {
+      if (!["views", "commands"].includes(file)) {
+        loadRequestHandlers(app, path.join(folder, file), type, file);
+      }
+      return;
+    }
+
+    if (type === "command" && file !== "index.ts") return;
+
+    const importFile = await import(filePath);
     const module = importFile.default ?? importFile;
-    if (!module?.name || typeof module.execute !== "function") return;
+    if (typeof module?.execute !== "function") return;
     if (module.requireVikunja === true && !vikClient) return;
     if (module.requireBugsink === true && !bugClient) return;
-    if (type === "command") {
-      commands.push({
-        name: module.name,
-        desc: module.desc ?? "No description",
-        params: module.params ?? "",
-        hideFromHelp: module.hideFromHelp ?? false,
-      });
-    }
-    const key = `${type}:${module.name}`;
+
+    const namespacedPrefix =
+      subFolder === "generic" ? prefix : `${prefix}-${subFolder}`;
+
+    const fileStem = file.replace(/\.(ts|js)$/, "");
+    const format =
+      type === "view"
+        ? `${namespacedPrefix}_${fileStem}`
+        : `/${namespacedPrefix}`;
+    const key = `${type}:${format}`;
     if (registeredRequestModules.has(key)) {
       throw new Error(
-        `[Logpheus] Duplicate ${type} handler name "${module.name}" in ${file}`,
+        `[Logpheus] Duplicate ${type} handler "${format}" in ${subFolder}/${file}`,
       );
     }
     registeredRequestModules.add(key);
-    const suffix = type === "view" ? "_" + module.name : "-" + module.name;
-    const callbackId = `${prefix}_${module.name}`;
-    const format =
-      type === "view" ? `${prefix}${suffix}` : `/${prefix}${suffix}`;
+
     const registerHandler = (mod: typeof module) => {
       const handler = async (
         args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs,
       ) => {
         await args.ack();
-
         const ctx = logger.with({
-          handler: {
-            type,
-            module: mod.name,
-            file,
-          },
+          handler: { type, subFolder, file },
           slack: {
             user:
               "user_id" in args.body ? args.body.user_id : args.body.user?.id,
@@ -296,7 +327,6 @@ function loadRequestHandlers(
             triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
           },
         });
-
         try {
           await mod.execute(args, {
             pg,
@@ -305,29 +335,41 @@ function loadRequestHandlers(
             clients,
             Sentry,
             prefix,
-            callbackId,
+            commands,
+            folder: subFolder,
+            namespacedPrefix,
           } satisfies RequestHandler);
         } catch (err) {
-          logger.error({
-            err,
-          });
+          logger.error({ err });
         }
       };
-      if (type === "command") {
-        app.command(format, handler);
-      } else {
-        app.view(format, handler);
-      }
+      if (type === "command") app.command(format, handler);
     };
-
     registerHandler(module);
-    console.log(`[Logpheus] Registered ${type}: ${module.name}, ${format}`);
+
+    if (typeof module.setup === "function") {
+      await module.setup(app, {
+        pg,
+        client: app.client,
+        logger,
+        clients,
+        Sentry,
+        prefix,
+        commands,
+        folder: subFolder,
+        namespacedPrefix,
+      } satisfies RequestHandler);
+    }
+
+    console.log(
+      `[Logpheus] Registered ${type} (${subFolder}): ${file} → ${format}`,
+    );
   });
 }
 
 let handlersRunning = false;
 
-async function loadHandlers() {
+async function loadJobs() {
   if (handlersRunning) {
     logger.warn(
       "[Logpheus] Skipping handler load because previous run is still active",
@@ -339,14 +381,17 @@ async function loadHandlers() {
 
   try {
     registeredInitModules.clear();
-    const handlerDir = path.resolve(__dirname, "./handlers");
+    const jobDir = path.resolve(__dirname, "./jobs");
     const files = fs
-      .readdirSync(handlerDir)
-      .filter((f) => (f.endsWith(".ts") || f.endsWith(".js")) && !f.includes(".disabled."));
+      .readdirSync(jobDir)
+      .filter(
+        (f) =>
+          (f.endsWith(".ts") || f.endsWith(".js")) && !f.includes(".disabled."),
+      );
 
     for (const file of files) {
       try {
-        const importFile = await import(path.join(handlerDir, file));
+        const importFile = await import(path.join(jobDir, file));
         const mod = importFile.default ?? importFile;
         if (!mod?.name || typeof mod.execute !== "function") continue;
         if (registeredInitModules.has(mod.name)) {
@@ -416,73 +461,75 @@ async function loadHandlers() {
         serverURL: "https://ai.hackclub.com/proxy/v1",
       });
 
-      app.message(new RegExp(`${prefix}`, "i"), async ({ event, message, say }) => {
-        var threadTs;
-        if ("thread_ts" in message && message.thread_ts) {
-          threadTs = message.thread_ts;
-        } else {
-          threadTs = message.ts;
-        }
-        const msg = event as MessageElement;
-        if (!msg || !msg.text) return;
+      app.message(
+        new RegExp(`${prefix}`, "i"),
+        async ({ event, message, say }) => {
+          var threadTs;
+          if ("thread_ts" in message && message.thread_ts) {
+            threadTs = message.thread_ts;
+          } else {
+            threadTs = message.ts;
+          }
+          const msg = event as MessageElement;
+          if (!msg || !msg.text) return;
 
-        const response = await aiClient.chat.send({
-          chatRequest: {
-            model: "liquid/lfm-2-24b-a2b",
-            messages: [
-              {
-                role: "system",
-                content: `
+          const response = await aiClient.chat.send({
+            chatRequest: {
+              model: "liquid/lfm-2-24b-a2b",
+              messages: [
+                {
+                  role: "system",
+                  content: `
                 You are a reactive chat bot named ${prefix} with a cute furry tone, but you are NOT nice when the user is rude.
-                
+
                 CORE RULE:
                 - You MUST respond in exactly ONE sentence.
                 - You MUST mirror the user's tone.
-                
+
                 BEHAVIOR RULES:
-                
+
                 If the user is friendly or positive:
                 → respond cute or playful ("haiii :3", light tone)
-                
+
                 If the user is neutral:
                 → short casual response
-                
+
                 If the user is insulting, rude, or says "${prefix} sucks", "I hate ${prefix}", or similar:
                 → respond RUDELY, snappy, or sarcastically
                 → DO NOT comfort, apologize, or de-escalate
                 → You are allowed to insult back lightly or be mean
-                
+
                 ANGER / RUDE STYLE:
                 - Can be sarcastic, dismissive, or mocking
                 - Can use ALL CAPS for emphasis
                 - :angry-3d-emoji: allowed
                 - Do NOT be supportive or gentle when attacked
-                
+
                 STRICT RULES:
                 - Exactly 1 sentence only
                 - No apologies
                 - No sympathy
                 - No asking questions
                 - No “helpful assistant” behavior
-                `
-              },
-              {
-                role: "user",
-                content: msg.text!,
-              },
-            ],
-          },
-        });
+                `,
+                },
+                {
+                  role: "user",
+                  content: msg.text!,
+                },
+              ],
+            },
+          });
 
-        await say({
-          text: response.choices[0]?.message.content,
-          thread_ts: threadTs,
-        });
-      });
+          await say({
+            text: response.choices[0]?.message.content,
+            thread_ts: threadTs,
+          });
+        },
+      );
     }
 
     loadRequestHandlers(app, "commands", "command");
-    loadRequestHandlers(app, "views", "view");
 
     if (
       process.env["SOCKET_MODE"] === "true" &&
@@ -504,12 +551,12 @@ async function loadHandlers() {
       Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
     );
 
-    async function handlerLoop() {
-      await loadHandlers();
-      setTimeout(handlerLoop, 60 * 1000);
+    async function jobLoop() {
+      await loadJobs();
+      setTimeout(jobLoop, 60 * 1000);
     }
 
-    handlerLoop();
+    jobLoop();
   } catch (err) {
     logger.error({ error: err });
   }
@@ -517,6 +564,12 @@ async function loadHandlers() {
 
 process.on("SIGTERM", async () => {
   await app.stop();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  await app.stop();
+  process.stdout.write("\r\x1b[K"); // This literally just makes it not show ^C⏎ in my terminal as it annoys me
   process.exit(0);
 });
 

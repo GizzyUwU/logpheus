@@ -5,27 +5,17 @@ export default defineConfig({
     output: {
       client: "zod",
       mode: "single",
-      target: "./src/lib/ft.zod.new.ts",
+      target: "./src/lib/ft/types.ts",
     },
     input: {
       target: "./specs/flavortown.yaml"
-    },
-  },
-  vikunja: {
-    output: {
-      client: "zod",
-      mode: "single",
-      target: "./src/lib/vk.zod.new.ts",
-    },
-    input: {
-      target: "./specs/docs.json",
     },
   },
   bugsink: {
     output: {
       client: "zod",
       mode: "single",
-      target: "./src/lib/bs.zod.new.ts",
+      target: "./src/lib/bugsink/types.ts",
     },
     input: {
       target: "./specs/bugsink.yaml",
@@ -35,7 +25,7 @@ export default defineConfig({
     output: {
       client: "zod",
       mode: "single",
-      target: "./src/lib/hcbscan.zod.new.ts",
+      target: "./src/lib/hcbscan/types.ts",
     },
     input: {
       target: "./specs/hcbscan.yaml",
@@ -45,7 +35,7 @@ export default defineConfig({
     output: {
       client: "zod",
       mode: "single",
-      target: "./src/lib/hcb.zod.new.ts",
+      target: "./src/lib/hcb/types.ts",
     },
     input: {
       target: "./specs/hcb.json",

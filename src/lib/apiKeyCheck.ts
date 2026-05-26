@@ -2,9 +2,9 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { Pool } from "pg";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
-import { users } from "../schema/users";
+import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
-import FT from "./ft";
+import FT from "@/lib/ft/index";
 import type { logger as LogTape } from "..";
 type DB =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })

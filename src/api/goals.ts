@@ -1,12 +1,12 @@
 import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsIncomingMessage";
 import type { ServerResponse, IncomingMessage } from "node:http";
-import main from "..";
-import checkAPIKey from "../lib/apiKeyCheck";
-import FT from "../lib/ft";
-import { getGenericErrorMessage } from "../lib/genericError";
-import { users } from "../schema/users";
+import main from "@/index";
+import checkAPIKey from "@/lib/apiKeyCheck";
+import FT from "@/lib/ft/index";
+import { getGenericErrorMessage } from "@/lib/genericError";
+import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
-import { rateLimit } from ".";
+import { rateLimit } from "@/api/index.ts";
 async function readJson<T>(req: any): Promise<T | null> {
   try {
     const chunks: Buffer[] = [];

@@ -1,8 +1,8 @@
 export type Capability =
-  | "hcb"
+  | "updateCreation"
 
 export const capabilities: Capability[] = [
-  "hcb",
+  "updateCreation",
 ];
 
 export function isCapability(

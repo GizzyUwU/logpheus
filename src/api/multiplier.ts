@@ -1,12 +1,12 @@
 import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsIncomingMessage";
 import type { ServerResponse, IncomingMessage } from "node:http";
-import main from "..";
-import checkAPIKey from "../lib/apiKeyCheck";
+import main from "@/index.ts";
+import checkAPIKey from "@/lib/apiKeyCheck";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { MultiplierError, MultiplierPostGet } from "../apiSchema/multiplier";
-import { projects } from "../schema/projects";
-import { rateLimit } from ".";
+import { MultiplierError, MultiplierPostGet } from "@/apiSchema/multiplier";
+import { projects } from "@/schema/projects";
+import { rateLimit } from "@/api/index";
 type ProjectRow = typeof projects.$inferSelect;
 
 async function readJson<T>(req: any): Promise<T | null> {

@@ -1,7 +1,7 @@
 import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsIncomingMessage";
 import type { ServerResponse, IncomingMessage } from "node:http";
 import { createDocument } from "zod-openapi";
-import openapiSpecification from "../oapiDocument";
+import openapiSpecification from "@/oapiDocument";
 import { rateLimit } from ".";
 const document = createDocument(openapiSpecification);
 
