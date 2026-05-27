@@ -360,7 +360,7 @@ function loadRequestHandlers(
     }
 
     logger.info(
-      `[Logpheus] Registered ${type} (${subFolder}): ${file} → ${format}`,
+      `Registered ${type} (${subFolder}): ${file} → ${format}`,
     );
   });
 }
@@ -370,7 +370,7 @@ let handlersRunning = false;
 async function loadJobs() {
   if (handlersRunning) {
     logger.warn(
-      "[Logpheus] Skipping handler load because previous run is still active",
+      "Skipping handler load because previous run is still active",
     );
     return;
   }
@@ -535,17 +535,19 @@ async function loadJobs() {
       !process.env["KEEP_PORT_USAGE"]
     ) {
       await app.start();
-      logger.info("[Logpheus] Running as Socket Mode");
+      logger.info("Running as Socket Mode");
     } else {
       const port = process.env["PORT"] ? parseInt(process.env["PORT"]) : 3000;
       await app.start({
         port,
       });
-      logger.info("[Logpheus] Running on port: " + port);
+      logger.info("Running on port: " + Bun.color("cyan", "ansi-256") +
+      port +
+      "\x1b[0m");
     }
 
     logger.info(
-      "[Logpheus] My prefix is " +
+      "My prefix is " +
         Bun.color("darkseagreen", "ansi") +
         prefix +
         "\x1b[0m",
@@ -571,6 +573,14 @@ process.on("SIGINT", async () => {
   await app.stop();
   process.stdout.write("\r\x1b[K"); // This literally just makes it not show ^C⏎ in my terminal as it annoys me
   process.exit(0);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled Rejection", { reason });
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught Exception", { error });
 });
 
 export default main;

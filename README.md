@@ -124,7 +124,7 @@ if (self.user_id === "U0AF4V5V04V") {
   prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
 }
 logger.info(
-  "[Logpheus] My prefix is",
+  "My prefix is",
   Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
 );
 ```
