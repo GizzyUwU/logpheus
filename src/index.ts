@@ -22,6 +22,7 @@ import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
 import loadAPI from "./api/index";
 import migrateUsers from "./migrate";
+import ansiRegex from "ansi-regex";
 import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsRepliesResponse";
 let sentryEnabled = false;
 let prefix: string;
@@ -83,6 +84,21 @@ if (process.env["SENTRY_DSN"]) {
     integrations: [],
     tracesSampleRate: 0,
     sendDefaultPii: true,
+    beforeSend(event) {
+      if (Array.isArray(event.breadcrumbs)) {
+        event.breadcrumbs = event.breadcrumbs.map((bc: Sentry.Breadcrumb) => ({
+          ...bc,
+          ...(bc.message !== undefined && {
+            message: bc.message.replace(ansiRegex(), ""),
+          }),
+        }));
+      }
+      return event;
+    },
+    beforeBreadcrumb(breadcrumb) {
+      if (breadcrumb.category === "console") return {};
+      return breadcrumb;
+    },
   });
   sentryEnabled = true;
 }
@@ -359,9 +375,7 @@ function loadRequestHandlers(
       } satisfies RequestHandler);
     }
 
-    logger.info(
-      `Registered ${type} (${subFolder}): ${file} → ${format}`,
-    );
+    logger.info(`Registered ${type} (${subFolder}): ${file} → ${format}`);
   });
 }
 
@@ -369,9 +383,7 @@ let handlersRunning = false;
 
 async function loadJobs() {
   if (handlersRunning) {
-    logger.warn(
-      "Skipping handler load because previous run is still active",
-    );
+    logger.warn("Skipping handler load because previous run is still active");
     return;
   }
 
@@ -541,16 +553,13 @@ async function loadJobs() {
       await app.start({
         port,
       });
-      logger.info("Running on port: " + Bun.color("cyan", "ansi-256") +
-      port +
-      "\x1b[0m");
+      logger.info(
+        "Running on port: " + Bun.color("cyan", "ansi") + port + "\x1b[0m",
+      );
     }
 
     logger.info(
-      "My prefix is " +
-        Bun.color("darkseagreen", "ansi") +
-        prefix +
-        "\x1b[0m",
+      "My prefix is " + Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
     );
 
     async function jobLoop() {
