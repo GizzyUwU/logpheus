@@ -2,10 +2,10 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { Pool } from "pg";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
-import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
 import FT from "@/lib/ft/index";
-import type { logger as LogTape } from "..";
+import type { logger as LogTape } from "../..";
+import { yswsUsers } from "@/schema/ysws";
 type DB =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
@@ -28,13 +28,13 @@ export default async function checkAPIKey(data: {
   const row = data.db ? allowDisabledByUser
     ? await data.db
         .select()
-        .from(users)
-        .where(eq(users.userId, data.userId!))
+        .from(yswsUsers)
+        .where(eq(yswsUsers.userId, data.userId!))
         .limit(1)
     : await data.db
         .select()
-        .from(users)
-        .where(eq(users.apiKey, data.apiKey))
+        .from(yswsUsers)
+        .where(eq(yswsUsers.apiKey, data.apiKey))
         .limit(1)
     : [];
 

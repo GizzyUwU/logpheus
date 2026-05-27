@@ -3,7 +3,7 @@ import FT from "@/lib/ft/index";
 import { eq } from "drizzle-orm";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
-import checkAPIKey from "@/lib/apiKeyCheck";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
 
 export default {

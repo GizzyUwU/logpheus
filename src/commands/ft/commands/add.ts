@@ -3,7 +3,7 @@ import type { RequestHandler } from "@/index";
 import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
 import { projects } from "@/schema/projects";
-import checkAPIKey from "@/lib/apiKeyCheck";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 type UserRow = typeof users._.inferSelect;

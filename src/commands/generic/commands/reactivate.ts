@@ -2,7 +2,7 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
-import checkAPIKey from "@/lib/apiKeyCheck";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index.ts";
 type UserRow = typeof users._.inferSelect;
 

@@ -30,6 +30,7 @@ export default async function (db: DB, logger: typeof LogtapeLogger) {
     projects: user.projects,
     disabled: user.disabled,
     optOuts: user.optOuts,
+    region: user.region
   }));
 
   await db
@@ -88,13 +89,18 @@ export default async function (db: DB, logger: typeof LogtapeLogger) {
 
     logger.info(`Updated ${updatedProjects} project ysws mappings.`);
   }
-
+  
   for (const user of usersToUpdate) {
+    const region =
+      user?.meta
+        ?.find((s) => s.startsWith("Region::"))
+        ?.split("::")[1] ?? "";
     await db
       .update(users)
       .set({
         ysws: [...(user.ysws ?? []), ysws.flavortown.id],
         projects: [],
+        region,
         apiKey: null
       })
       .where(eq(users.apiKey, user.apiKey!));

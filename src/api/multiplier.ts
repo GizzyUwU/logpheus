@@ -1,7 +1,7 @@
 import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsIncomingMessage";
 import type { ServerResponse, IncomingMessage } from "node:http";
 import main from "@/index.ts";
-import checkAPIKey from "@/lib/apiKeyCheck";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { MultiplierError, MultiplierPostGet } from "@/apiSchema/multiplier";

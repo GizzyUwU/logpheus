@@ -7,5 +7,6 @@ export const users = pgTable("users", {
   disabled: boolean().default(false),
   optOuts: text().array(),
   meta: text().array(),
+  region: text(),
   ysws: integer().array()
 });

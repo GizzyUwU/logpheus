@@ -64,6 +64,13 @@
       "when": 1779871326842,
       "tag": "0008_lucky_scrambler",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779880136716,
+      "tag": "0009_cute_deathbird",
+      "breakpoints": true
     }
   ]
 }

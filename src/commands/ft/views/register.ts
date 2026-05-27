@@ -1,10 +1,12 @@
 import type { SlackViewMiddlewareArgs } from "@slack/bolt";
 import { users } from "@/schema/users";
-import { eq } from "drizzle-orm";
+import { yswsUsers } from "@/schema/ysws";
+import { eq, and, type InferSelectModel } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
-type UserInsert = typeof users.$inferInsert;
+import ysws from "@/ysws";
+type UserInsert = typeof yswsUsers.$inferInsert;
 
 export default {
   name: "register",
@@ -13,7 +15,9 @@ export default {
     { pg, logger, client }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
-      const channelId = JSON.parse(view.private_metadata).channel;
+      const metadata = JSON.parse(view.private_metadata);
+      const channelId = metadata.channel;
+      const userData = JSON.parse(metadata.userData) as InferSelectModel<typeof users>;;
       const userId = body.user.id;
 
       if (!channelId || !userId) {
@@ -34,32 +38,60 @@ export default {
       }
 
       const values = view.state.values;
-      const regionOpt =
-        values?.["personal"]?.["region"]?.selected_option?.value?.trim();
+      const checkKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
+
+      const working = await checkAPIKey({
+        db: pg,
+        apiKey: checkKey,
+        logger,
+        register: true,
+      });
+      if (!working.works)
+        return await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "Flavortown API Key is invalid, provide a valid one.",
+        });
+      if(Number(working.row?.length) > 0)  return await client.chat.postEphemeral({
+        channel: channelId,
+        user: userId,
+        text: "You already exist in the db!",
+      });
+
+      const apiKey = checkKey!;
+
       const exists = await pg
         .select()
-        .from(users)
+        .from(yswsUsers)
         .limit(1)
-        .where(eq(users.userId, userId));
+        .where(
+          and(
+            eq(yswsUsers.apiKey, apiKey),
+            eq(yswsUsers.yswsId, ysws.flavortown.id),
+          ),
+        );
+      
       if (exists.length > 0)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
-          text: "You already exist in the database!",
+          text: "This API key is already bound to a user.",
         });
 
       const insertFields: UserInsert = {
+        apiKey,
         userId,
-        region: regionOpt ?? "us",
         disabled: false,
+        region: userData.region,
+        yswsId: ysws.flavortown.id
       };
 
-      await pg.insert(users).values(insertFields);
+      await pg.insert(yswsUsers).values(insertFields);
 
       await client.chat.postEphemeral({
         channel: channelId,
         user: userId,
-        markdown_text: "Yay! You are now a user of logpheus! :yay-nb:",
+        markdown_text: "You are now able to use all Flavortown based commands! :yay:",
       });
     } catch (err) {
       const ctx = logger.with({

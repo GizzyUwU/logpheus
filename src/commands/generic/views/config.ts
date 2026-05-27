@@ -4,7 +4,7 @@ import FT from "@/lib/ft/index";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
-import checkAPIKey from "@/lib/apiKeyCheck";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 type UserRow = typeof users._.inferSelect;
 
 export default {

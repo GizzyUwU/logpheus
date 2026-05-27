@@ -1,7 +1,7 @@
 import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsIncomingMessage";
 import type { ServerResponse, IncomingMessage } from "node:http";
 import main from "@/index";
-import checkAPIKey from "@/lib/apiKeyCheck";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { users } from "@/schema/users";

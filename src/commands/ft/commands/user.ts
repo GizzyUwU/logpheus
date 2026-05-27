@@ -1,5 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import checkAPIKey from "@/lib/apiKeyCheck";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import type { RequestHandler } from "@/index.ts";
 import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";

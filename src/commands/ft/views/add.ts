@@ -5,7 +5,7 @@ import { projects } from "@/schema/projects";
 import { eq } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
-import checkAPIKey from "@/lib/apiKeyCheck";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
 type UserRow = typeof users._.inferSelect;
 

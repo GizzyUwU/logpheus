@@ -2,6 +2,7 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { eq, count } from "drizzle-orm";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
+import { yswsUsers } from "@/schema/ysws";
 
 export default {
   name: "register",
@@ -14,6 +15,7 @@ export default {
       const channel = await client.conversations.info({
         channel: command.channel_id,
       });
+
       if (
         !channel ||
         !channel.channel ||
@@ -29,11 +31,25 @@ export default {
         return;
       }
 
-      const res = (await pg
-        .select({ count: count() })
+      const userData = await pg
+        .select()
         .from(users)
         .limit(1)
-        .where(eq(users.userId, command.user_id))) as { count: number }[];
+        .where(eq(users.userId, command.user_id));
+      if (userData.length === 0)
+        return await respond({
+          text:
+            "You aren't registed to the bot yet! Run /" +
+            prefix +
+            " register first before registering to a ysws.",
+          response_type: "ephemeral",
+        });
+
+      const res = (await pg
+        .select({ count: count() })
+        .from(yswsUsers)
+        .limit(1)
+        .where(eq(yswsUsers.userId, command.user_id))) as { count: number }[];
       const existingCount = res[0]?.count ?? 0;
       if (existingCount !== 0)
         return await respond({
@@ -56,43 +72,28 @@ export default {
           },
           private_metadata: JSON.stringify({
             channel: command.channel_id,
+            userData: JSON.stringify(userData[0])
           }),
           blocks: [
             {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "Get your API key here: <https://flavortown.hackclub.com/kitchen?settings=1#api_key|Flavortown Settings>",
+              },
+            },
+            {
               type: "input",
-              block_id: "personal",
+              block_id: "ftApiKey",
               label: {
                 type: "plain_text",
-                text: "What is your region for regional pricing?",
+                text: "What is your flavortown api key?",
               },
               element: {
-                type: "static_select",
-                action_id: "region",
-                placeholder: {
-                  type: "plain_text",
-                  text: "Select your region",
-                  emoji: true,
-                },
-                options: Object.entries(
-                  {
-                    au: "Australia",
-                    ca: "Canada",
-                    eu: "Europe",
-                    in: "India",
-                    uk: "United Kingdom",
-                    us: "United States",
-                    xx: "Other / Unknown",
-                  }
-                ).map(([code, name]) => ({
-                  text: {
-                    type: "plain_text",
-                    text: name,
-                    emoji: true,
-                  },
-                  value: code,
-                }))
+                type: "plain_text_input",
+                action_id: "api_input",
+                multiline: false,
               },
-              optional: true,
             },
           ],
           submit: {

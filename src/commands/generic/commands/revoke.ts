@@ -3,6 +3,7 @@ import { eq, inArray } from "drizzle-orm";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import { projects } from "@/schema/projects";
+import { yswsUsers } from "@/schema/ysws";
 
 export default {
   name: "revoke",
@@ -40,6 +41,7 @@ export default {
         delete clients[res[0]?.apiKey];
       }
 
+      await pg.delete(yswsUsers).where(eq(yswsUsers.userId, command.user_id))
       await pg.delete(users).where(eq(users.userId, command.user_id));
 
       return await respond({
