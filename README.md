@@ -123,7 +123,7 @@ if (self.user_id === "U0AF4V5V04V") {
     throw new Error("No username or user id for prefix");
   prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
 }
-console.log(
+logger.info(
   "[Logpheus] My prefix is",
   Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
 );

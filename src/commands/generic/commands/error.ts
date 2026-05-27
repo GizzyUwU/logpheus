@@ -34,7 +34,6 @@ export default {
       const id = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
       if (id) {
         if (!isValidUUID(id)) {
-          console.log(id, isValidUUID(id))
           return await respond({
             text: "ID has to be a valid uuid",
           });
@@ -87,7 +86,6 @@ export default {
         const issues = await bugClient?.listIssues({
           project: Number(process.env["BUGSINK_PROJECT_ID"]),
         });
-        console.log(issues)
         return respond({
           blocks: [
             {

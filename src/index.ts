@@ -105,7 +105,7 @@ await configure({
     {
       category: ["logtape", "meta"],
       sinks: [...(sentryEnabled ? ["sentry"] : []), "console"],
-      lowestLevel: "error"
+      lowestLevel: "error",
     },
     {
       category: ["drizzle-orm"],
@@ -359,7 +359,7 @@ function loadRequestHandlers(
       } satisfies RequestHandler);
     }
 
-    console.log(
+    logger.info(
       `[Logpheus] Registered ${type} (${subFolder}): ${file} → ${format}`,
     );
   });
@@ -535,18 +535,20 @@ async function loadJobs() {
       !process.env["KEEP_PORT_USAGE"]
     ) {
       await app.start();
-      console.info("[Logpheus] Running as Socket Mode");
+      logger.info("[Logpheus] Running as Socket Mode");
     } else {
       const port = process.env["PORT"] ? parseInt(process.env["PORT"]) : 3000;
       await app.start({
         port,
       });
-      console.info("[Logpheus] Running on port:", port);
+      logger.info("[Logpheus] Running on port: " + port);
     }
 
-    console.log(
-      "[Logpheus] My prefix is",
-      Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
+    logger.info(
+      "[Logpheus] My prefix is " +
+        Bun.color("darkseagreen", "ansi") +
+        prefix +
+        "\x1b[0m",
     );
 
     async function jobLoop() {

@@ -46,7 +46,7 @@ async function setup(
         ctx.logger.error({ err });
       }
     });
-    console.log(`[Logpheus] Registered view (${ctx.folder}): ${file} → ${callbackId}`);
+    ctx.logger.info(`[Logpheus] Registered view (${ctx.folder}): ${file} → ${callbackId}`);
   }
 }
 

@@ -99,7 +99,7 @@ export default {
           user: command.user_id ?? "",
         },
       });
-      console.log(err)
+
       ctx.error("Unexpected error occurred", {
         error: err,
       });
