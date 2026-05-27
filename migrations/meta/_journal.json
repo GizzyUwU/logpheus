@@ -57,6 +57,13 @@
       "when": 1779787706215,
       "tag": "0007_first_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779871326842,
+      "tag": "0008_lucky_scrambler",
+      "breakpoints": true
     }
   ]
 }

@@ -4,8 +4,9 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { logger as LogtapeLogger } from "@/index.ts";
 import { users } from "@/schema/users.ts";
-import { yswsUsers } from "@/schema/ysws.ts";
-import { eq, isNotNull, ne, and } from "drizzle-orm";
+import { yswsUsers } from "@/schema/ysws.ts"; 
+import { projects } from "@/schema/projects";
+import { eq, isNotNull, ne, and, inArray } from "drizzle-orm";
 import ysws from "@/ysws.ts"
 
 type DB =
@@ -41,6 +42,52 @@ export default async function (db: DB, logger: typeof LogtapeLogger) {
   const usersToUpdate = allUsers.filter(
     (user) => !user.ysws?.includes(ysws.flavortown.id)
   );
+
+  const allProjectIds = [
+    ...new Set(
+      usersToUpdate.flatMap((user) => user.projects ?? [])
+    ),
+  ];
+
+  if (allProjectIds.length > 0) {
+    const existingProjects = await db
+      .select()
+      .from(projects)
+      .where(inArray(projects.id, allProjectIds));
+
+    const projectMap = new Map(
+      existingProjects.map((project) => [project.id, project])
+    );
+
+    let updatedProjects = 0;
+
+    for (const user of usersToUpdate) {
+      const userProjects = user.projects ?? [];
+
+      for (const projectId of userProjects) {
+        const project = projectMap.get(projectId);
+
+        if (!project) continue;
+
+        if (project.ysws !== ysws.flavortown.id) {
+          await db
+            .update(projects)
+            .set({
+              ysws: ysws.flavortown.id,
+            })
+            .where(eq(projects.id, projectId));
+
+          updatedProjects++;
+
+          logger.info(
+            `Updated project ${projectId} ysws from ${project.ysws} -> ${ysws.flavortown.id}`
+          );
+        }
+      }
+    }
+
+    logger.info(`Updated ${updatedProjects} project ysws mappings.`);
+  }
 
   for (const user of usersToUpdate) {
     await db
