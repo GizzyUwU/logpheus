@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "ysws" integer DEFAULT 0;
