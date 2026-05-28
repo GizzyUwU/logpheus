@@ -1,15 +1,17 @@
 import type { SlackViewMiddlewareArgs } from "@slack/bolt";
 import { eq } from "drizzle-orm";
+import FT from "@/lib/ft/index";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
+import checkAPIKey from "@/lib/ft/apiKeyCheck";
 type UserRow = typeof users._.inferSelect;
 
 export default {
   name: "config",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client }: RequestHandler,
+    { pg, logger, client, clients }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
@@ -32,6 +34,7 @@ export default {
       }
 
       const values = view.state.values;
+      // const optOuts = values["optOuts"]?.["opt_out"]?.value?.trim().split(",");
 
       const flatValues = Object.entries(values).reduce(
         (acc, [, block]) => {
@@ -44,9 +47,46 @@ export default {
       );
       
       const updateFields: Partial<UserRow> = {};
+      if (flatValues["api_input"]) {
+        const working = await checkAPIKey({
+          db: pg,
+          apiKey: flatValues["api_input"],
+          logger,
+          register: true,
+        });
+        if (!working.works)
+          return await client.chat.postEphemeral({
+            channel: channelId,
+            user: userId,
+            text: "Flavortown API Key is invalid, provide a valid one.",
+          });
+
+        const apiKey = flatValues["api_input"]!;
+        const ftClient = new FT(apiKey, logger);
+
+        const dbData = await pg
+          .select()
+          .from(users)
+          .limit(1)
+          .where(eq(users.userId, userId));
+        if (dbData.length === 0)
+          return await client.chat.postEphemeral({
+            channel: channelId,
+            user: userId,
+            text: "No entry found for you in DB",
+          });
+
+        updateFields.apiKey = apiKey;
+        if (dbData[0]?.disabled) updateFields.disabled = false;
+
+        if (!clients[apiKey]) {
+          clients[apiKey] = ftClient;
+        }
+      }
 
       if (flatValues["region"]) {
-        updateFields.region = flatValues["region"];
+        const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("Region::"));
+        updateFields.meta = [...filteredMeta, "Region::" + flatValues["region"].toLowerCase()];
       }
 
       if (flatValues["pingGroupId"]) {
@@ -68,7 +108,7 @@ export default {
         await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
-          text: "Updated successfully! :yay:",
+          text: "Updated successfully!",
         });
       } else {
         await client.chat.postEphemeral({

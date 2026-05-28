@@ -7,5 +7,6 @@ export const yswsUsers = pgTable("ysws", {
   disabled: boolean().default(false),
   optOuts: text().array(),
   region: text(),
+  goals: integer().array(),
   meta: text().array(),
 });

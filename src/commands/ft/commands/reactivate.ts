@@ -4,7 +4,8 @@ import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index.ts";
-type UserRow = typeof users._.inferSelect;
+import { yswsUsers } from "@/schema/ysws";
+type UserRow = typeof yswsUsers._.inferSelect;
 
 export default {
   name: "reactivate",
@@ -17,6 +18,7 @@ export default {
       const channel = await client.conversations.info({
         channel: command.channel_id,
       });
+      
       if (!channel)
         return await respond({
           text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
@@ -32,13 +34,7 @@ export default {
 
       if (userData.length === 0)
         return await respond({
-          text: `Run /${prefix}-register first to be able to run this command.`,
-          response_type: "ephemeral",
-        });
-
-      if (command.channel_id !== userData[0]?.channel)
-        return respond({
-          text: `Please run this in the channel that ${prefix} is setup to post in.`,
+          text: `Run /${prefix} register first to be able to run this command.`,
           response_type: "ephemeral",
         });
 
@@ -50,6 +46,7 @@ export default {
         allowTheDisabled: true,
         userId: command.user_id
       });
+      
       if (!working.works)
         return respond({
           text: "Flavortown API Key is invalid, provide a valid one.",
@@ -66,9 +63,9 @@ export default {
       updateFields.disabled = false;
       clients[apiKey] = new FT(apiKey, logger);
       await pg
-        .update(users)
+        .update(yswsUsers)
         .set(updateFields)
-        .where(eq(users.userId, command.user_id));
+        .where(eq(yswsUsers.userId, command.user_id));
 
       return respond({
         text: "You have been reactivated!",

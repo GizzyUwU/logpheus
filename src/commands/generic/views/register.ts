@@ -3,7 +3,6 @@ import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
-import checkAPIKey from "@/lib/ft/apiKeyCheck";
 type UserInsert = typeof users.$inferInsert;
 
 export default {

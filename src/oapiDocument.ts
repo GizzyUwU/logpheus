@@ -4,8 +4,9 @@ import {
   GoalsError,
   GoalsPutPostDelete,
   GoalsResponse,
-} from "./apiSchema/goals";
-import { MultiplierError, MultiplierPostGet } from "./apiSchema/multiplier";
+} from "@/apiSchema/goals";
+import { yswsSchema, yswsItem, YSWSId } from "@/ysws";
+import { MultiplierError, MultiplierPostGet } from "@/apiSchema/multiplier";
 
 const openapiSpecification = {
   openapi: "3.1.1",
@@ -24,14 +25,180 @@ const openapiSpecification = {
     },
   },
   paths: {
-    "/api/v1/goals": {
+    "/api/v1/ysws": {
+      get: {
+        tags: ["YSWS"],
+        responses: {
+          "200": {
+            description: "200 OK",
+            content: {
+              "application/json": {
+                schema: yswsSchema,
+              },
+            },
+          },
+          "401": {
+            description: "401 Unauthorised",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "408": {
+            description: "408 Request Timeout",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "429": {
+            description: "429 Too Many Requests",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "500": {
+            description: "500 Internal Server Error",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "502": {
+            description: "502 Bad Gateway",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "503": {
+            description: "503 Service Unavailable",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "504": {
+            description: "504 Gateway Timeout",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/ysws/{yswsId}": {
+      parameters: [
+        {
+          in: "path",
+          name: "yswsId",
+          required: true,
+          description: "Identifier of the YSWS found in /api/v1/ysws",
+          schema: {
+            type: "integer",
+            example: 1,
+          },
+        },
+      ],
+      get: {
+        tags: ["YSWS"],
+        responses: {
+          "200": {
+            description: "200 OK",
+            content: {
+              "application/json": {
+                schema: yswsItem,
+              },
+            },
+          },
+          "401": {
+            description: "401 Unauthorised",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "408": {
+            description: "408 Request Timeout",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "429": {
+            description: "429 Too Many Requests",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "500": {
+            description: "500 Internal Server Error",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "502": {
+            description: "502 Bad Gateway",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "503": {
+            description: "503 Service Unavailable",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+          "504": {
+            description: "504 Gateway Timeout",
+            content: {
+              "application/json": {
+                schema: GoalsError,
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/{yswsId}/goals": {
+      parameters: [
+        {
+          in: "path",
+          name: "yswsId",
+          required: true,
+          description: "Identifier of the YSWS found in /api/v1/ysws",
+          schema: {
+            type: "integer",
+            example: 1,
+          },
+        },
+      ],
       post: {
         tags: ["Goals"],
         requestParams: {
           header: z.object({
             Authorization: z.string().meta({
               description: "JWT token in format: Bearer <token>",
-              example: "Bearer ft_sk_",
+              example: "Bearer logpheus_sk",
               param: {
                 required: true,
               },
@@ -118,7 +285,7 @@ const openapiSpecification = {
           header: z.object({
             Authorization: z.string().meta({
               description: "JWT token in format: Bearer <token>",
-              example: "Bearer ft_sk_",
+              example: "Bearer logpheus_sk_",
               param: {
                 required: true,
               },
@@ -205,7 +372,7 @@ const openapiSpecification = {
           header: z.object({
             Authorization: z.string().meta({
               description: "JWT token in format: Bearer <token>",
-              example: "Bearer ft_sk_",
+              example: "Bearer logpheus_sk_",
               param: {
                 required: true,
               },
@@ -292,7 +459,7 @@ const openapiSpecification = {
           header: z.object({
             Authorization: z.string().meta({
               description: "JWT token in format: Bearer <token>",
-              example: "Bearer ft_sk_",
+              example: "Bearer logpheus_sk_",
               param: {
                 required: true,
               },
@@ -367,12 +534,28 @@ const openapiSpecification = {
         },
       },
     },
-    "/api/v1/{projectId}/multiplier": {
+    "/api/v1/{yswsId}/{projectId}/multiplier": {
       parameters: [
         {
           in: "path",
+          name: "yswsId",
+          required: true,
+          description: "Identifier of the YSWS found in /api/v1/ysws",
+          schema: {
+            type: "integer",
+            example: 1,
+          },
+        },
+        {
+          in: "path",
           name: "projectId",
-          description: "The project's identifier",
+          required: true,
+          description:
+            "Identifier of the project like https://flavortown.hackclub.com/projects/{projectId}",
+          schema: {
+            type: "integer",
+            example: 1,
+          },
         },
       ],
       post: {
@@ -381,7 +564,7 @@ const openapiSpecification = {
           header: z.object({
             Authorization: z.string().meta({
               description: "JWT token in format: Bearer <token>",
-              example: "Bearer ft_sk_",
+              example: "Bearer logpheus_sk_",
               param: {
                 required: true,
               },
@@ -468,7 +651,7 @@ const openapiSpecification = {
           header: z.object({
             Authorization: z.string().meta({
               description: "JWT token in format: Bearer <token>",
-              example: "Bearer ft_sk_",
+              example: "Bearer logpheus_sk_",
               param: {
                 required: true,
               },

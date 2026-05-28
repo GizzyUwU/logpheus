@@ -56,7 +56,7 @@ export default {
 
     const working = await checkAPIKey({
       db: pg,
-      apiKey: checkKey,
+      apiKey: checkKey!,
       logger,
     });
 
