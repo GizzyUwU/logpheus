@@ -71,6 +71,13 @@
       "when": 1779880136716,
       "tag": "0009_cute_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779993153566,
+      "tag": "0010_glamorous_blue_blade",
+      "breakpoints": true
     }
   ]
 }

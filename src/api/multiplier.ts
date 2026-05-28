@@ -1,11 +1,14 @@
 import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsIncomingMessage";
 import type { ServerResponse, IncomingMessage } from "node:http";
 import main from "@/index.ts";
-import checkAPIKey from "@/lib/ft/apiKeyCheck";
-import { eq } from "drizzle-orm";
+import checkAPIKey from "@/lib/apiKeyCheck";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { MultiplierError, MultiplierPostGet } from "@/apiSchema/multiplier";
 import { projects } from "@/schema/projects";
+import { MultiplierProjectID } from "@/apiSchema/multiplier";
+import ysws, { YSWSId } from "@/ysws";
+import { yswsUsers } from "@/schema/ysws";
 import { rateLimit } from "@/api/index";
 type ProjectRow = typeof projects.$inferSelect;
 
@@ -21,10 +24,9 @@ async function readJson<T>(req: any): Promise<T | null> {
   }
 }
 
-// S B O  I  H L I G M  A  G N O N  T  M K  T I  E D O N  S N H L
 export default [
   {
-    path: "/api/v1/:projectId/multiplier",
+    path: "/api/v1/:yswsId/:projectId/multiplier",
     method: ["GET", "POST"],
     handler: async (
       req: ParamsIncomingMessage,
@@ -35,25 +37,42 @@ export default [
         if (!rateLimit(ip)) {
           res.writeHead(429, { "Content-Type": "application/json" });
           res.end(
-            JSON.stringify({ msg: "Too many requests, try again later." }),
+            JSON.stringify({ msg: "Too many wequests, try a-again watew." }),
           );
           return;
         }
-        if (!req.params!["projectId"]) {
+
+        if (!req.params!["yswsId"] || !req.params!["projectId"]) {
           res.writeHead(400);
           res.end(
             JSON.stringify({
-              msg: "Provide project id like /api/v1/projectIdHere/multiplier",
+              msg: "Pwovide pwoject id wike /api/v1/{yswsId}/${projectId}/multiplier",
             }),
           );
           return;
         }
 
-        const projectId = Number(req.params!["projectId"]);
+        const projectId = MultiplierProjectID.parse(
+          req.params!["projectId"],
+        )
+        const yswsId = YSWSId.parse(req.params!["yswsId"])
+        const yswsData = Object.values(ysws).find((record) => record.id === yswsId);
+        if (!yswsData) {
+          res.writeHead(404);
+          res.end(
+            JSON.stringify({
+              msg: "The YSWS ID provided isn't valid for this bot.",
+            }),
+          );
+          return;
+        }
+
         const preReplaceAPIKey = req.headers["authorization"];
         if (!preReplaceAPIKey?.startsWith("Bearer ")) {
           res.writeHead(401);
-          res.end("Failed authentication, please provide your api key.");
+          res.end(
+            "You nyeed pwovide youw api key to make use of this endpoint!!",
+          );
           return;
         }
 
@@ -66,16 +85,39 @@ export default [
         if (!working.works) {
           res.writeHead(401);
           res.end(
-            "Failed authentication check! Check if the api key is correct and you are registered to logpheus.",
+            JSON.stringify({
+              msg: "Oh nyo?!?! We f-faiwed to authenticate you, check the *boops your nose* pwovided api key.",
+            }),
           );
           return;
         }
 
-        if (!working.row![0]?.projects?.includes(Number(projectId))) {
-          res.writeHead(400);
+        const userYSWS = await main.pg
+          .select()
+          .from(yswsUsers)
+          .limit(1)
+          .where(
+            and(
+              eq(yswsUsers.userId, working.row.userId),
+              eq(yswsUsers.yswsId, yswsId),
+            ),
+          );
+
+        if (userYSWS.length === 0) {
+          res.writeHead(404);
           res.end(
             JSON.stringify({
-              msg: "Prject ID doesn't exist under your account.",
+              msg: "You awen't subscwibed to this YSWS!?",
+            }),
+          );
+          return;
+        }
+
+        if (!userYSWS[0]?.projects?.includes(projectId)) {
+          res.writeHead(404);
+          res.end(
+            JSON.stringify({
+              msg: "This pwoject isn't undew youw account?!!",
             }),
           );
           return;
@@ -87,7 +129,7 @@ export default [
             const unparsedBody =
               await readJson<z.infer<typeof MultiplierPostGet>>(req);
             const body = MultiplierPostGet.parse(unparsedBody);
-            if (body.multiplier < 0 || body.multiplier > 30) {
+            if (body.multiplier < 0 || body.multiplier > yswsData.maxMult) {
               res.writeHead(400, { "content-type": "application/json" });
               res.end(
                 JSON.stringify({
@@ -116,7 +158,7 @@ export default [
             }
 
             const existingMultiplier = project[0]?.multiplier;
-            if (Number(existingMultiplier) === body.multiplier) {
+            if (existingMultiplier && existingMultiplier === body.multiplier) {
               res.writeHead(200, { "content-type": "application/json" });
               res.end(
                 JSON.stringify({ multiplier: body.multiplier } as z.infer<
@@ -177,7 +219,7 @@ export default [
             res.writeHead(200, { "content-type": "application/json" });
             res.end(
               JSON.stringify({
-                multiplier: Number(existingMultiplier),
+                multiplier: existingMultiplier,
               } as z.infer<typeof MultiplierPostGet>),
             );
             return;
@@ -204,4 +246,3 @@ export default [
     },
   },
 ];
-// A I  S  O D N  E  T  U P I T  O  A E  H S  N P I T  E D  E P

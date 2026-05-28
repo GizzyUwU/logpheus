@@ -38,6 +38,8 @@ export default async function checkAPIKey(data: {
         .limit(1)
     : [];
 
+  console.log(row)
+
   if (data.db && row.length === 0) return { works: data.register === true && !allowDisabledByUser };
   if (!allowDisabledByUser && (data.db && row[0]?.disabled === true)) return { works: false };
 

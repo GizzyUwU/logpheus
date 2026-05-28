@@ -5,7 +5,7 @@ import {
   GoalsPutPostDelete,
   GoalsResponse,
 } from "@/apiSchema/goals";
-import { yswsSchema, yswsItem, YSWSId } from "@/ysws";
+import { yswsSchema, yswsItem } from "@/ysws";
 import { MultiplierError, MultiplierPostGet } from "@/apiSchema/multiplier";
 
 const openapiSpecification = {
@@ -198,7 +198,7 @@ const openapiSpecification = {
           header: z.object({
             Authorization: z.string().meta({
               description: "JWT token in format: Bearer <token>",
-              example: "Bearer logpheus_sk",
+              example: "Bearer logpheus_sk_",
               param: {
                 required: true,
               },

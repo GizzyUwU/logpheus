@@ -1,16 +1,18 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index";
 import { users } from "@/schema/users";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { projects } from "@/schema/projects";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
-type UserRow = typeof users._.inferSelect;
+import { yswsUsers } from "@/schema/ysws";
+import ysws from "@/ysws";
+type UserRow = typeof yswsUsers._.inferSelect;
 
 export default {
   name: "add",
-  params: "[projectId]",
+  params: "[projectId || null]",
   desc: "Subscribe a project to get automated devlogs posts to your channel!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
@@ -38,15 +40,21 @@ export default {
         .limit(1)
         .where(eq(users.userId, command.user_id));
 
+      const yswsData = await pg
+        .select()
+        .from(yswsUsers)
+        .limit(1)
+        .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
+
       if (userData.length === 0)
         return await respond({
-          text: `Run /${prefix}-register first to be able to run this command.`,
+          text: `Run /${prefix} register first to be able to run this command.`,
           response_type: "ephemeral",
         });
 
       const projectId = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
       if (!projectId) {
-        const checkKey = String(userData[0]?.apiKey);
+        const checkKey = String(yswsData[0]?.apiKey);
 
         const working = await checkAPIKey({
           db: pg,
@@ -83,10 +91,10 @@ export default {
           }
         }
 
-        const projectsArr = Array.isArray(userData[0]?.projects)
+        const projectsArr = Array.isArray(yswsData[0]?.projects)
           ? Array.from(
               new Set(
-                userData[0]?.projects.filter(
+                yswsData[0]?.projects.filter(
                   (p): p is number => Number.isInteger(p) && p > 0,
                 ),
               ),
@@ -109,19 +117,11 @@ export default {
           ...newProjects.map((p) => p.id),
         ];
 
-        if (!userData[0]?.userId) {
-          updateFields.userId = command.user_id;
-        }
-
-        if (!userData[0]?.channel) {
-          updateFields.channel = command.channel_id;
-        }
-
         updateFields.projects = projectsArr;
         await pg
-          .update(users)
+          .update(yswsUsers)
           .set(updateFields)
-          .where(eq(users.userId, command.user_id));
+          .where(eq(yswsUsers.userId, command.user_id));
 
         for (const project of newProjects) {
           const devlogIds = Array.isArray(project.devlog_ids)
@@ -196,7 +196,7 @@ export default {
             text: `Project ID has to be a integer`,
             response_type: "ephemeral",
           });
-        const checkKey = String(userData[0]?.apiKey);
+        const checkKey = String(yswsData[0]?.apiKey);
 
         const working = await checkAPIKey({
           db: pg,
@@ -212,10 +212,10 @@ export default {
         const apiKey = checkKey!;
 
         const ftClient = new FT(apiKey, logger);
-        const projectsArr = Array.isArray(userData[0]?.projects)
+        const projectsArr = Array.isArray(yswsData[0]?.projects)
           ? Array.from(
               new Set(
-                userData[0]?.projects.filter(
+                yswsData[0]?.projects.filter(
                   (p): p is number => Number.isInteger(p) && p > 0,
                 ),
               ),
@@ -230,19 +230,12 @@ export default {
         }
 
         projectsArr.push(Number(projectId));
-        if (!userData[0]?.userId) {
-          updateFields.userId = command.user_id;
-        }
-
-        if (!userData[0]?.channel) {
-          updateFields.channel = command.channel_id;
-        }
-
+  
         updateFields.projects = projectsArr;
         await pg
-          .update(users)
+          .update(yswsUsers)
           .set(updateFields)
-          .where(eq(users.userId, command.user_id));
+          .where(eq(yswsUsers.userId, command.user_id));
 
         const freshProject = await ftClient.project({ id: Number(projectId) });
         if (!freshProject || !freshProject.status) {

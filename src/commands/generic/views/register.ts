@@ -1,9 +1,21 @@
 import type { SlackViewMiddlewareArgs } from "@slack/bolt";
 import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
-import type { RequestHandler } from "@/index.ts";
+import type { DatabaseType, RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 type UserInsert = typeof users.$inferInsert;
+
+async function genAPIKey(pg: DatabaseType): Promise<string> {
+  while (true) {
+    const key = "logpheus_sk_" + crypto.randomUUID().replace(/-/g, "");
+    const exists = await pg
+      .select()
+      .from(users)
+      .where(eq(users.apiKey, key))
+      .limit(1);
+    if (exists.length === 0) return key;
+  }
+}
 
 export default {
   name: "register",
@@ -48,6 +60,7 @@ export default {
         });
 
       const insertFields: UserInsert = {
+        apiKey: await genAPIKey(pg),
         userId,
         region: regionOpt ?? "us",
         disabled: false,

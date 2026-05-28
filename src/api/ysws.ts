@@ -1,7 +1,6 @@
 import ysws, { YSWSId } from "@/ysws";
 import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsIncomingMessage";
 import type { ServerResponse, IncomingMessage } from "node:http";
-import z from "zod";
 
 export default [
   {
@@ -25,8 +24,8 @@ export default [
         );
       }
 
-      const data = YSWSId.parse(req.params);
-      const item = Object.values(ysws).find((x) => x.id === data.yswsId);
+      const data = YSWSId.parse(req.params!["yswsId"]);
+      const item = Object.values(ysws).find((x) => x.id === data);
      
        if (!item) {
          res.writeHead(404, { "content-type": "application/json" });

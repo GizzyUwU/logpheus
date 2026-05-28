@@ -26,7 +26,7 @@ import ansiRegex from "ansi-regex";
 import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsRepliesResponse";
 let sentryEnabled = false;
 let prefix: string;
-type DatabaseType =
+export type DatabaseType =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 const cacheDir = path.join(__dirname, "../cache");

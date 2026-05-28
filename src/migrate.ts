@@ -1,19 +1,23 @@
-import type { PGlite } from "@electric-sql/pglite";
-import type { Pool } from "pg";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
-import type { logger as LogtapeLogger } from "@/index.ts";
+import type { logger as LogtapeLogger, DatabaseType} from "@/index.ts";
 import { users } from "@/schema/users.ts";
 import { yswsUsers } from "@/schema/ysws.ts"; 
 import { projects } from "@/schema/projects";
 import { eq, isNotNull, ne, and, inArray } from "drizzle-orm";
 import ysws from "@/ysws.ts"
 
-type DB =
-  | (NodePgDatabase<Record<string, never>> & { $client: Pool })
-  | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
+async function genAPIKey(pg: DatabaseType): Promise<string> {
+  while (true) {
+    const key = "logpheus_sk_" + crypto.randomUUID().replace(/-/g, "");
+    const exists = await pg
+      .select()
+      .from(users)
+      .where(eq(users.apiKey, key))
+      .limit(1);
+    if (exists.length === 0) return key;
+  }
+}
 
-export default async function (db: DB, logger: typeof LogtapeLogger) {
+export default async function (db: DatabaseType, logger: typeof LogtapeLogger) {
   const allUsers = await db
     .select()
     .from(users)
@@ -101,7 +105,7 @@ export default async function (db: DB, logger: typeof LogtapeLogger) {
         ysws: [...(user.ysws ?? []), ysws.flavortown.id],
         projects: [],
         region,
-        apiKey: null
+        apiKey: await genAPIKey(db)
       })
       .where(eq(users.apiKey, user.apiKey!));
   }

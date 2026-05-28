@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, real } from "drizzle-orm/pg-core";
 export const yswsUsers = pgTable("ysws", {
   yswsId: integer().notNull().primaryKey(),
   apiKey: text(),
@@ -8,5 +8,6 @@ export const yswsUsers = pgTable("ysws", {
   optOuts: text().array(),
   region: text(),
   goals: integer().array(),
+  avgMult: real().default(0),
   meta: text().array(),
 });

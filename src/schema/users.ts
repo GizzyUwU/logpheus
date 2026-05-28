@@ -1,7 +1,7 @@
 import { pgTable, varchar, text, integer, boolean } from "drizzle-orm/pg-core";
 export const users = pgTable("users", {
-  apiKey: varchar(),
-  userId: text().primaryKey(),
+  apiKey: varchar().unique(),
+  userId: text().primaryKey().unique(),
   channel: text().unique(),
   projects: integer().array(),
   disabled: boolean().default(false),
