@@ -78,6 +78,13 @@
       "when": 1779993153566,
       "tag": "0010_glamorous_blue_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780045619170,
+      "tag": "0011_wild_zaran",
+      "breakpoints": true
     }
   ]
 }

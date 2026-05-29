@@ -1,7 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import FT from "@/lib/ft/index";
-import { eq } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
@@ -49,42 +47,36 @@ export default {
   desc: "Search through all the projects on flavortown.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, clients, prefix }: RequestHandler,
+    { pg, logger, clients, prefix, folder, yswsData }: RequestHandler,
   ) => {
-    const { query: actualQuery, page: actualPage, limit } =
-      parseProjectCommand(command.text);
-    
-    const userData = await pg
-      .select()
-      .from(users)
-      .where(eq(users.userId, command.user_id))
-      .limit(1);
-
-    if (userData.length === 0)
+    if (yswsData && Object.keys(yswsData).length === 0)
       return respond({
-        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix}-register`,
+        text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
         response_type: "ephemeral",
       });
+    
+    const { query: actualQuery, page: actualPage, limit } =
+      parseProjectCommand(command.text);
 
-    const checkKey = userData[0]?.apiKey;
+
+    const apiKey = String(yswsData?.apiKey);
 
     const working = await checkAPIKey({
       db: pg,
-      apiKey: checkKey!,
+      apiKey,
+      yswsData: yswsData!,
+      userId: command.user_id,
       logger,
     });
+    
     if (!working.works)
       return respond({
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
       });
 
-    const apiKey = checkKey!;
-
     let ftClient: FT = clients[apiKey]!;
-    if (!ftClient) {
-      ftClient = new FT(apiKey, logger);
-    }
+    if (!ftClient) ftClient = new FT(apiKey, logger);
 
     const projects = await ftClient.projects({
       ...(actualQuery !== undefined ? { query: actualQuery } : {}),

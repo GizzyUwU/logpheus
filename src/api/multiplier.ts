@@ -133,7 +133,7 @@ export default [
               res.writeHead(400, { "content-type": "application/json" });
               res.end(
                 JSON.stringify({
-                  msg: "Multiplier can not be under 0 or above 30",
+                  msg: "Muwtipwiew can nyot be undew 0 ow abuv 30",
                 } as z.infer<typeof MultiplierError>),
               );
               return;
@@ -151,7 +151,7 @@ export default [
               res.writeHead(400, { "content-type": "application/json" });
               res.end(
                 JSON.stringify({
-                  msg: "This project doesn't exist in the database",
+                  msg: "This pwoject doesn't exist in the *boops your nose* database",
                 } as z.infer<typeof MultiplierError>),
               );
               return;
@@ -199,7 +199,7 @@ export default [
               res.writeHead(400, { "content-type": "application/json" });
               res.end(
                 JSON.stringify({
-                  msg: "This project doesn't exist in the database",
+                  msg: "This pwoject doesn't exist in the *boops your nose* database *whispers to self*",
                 } as z.infer<typeof MultiplierError>),
               );
               return;

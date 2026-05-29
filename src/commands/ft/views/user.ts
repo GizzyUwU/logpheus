@@ -1,7 +1,5 @@
 import type { SlackViewMiddlewareArgs } from "@slack/bolt";
 import FT from "@/lib/ft/index";
-import { users } from "@/schema/users";
-import { eq } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
@@ -27,7 +25,7 @@ export default {
   name: "user",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, clients, prefix }: RequestHandler,
+    { pg, logger, client, clients, prefix, yswsData, folder }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
@@ -49,6 +47,13 @@ export default {
         });
       }
 
+      if (yswsData && Object.keys(yswsData).length === 0)
+        return await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
+        });
+
       const { target_user } = view.state.values as {
         target_user: {
           user: {
@@ -59,33 +64,20 @@ export default {
       };
 
       const targetId = target_user.user.selected_user;
-      const userData = await pg
-        .select()
-        .from(users)
-        .limit(1)
-        .where(eq(users.userId, userId));
-
-      if (userData.length === 0)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: `You don't exist in the db! Run /${prefix}-register`,
-        });
-      const checkKey = userData[0]?.apiKey;
+      const apiKey = String(yswsData?.apiKey);
       const working = await checkAPIKey({
         db: pg,
-        apiKey: checkKey,
+        apiKey,
         logger,
         register: true,
       });
-      if (!working)
+      
+      if (!working.works)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
           text: `You're api key isn't working! Try re-entering it with /${prefix}-config`,
         });
-
-      const apiKey = checkKey!;
 
       let ftClient: FT = clients[apiKey]!;
       if (!ftClient) {

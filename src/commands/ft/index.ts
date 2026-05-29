@@ -2,6 +2,10 @@ import path from "path";
 import fs from "fs";
 import type { SlackCommandMiddlewareArgs, App } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
+import { users } from "@/schema/users";
+import { and, eq } from "drizzle-orm";
+import { yswsUsers } from "@/schema/ysws";
+import ysws from "@/ysws";
 const commandHandlers = new Map<string, { execute: Function }>();
 
 const commandsDir = path.join(__dirname, "commands");
@@ -20,10 +24,7 @@ if (fs.existsSync(commandsDir)) {
   }
 }
 
-async function setup(
-  app: App,
-  ctx: RequestHandler,
-) {
+async function setup(app: App, ctx: RequestHandler) {
   const viewsDir = path.join(__dirname, "views");
   if (!fs.existsSync(viewsDir)) return;
 
@@ -40,8 +41,43 @@ async function setup(
     const callbackId = `${ctx.namespacedPrefix}_${fileStem}`;
     app.view(callbackId, async (args) => {
       await args.ack();
+      const userData = await ctx.pg
+        .select()
+        .from(users)
+        .where(eq(users.userId, args.body.user.id))
+        .limit(1);
+  
+      if (userData.length === 0)
+        return args.respond({
+          text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
+          response_type: "ephemeral",
+        });
+  
+      const yswsData = await ctx.pg
+        .select()
+        .from(yswsUsers)
+        .where(
+          and(
+            eq(yswsUsers.userId, args.body.user.id),
+            eq(yswsUsers.yswsId, ysws.flavortown.id),
+          ),
+        )
+        .limit(1);
+  
+      if (yswsData.length === 0 && !callbackId.includes("register"))
+        return args.client.chat.postEphemeral({
+          channel: JSON.parse(args.view.private_metadata).channel,
+          user: args.body.user.id,
+          text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
+        });
+      
       try {
-        await mod.execute(args, { ...ctx, callbackId } satisfies RequestHandler);
+        await mod.execute(args, {
+          ...ctx,
+          callbackId,
+          yswsData: yswsData[0]!,
+          userData: userData[0]!,
+        } satisfies RequestHandler);
       } catch (err) {
         ctx.logger.error({ err });
       }
@@ -54,13 +90,43 @@ export default {
   setup: async (app: App, ctx: RequestHandler) => setup(app, ctx),
   execute: async (args: SlackCommandMiddlewareArgs, ctx: RequestHandler) => {
     const [rawOption] = args.command.text.split(" ").filter(Boolean);
-    if (!rawOption)
+    const userData = await ctx.pg
+      .select()
+      .from(users)
+      .where(eq(users.userId, args.command.user_id))
+      .limit(1);
+
+    if (userData.length === 0)
       return args.respond({
-        text: "You must provide an option.",
+        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
         response_type: "ephemeral",
       });
 
-    const option = rawOption.toLowerCase();
+    const yswsData = await ctx.pg
+      .select()
+      .from(yswsUsers)
+      .where(
+        and(
+          eq(yswsUsers.userId, args.command.user_id),
+          eq(yswsUsers.yswsId, ysws.flavortown.id),
+        ),
+      )
+      .limit(1);
+
+    if (yswsData.length === 0 && rawOption !== "register")
+      return args.respond({
+        text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
+        response_type: "ephemeral",
+      });
+
+      if (!rawOption)
+        return args.respond({
+          text: "You must provide an option.",
+          response_type: "ephemeral",
+        });
+  
+      const option = rawOption.toLowerCase();
+    
     const handler = commandHandlers.get(option);
 
     if (!handler)
@@ -79,8 +145,10 @@ export default {
       },
       {
         ...ctx,
-        callbackId: ctx.namespacedPrefix + "_" + option
-      },
+        callbackId: ctx.namespacedPrefix + "_" + option,
+        yswsData: yswsData[0]!,
+        userData: userData[0]!
+      } satisfies RequestHandler,
     );
   },
 };

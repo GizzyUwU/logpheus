@@ -1,7 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import FT from "@/lib/ft/index";
-import { eq } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
@@ -12,30 +10,27 @@ export default {
   desc: "Look through the items on the shop and maybe add it to your goals!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, client, logger, clients, prefix }: RequestHandler,
+    { pg, client, logger, clients, prefix, folder, yswsData }: RequestHandler,
   ) => {
+    if (yswsData && Object.keys(yswsData).length === 0)
+      return respond({
+        text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
+        response_type: "ephemeral",
+      });
+    
     const id = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
     if (!Number.isInteger(Number(id)))
       return respond({
         text: `The shop id provided has to be a valid integer`,
         response_type: "ephemeral",
       });
-    const userData = await pg
-      .select()
-      .from(users)
-      .where(eq(users.userId, command.user_id))
-      .limit(1);
 
-    if (userData.length === 0)
-      return respond({
-        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix}-register`,
-        response_type: "ephemeral",
-      });
-
-    const checkKey = userData[0]?.apiKey;
+    const apiKey = String(yswsData?.apiKey);
     const working = await checkAPIKey({
       db: pg,
-      apiKey: checkKey,
+      apiKey,
+      userId: command.user_id,
+      yswsData: yswsData!,
       logger,
     });
 
@@ -44,13 +39,9 @@ export default {
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
       });
-    const apiKey = checkKey!;
 
     let ftClient: FT = clients[apiKey]!;
-    if (!ftClient) {
-      ftClient = new FT(apiKey, logger);
-    }
-
+    if (!ftClient) ftClient = new FT(apiKey, logger);
     if (!id) {
       const items = await ftClient.shop();
 
@@ -72,43 +63,22 @@ export default {
         }
       }
 
-      let goalsRaw = (working.row![0]?.meta ?? []).find((item) =>
-        item.startsWith("Goals::"),
-      );
-
-      if (!goalsRaw) {
-        goalsRaw = "[]";
-      }
-
-      const match = goalsRaw.match(/\[(.*?)\]/);
-      const goals = match?.[1]
-        ? match[1]
-          .split(",")
-          .map((v) => parseInt(v.trim()))
-          .filter((v) => !isNaN(v))
-        : [];
-
-      const region =
-        working.row![0]?.meta
-          ?.find((s) => s.startsWith("Region::"))
-          ?.split("::")[1] ?? "";
-
       const text = "*Items*:\n" + (items.data ?? [])
         .filter(
           (item) =>
             item.type !== "ShopItem::Accessory" &&
             !item.attached_shop_item_ids?.some((id) => id != null) &&
-            !goals.includes(Number(item.id)) &&
-            (region && region.length > 0
-              ? item.enabled?.[`enabled_${region.toLowerCase()}` as keyof typeof item.enabled]
+            (yswsData?.goals && !yswsData.goals.includes(Number(item.id))) &&
+            (yswsData?.region && yswsData.region.length > 0
+              ? item.enabled?.[`enabled_${yswsData.region.toLowerCase()}` as keyof typeof item.enabled]
               : true),
         )
         .slice(0, 30)
         .map((item) => {
           const cost =
-            region && region.length > 0
+            yswsData?.region && yswsData.region.length > 0
               ? ((item.ticket_cost as Record<string, number | undefined>)[
-                region.toLowerCase()
+                yswsData.region.toLowerCase()
               ] ??
                 item.ticket_cost?.base_cost ??
                 0)
@@ -118,26 +88,26 @@ export default {
         })
         .join("\n");
 
-      const goalsResolved = goals
+      const goalsResolved = yswsData?.goals ? yswsData.goals
         .map((goalId) => items.data.find((item) => item.id === goalId))
-        .filter(Boolean)
-        .map((item) => {
-          const cost =
-            region && region.length > 0
-              ? ((item!.ticket_cost as Record<string, number | undefined>)[
-                region.toLowerCase()
-              ] ??
-                item!.ticket_cost?.base_cost ??
-                0)
-              : item!.ticket_cost?.base_cost ?? 0;
+          .filter(Boolean)
+          .map((item) => {
+            const cost =
+              yswsData?.region && yswsData.region.length > 0
+                ? ((item!.ticket_cost as Record<string, number | undefined>)[
+                  yswsData.region.toLowerCase()
+                ] ??
+                  item!.ticket_cost?.base_cost ??
+                  0)
+                : item!.ticket_cost?.base_cost ?? 0;
 
-          return {
-            id: item!.id,
-            name: item!.name ?? "Untitled",
-            cost,
-            desc: item!.description ?? "",
-          };
-        });
+            return {
+              id: item!.id,
+              name: item!.name ?? "Untitled",
+              cost,
+              desc: item!.description ?? "",
+            };
+          }) : [];
 
       const goalsText =
         "*Goals*:\n" +
@@ -154,12 +124,12 @@ export default {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: region?.length
-                ? "*Flavortown Store with " + region.toUpperCase() + "'s Prices*"
+              text: yswsData?.region && yswsData.region.length > 0
+                ? "*Flavortown Store with " + yswsData.region.toUpperCase() + "'s Prices*"
                 : "*Flavortown Store*",
             },
           },
-          ...(goals.length > 0 ? [{
+          ...(yswsData?.goals && yswsData.goals.length > 0 ? [{
             type: "section",
             text: {
               type: "mrkdwn",

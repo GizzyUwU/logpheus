@@ -13,7 +13,7 @@ export default {
   name: "add",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, prefix }: RequestHandler,
+    { pg, logger, client, prefix, yswsData, folder }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
@@ -31,25 +31,18 @@ export default {
         });
       }
 
-      const values = view.state.values;
-      const projectIdRaw = values["projId"]?.["proj_input"]?.value?.trim();
-      const numericProjectId = Number(projectIdRaw);
-
-      const userData = await pg
-        .select()
-        .from(users)
-        .limit(1)
-        .where(eq(users.userId, userId));
-
-      const checkKey = String(userData[0]?.apiKey);
-
-      if (!projectIdRaw)
+      if (yswsData && Object.keys(yswsData).length === 0)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
-          text: "Project ID is required",
+          text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
         });
-      if (!Number.isInteger(numericProjectId) || numericProjectId <= 0)
+
+      const values = view.state.values;
+      const projectId = Number(values["projId"]?.["proj_input"]?.value?.trim());
+      const apiKey = String(yswsData?.apiKey);
+      
+      if (!projectId || Number.isInteger(projectId) || projectId <= 0)
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
@@ -58,7 +51,7 @@ export default {
 
       const working = await checkAPIKey({
         db: pg,
-        apiKey: checkKey,
+        apiKey,
         logger,
       });
       if (!working.works)
@@ -68,57 +61,32 @@ export default {
           text: "Flavortown API Key is invalid, provide a valid one.",
         });
 
-      const apiKey = checkKey!;
       const ftClient = new FT(apiKey, logger);
-
-      if (working.row!.length === 0)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "Unexpected error has occured",
-        });
-
       const updateFields: Partial<UserRow> = {};
-      const row = working.row![0];
-      if (row?.channel && row?.channel !== channelId)
-        return await client.chat.postEphemeral({
-          channel: channelId,
-          user: userId,
-          text: "This API key is already bound to a different channel",
-        });
-
-      const projectsArr = Array.isArray(row?.projects)
+      const projectsArr = Array.isArray(yswsData?.projects)
         ? Array.from(
             new Set(
-              row.projects.filter(
+              yswsData.projects.filter(
                 (p): p is number => Number.isInteger(p) && p > 0,
               ),
             ),
           )
         : [];
 
-      if (projectsArr.includes(numericProjectId)) {
+      if (projectsArr.includes(projectId)) {
         return await client.chat.postEphemeral({
           channel: channelId,
           user: userId,
-          text: "Project already registered",
+          text: "Project ID already registered to your account!",
         });
       }
 
-      projectsArr.push(numericProjectId);
-
-      if (!row?.userId) {
-        updateFields.userId = userId;
-      }
-
-      if (!row?.channel) {
-        updateFields.channel = channelId;
-      }
+      projectsArr.push(projectId);
 
       updateFields.projects = projectsArr;
       await pg.update(users).set(updateFields).where(eq(users.userId, userId));
 
-      const freshProject = await ftClient.project({ id: numericProjectId });
+      const freshProject = await ftClient.project({ id: projectId });
       if (!freshProject || !freshProject.status) {
         return client.chat.postEphemeral({
           channel: channelId,
@@ -152,7 +120,7 @@ export default {
       await pg
         .insert(projects)
         .values({
-          id: numericProjectId,
+          id: projectId,
           devlogIds,
         })
         .onConflictDoUpdate({
@@ -171,7 +139,7 @@ export default {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `:woah-dino: <https://flavortown.hackclub.com/projects/${numericProjectId}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
+              text: `:woah-dino: <https://flavortown.hackclub.com/projects/${projectId}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
             },
           },
           {

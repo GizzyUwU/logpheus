@@ -20,6 +20,8 @@ import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
+import { yswsUsers } from "./schema/ysws";
+import { users } from "./schema/users";
 import loadAPI from "./api/index";
 import migrateUsers from "./migrate";
 import ansiRegex from "ansi-regex";
@@ -266,6 +268,8 @@ export interface RequestHandler {
   folder?: string | undefined;
   callbackId?: string;
   commands?: typeof commands;
+  yswsData?: typeof yswsUsers.$inferSelect
+  userData?: typeof users.$inferSelect
 }
 
 const main = {

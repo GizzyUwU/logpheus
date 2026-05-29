@@ -1,8 +1,6 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import type { RequestHandler } from "@/index.ts";
-import { users } from "@/schema/users";
-import { eq } from "drizzle-orm";
 import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import type { GetUserResponse } from "@/lib/ft/types";
@@ -30,7 +28,16 @@ export default {
   desc: "View a user's flavortown profile.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, client, clients, logger, callbackId, prefix }: RequestHandler,
+    {
+      pg,
+      client,
+      clients,
+      logger,
+      callbackId,
+      prefix,
+      folder,
+      yswsData,
+    }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -41,31 +48,27 @@ export default {
           text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
           response_type: "ephemeral",
         });
-      const userExists = await pg
-        .select()
-        .from(users)
-        .where(eq(users.userId, command.user_id))
-        .limit(1);
 
-      if (userExists.length === 0)
+      if (yswsData && Object.keys(yswsData).length === 0)
         return respond({
-          text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix}-register`,
+          text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
           response_type: "ephemeral",
         });
 
-      const checkKey = userExists[0]?.apiKey;
+      const apiKey = String(yswsData?.apiKey);
       const working = await checkAPIKey({
-        apiKey: checkKey,
+        db: pg,
+        apiKey,
+        userId: command.user_id,
+        yswsData: yswsData!,
         logger,
       });
 
       if (!working.works)
         return respond({
-          text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
+          text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-${folder} config to re-enter your api key to fix it.`,
           response_type: "ephemeral",
         });
-
-      const apiKey = checkKey!;
 
       const mention = command.text.trim();
       if (!mention) {
@@ -116,11 +119,8 @@ export default {
           });
 
         const mentionId = match[1];
-
         let ftClient: FT = clients[apiKey]!;
-        if (!ftClient) {
-          ftClient = new FT(apiKey, logger);
-        }
+        if (!ftClient) ftClient = new FT(apiKey, logger);
 
         const queryWithTarget = await ftClient.users({
           query: mentionId,
@@ -215,10 +215,11 @@ export default {
               targetUser.data.achievements.length > 0
                 ? targetUser.data.achievements
                     .map(
-                      (item:  NonNullable<
-                       z.infer<typeof GetUserResponse>["achievements"]
-                     >[number]) =>
-                        item.name,
+                      (
+                        item: NonNullable<
+                          z.infer<typeof GetUserResponse>["achievements"]
+                        >[number],
+                      ) => item.name,
                     )
                     .join(", ")
                 : "No projects",

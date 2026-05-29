@@ -1,12 +1,13 @@
 import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsIncomingMessage";
 import type { ServerResponse, IncomingMessage } from "node:http";
 import main from "@/index";
-import checkAPIKey from "@/lib/ft/apiKeyCheck";
+import checkAPIKey from "@/lib/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
-import { users } from "@/schema/users";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { rateLimit } from "@/api/index.ts";
+import { yswsUsers } from "@/schema/ysws";
+import ysws, { YSWSId } from "@/ysws";
 async function readJson<T>(req: any): Promise<T | null> {
   try {
     const chunks: Buffer[] = [];
@@ -21,7 +22,7 @@ async function readJson<T>(req: any): Promise<T | null> {
 
 export default [
   {
-    path: "/api/v1/goals",
+    path: "/api/v2/:yswsId/goals",
     method: ["GET", "POST", "PUT", "DELETE"],
     handler: async (
       req: ParamsIncomingMessage,
@@ -32,7 +33,30 @@ export default [
         if (!rateLimit(ip)) {
           res.writeHead(429, { "Content-Type": "application/json" });
           res.end(
-            JSON.stringify({ msg: "Too many requests, try again later." }),
+            JSON.stringify({ msg: "Too many wequests, try a-again watew." }),
+          );
+          return;
+        }
+
+        
+        if (!req.params!["yswsId"]) {
+          res.writeHead(400);
+          res.end(
+            JSON.stringify({
+              msg: "Pwovide YSWS id wike this /api/v2/{yswsId}/goals",
+            }),
+          );
+          return;
+        }
+
+        const yswsId = YSWSId.parse(req.params!["yswsId"])
+        const yswsData = Object.values(ysws).find((record) => record.id === yswsId);
+        if (!yswsData) {
+          res.writeHead(404);
+          res.end(
+            JSON.stringify({
+              msg: "The YSWS ID provided isn't valid for this bot.",
+            }),
           );
           return;
         }
@@ -40,25 +64,45 @@ export default [
         const preReplaceAPIKey = req.headers["authorization"];
         if (!preReplaceAPIKey?.startsWith("Bearer ")) {
           res.writeHead(401);
-          res.end("Failed authentication, please provide your api key.");
+          res.end("You nyeed pwovide youw api key to make use of this endpoint!!");
           return;
         }
 
-        const checkKey = preReplaceAPIKey.replace(/^Bearer\s+/i, "");
+        const apiKey = String(preReplaceAPIKey.replace(/^Bearer\s+/i, ""));
         const working = await checkAPIKey({
           db: main.pg,
-          apiKey: checkKey,
+          apiKey,
           logger: main.logger,
         });
         if (!working.works) {
           res.writeHead(401);
           res.end(
-            "Failed authentication check! Check if the api key is correct and you are registered to logpheus.",
+            "Oh nyo?!?! We f-faiwed to authenticate you, check the *boops your nose* pwovided api key.",
           );
           return;
         }
 
-        const apiKey = checkKey!;
+        const userYSWS = await main.pg
+          .select()
+          .from(yswsUsers)
+          .limit(1)
+          .where(
+            and(
+              eq(yswsUsers.userId, working.row.userId),
+              eq(yswsUsers.yswsId, yswsId),
+            ),
+          );
+
+        if (userYSWS.length === 0) {
+          res.writeHead(404);
+          res.end(
+            JSON.stringify({
+              msg: "You awen't subscwibed to this YSWS!?",
+            }),
+          );
+          return;
+        }
+
         switch (req.method) {
           case "POST": {
             const body = await readJson<{ goals: number[] }>(req);
@@ -80,7 +124,7 @@ export default [
               });
               res.end(
                 JSON.stringify({
-                  msg: "Unexpected error has occurred",
+                  msg: "Unyexpected ewwow has occuwwed",
                 }),
               );
               return;
@@ -95,7 +139,7 @@ export default [
                   });
                   res.end(
                     JSON.stringify({
-                      msg: msg ?? "Unexpected error has occurred ",
+                      msg: msg ?? "Unyexpected ewwow has occuwwed",
                     }),
                   );
                   return;
@@ -112,16 +156,12 @@ export default [
               return;
             }
 
-            let metaArr = working.row![0]?.meta ?? [];
-            metaArr = metaArr.filter((item) => !item.startsWith("Goals::"));
-            metaArr.push("Goals::[" + goals.join(",") + "]");
-
             await main.pg
-              .update(users)
+              .update(yswsUsers)
               .set({
-                meta: metaArr,
+                goals
               })
-              .where(eq(users.apiKey, apiKey));
+              .where(and(eq(yswsUsers.userId, working.row.userId), eq(yswsUsers.yswsId, yswsId)));
 
             res.writeHead(200, {
               "content-type": "application/json",
@@ -151,7 +191,7 @@ export default [
               });
               res.end(
                 JSON.stringify({
-                  msg: "Unexpected error has occurred",
+                  msg: "Unyexpected ewwow has occuwwed",
                 }),
               );
               return;
@@ -166,7 +206,7 @@ export default [
                   });
                   res.end(
                     JSON.stringify({
-                      msg: msg ?? "Unexpected error has occurred ",
+                      msg: msg ?? "Unyexpected ewwow has occuwwed",
                     }),
                   );
                   return;
@@ -183,34 +223,19 @@ export default [
               return;
             }
 
-            let metaArr = working.row![0]?.meta ?? [];
-            const existGoals = metaArr.find((item) =>
-              item.startsWith("Goals::"),
-            );
-
-            let mergedGoals: number[] = [];
-            if (!existGoals) {
-              mergedGoals = goals;
-            } else {
-              const match = existGoals.match(/\[(.*?)\]/);
-              const parsedGoals = match?.[1]
-                ? match[1]
-                    .split(",")
-                    .map((v) => parseInt(v.trim()))
-                    .filter((v) => !isNaN(v))
-                : [];
-
-              mergedGoals = Array.from(new Set([...parsedGoals, ...goals]));
-            }
-            metaArr = metaArr.filter((item) => !item.startsWith("Goals::"));
-            metaArr.push("Goals::[" + mergedGoals.join(",") + "]");
-
+            const mergedGoals = [
+              ...new Set([
+                ...(userYSWS?.[0]?.goals ?? []),
+                ...(goals ?? [])
+              ])
+            ];
+            
             await main.pg
-              .update(users)
+              .update(yswsUsers)
               .set({
-                meta: metaArr,
+                goals: mergedGoals
               })
-              .where(eq(users.apiKey, apiKey));
+              .where(and(eq(yswsUsers.userId, working.row.userId), eq(yswsUsers.yswsId, yswsId)));
 
             res.writeHead(200, {
               "content-type": "application/json",
@@ -228,44 +253,30 @@ export default [
               res.end(JSON.stringify({ goals: [] }));
               return;
             }
-            let metaArr = working.row![0]?.meta ?? [];
-            const existGoalsStr = metaArr.find((item) =>
-              item.startsWith("Goals::"),
-            );
+      
 
-            if (!existGoalsStr) {
+            if (!userYSWS[0]?.goals) {
               res.writeHead(200, { "content-type": "application/json" });
               res.end(JSON.stringify({ goals: [] }));
               return;
             }
-
-            const match = existGoalsStr.match(/\[(.*?)\]/);
-            const parsedGoals = match?.[1]
-              ? match[1]
-                  .split(",")
-                  .map((v) => parseInt(v.trim()))
-                  .filter((v) => !isNaN(v))
-              : [];
-
-            const remainingGoals = parsedGoals.filter(
+            
+            const remainingGoals = userYSWS[0]?.goals.filter(
               (id) => !goals.includes(id),
             );
 
-            if (remainingGoals.length === parsedGoals.length) {
+            if (remainingGoals.length === userYSWS[0]?.goals.length) {
               res.writeHead(200, { "content-type": "application/json" });
               res.end(JSON.stringify({ goals: remainingGoals }));
               return;
             }
 
-            metaArr = metaArr.filter((item) => !item.startsWith("Goals::["));
-            if (remainingGoals.length > 0) {
-              metaArr.push(`Goals::[${remainingGoals.join(",")}]`);
-            }
-
             await main.pg
-              .update(users)
-              .set({ meta: metaArr })
-              .where(eq(users.apiKey, apiKey));
+              .update(yswsUsers)
+              .set({
+                goals: remainingGoals
+              })
+              .where(and(eq(yswsUsers.userId, working.row.userId), eq(yswsUsers.yswsId, yswsId)));
 
             res.writeHead(200, { "content-type": "application/json" });
             res.end(JSON.stringify({ goals: remainingGoals }));
@@ -273,9 +284,7 @@ export default [
           }
 
           default: {
-            let metaArr = working.row![0]?.meta ?? [];
-            const goalsRaw = metaArr.find((item) => item.startsWith("Goals::"));
-            if (!goalsRaw) {
+            if (!userYSWS[0]?.goals) {
               res.writeHead(200, {
                 "content-type": "application/json",
               });
@@ -287,19 +296,11 @@ export default [
               return;
             }
 
-            const match = goalsRaw.match(/\[(.*?)\]/);
-            const goals = match?.[1]
-              ? match[1]
-                  .split(",")
-                  .map((v) => parseInt(v.trim()))
-                  .filter((v) => !isNaN(v))
-              : [];
-
             res.writeHead(200, {
               "content-type": "application/json",
             });
 
-            res.end(JSON.stringify({ goals }));
+            res.end(JSON.stringify({ goals: userYSWS[0]?.goals }));
             return;
           }
         }

@@ -1,7 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import FT from "@/lib/ft/index";
-import { eq } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
@@ -37,34 +35,29 @@ export default {
   desc: "Look at a project's stats by providing its id!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, clients, prefix }: RequestHandler,
+    { pg, logger, clients, prefix, folder, yswsData }: RequestHandler,
   ) => {
-    const projectIdRaw = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
-    const projectId = Number(projectIdRaw);
+    const projectId = Number(command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim());
 
-    if (!projectIdRaw || !Number.isInteger(projectId) || projectId <= 0)
+    if (!projectId || !Number.isInteger(projectId) || projectId <= 0)
       return respond({
         text: "Project ID must be a positive whole number.",
         response_type: "ephemeral",
       });
 
-    const userData = await pg
-      .select()
-      .from(users)
-      .where(eq(users.userId, command.user_id))
-      .limit(1);
-
-    if (userData.length === 0)
+    if (yswsData && Object.keys(yswsData).length === 0)
       return respond({
-        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix}-register`,
+        text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
         response_type: "ephemeral",
       });
 
-    const checkKey = userData[0]?.apiKey;
+    const apiKey = String(yswsData?.apiKey);
 
     const working = await checkAPIKey({
       db: pg,
-      apiKey: checkKey,
+      apiKey,
+      yswsData: yswsData!,
+      userId: command.user_id,
       logger,
     });
 
@@ -73,12 +66,9 @@ export default {
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
       });
-    const apiKey = checkKey!;
 
     let ftClient: FT = clients[apiKey]!;
-    if (!ftClient) {
-      ftClient = new FT(apiKey, logger);
-    }
+    if (!ftClient) ftClient = new FT(apiKey, logger);
 
     const project = await ftClient.project({
       id: projectId,

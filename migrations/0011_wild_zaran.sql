@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "predicted_currency" integer DEFAULT 0;

@@ -1,13 +1,11 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index";
-import { users } from "@/schema/users";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { projects } from "@/schema/projects";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { yswsUsers } from "@/schema/ysws";
-import ysws from "@/ysws";
 type UserRow = typeof yswsUsers._.inferSelect;
 
 export default {
@@ -16,7 +14,7 @@ export default {
   desc: "Subscribe a project to get automated devlogs posts to your channel!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { logger, client, pg, prefix }: RequestHandler,
+    { logger, client, pg, prefix, userData, folder, yswsData }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -33,32 +31,29 @@ export default {
           response_type: "ephemeral",
         });
 
-      const updateFields: Partial<UserRow> = {};
-      const userData = await pg
-        .select()
-        .from(users)
-        .limit(1)
-        .where(eq(users.userId, command.user_id));
-
-      const yswsData = await pg
-        .select()
-        .from(yswsUsers)
-        .limit(1)
-        .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
-
-      if (userData.length === 0)
-        return await respond({
-          text: `Run /${prefix} register first to be able to run this command.`,
+      if (userData && Object.keys(userData).length === 0)
+        return respond({
+          text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix} register`,
           response_type: "ephemeral",
         });
 
-      const projectId = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
-      if (!projectId) {
-        const checkKey = String(yswsData[0]?.apiKey);
+      if (yswsData && Object.keys(yswsData).length === 0)
+        return respond({
+          text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
+          response_type: "ephemeral",
+        });
 
+      const updateFields: Partial<UserRow> = {};
+      const projectId = Number(
+        command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim(),
+      );
+      if (!projectId) {
+        const apiKey = String(yswsData?.apiKey);
         const working = await checkAPIKey({
           db: pg,
-          apiKey: checkKey,
+          apiKey,
+          yswsData: yswsData!,
+          userId: command.user_id,
           logger,
         });
         if (!working.works)
@@ -67,7 +62,6 @@ export default {
             response_type: "ephemeral",
           });
 
-        const apiKey = checkKey!;
         const ftClient = new FT(apiKey, logger);
         const allProjects = await ftClient.userProjects({
           id: "me",
@@ -80,7 +74,12 @@ export default {
           });
         }
 
-        if (!allProjects.ok || !Object.keys(allProjects.data)?.length || !allProjects.data.projects || allProjects.data.projects.length === 0) {
+        if (
+          !allProjects.ok ||
+          !Object.keys(allProjects.data)?.length ||
+          !allProjects.data.projects ||
+          allProjects.data.projects.length === 0
+        ) {
           switch (allProjects.status) {
             default:
               const msg = getGenericErrorMessage(allProjects.status, prefix!);
@@ -91,10 +90,10 @@ export default {
           }
         }
 
-        const projectsArr = Array.isArray(yswsData[0]?.projects)
+        const projectsArr = Array.isArray(yswsData?.projects)
           ? Array.from(
               new Set(
-                yswsData[0]?.projects.filter(
+                yswsData?.projects.filter(
                   (p): p is number => Number.isInteger(p) && p > 0,
                 ),
               ),
@@ -163,7 +162,7 @@ export default {
                 text: shownProjects
                   .map(
                     (p) =>
-                      `• <https://flavortown.hackclub.com/projects/${p.id}|${p.title}>`
+                      `• <https://flavortown.hackclub.com/projects/${p.id}|${p.title}>`,
                   )
                   .join("\n"),
               },
@@ -191,53 +190,55 @@ export default {
           response_type: "in_channel",
         });
       } else {
-        if (!Number.isInteger(Number(projectId)))
+        if (!Number.isInteger(projectId))
           return respond({
             text: `Project ID has to be a integer`,
             response_type: "ephemeral",
           });
-        const checkKey = String(yswsData[0]?.apiKey);
+
+        const apiKey = String(yswsData?.apiKey);
 
         const working = await checkAPIKey({
           db: pg,
-          apiKey: checkKey,
+          apiKey,
+          yswsData: yswsData!,
+          userId: command.user_id,
           logger,
         });
+        
         if (!working.works)
           return respond({
             text: "Flavortown API Key is invalid, provide a valid one.",
             response_type: "ephemeral",
           });
 
-        const apiKey = checkKey!;
-
         const ftClient = new FT(apiKey, logger);
-        const projectsArr = Array.isArray(yswsData[0]?.projects)
+        const projectsArr = Array.isArray(yswsData?.projects)
           ? Array.from(
               new Set(
-                yswsData[0]?.projects.filter(
+                yswsData?.projects.filter(
                   (p): p is number => Number.isInteger(p) && p > 0,
                 ),
               ),
             )
           : [];
 
-        if (projectsArr.includes(Number(projectId))) {
+        if (projectsArr.includes(projectId)) {
           return respond({
             text: "Project already registered",
             response_type: "ephemeral",
           });
         }
 
-        projectsArr.push(Number(projectId));
-  
+        projectsArr.push(projectId);
+
         updateFields.projects = projectsArr;
         await pg
           .update(yswsUsers)
           .set(updateFields)
           .where(eq(yswsUsers.userId, command.user_id));
 
-        const freshProject = await ftClient.project({ id: Number(projectId) });
+        const freshProject = await ftClient.project({ id: projectId });
         if (!freshProject || !freshProject.status) {
           return respond({
             text: "Unexpected error has occurred.",
@@ -268,7 +269,7 @@ export default {
         await pg
           .insert(projects)
           .values({
-            id: Number(projectId),
+            id: projectId,
             devlogIds,
           })
           .onConflictDoUpdate({
@@ -286,7 +287,7 @@ export default {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `:woah-dino: <https://flavortown.hackclub.com/projects/${Number(projectId)}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
+                text: `:woah-dino: <https://flavortown.hackclub.com/projects/${projectId}|${freshProject.data.title}'s> devlogs just got subscribed to the channel. :yay:`,
               },
             },
             ...(freshProject.data.description

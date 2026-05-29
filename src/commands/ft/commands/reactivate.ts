@@ -1,6 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
-import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index.ts";
@@ -12,54 +11,48 @@ export default {
   desc: "Got deactivated because of a bad config? Run this get reactivated!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { logger, client, clients, pg, prefix }: RequestHandler,
+    { logger, client, clients, pg, prefix, folder, yswsData }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
         channel: command.channel_id,
       });
-      
+
       if (!channel)
         return await respond({
           text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
           response_type: "ephemeral",
         });
 
-      const updateFields: Partial<UserRow> = {};
-      const userData = await pg
-        .select()
-        .from(users)
-        .limit(1)
-        .where(eq(users.userId, command.user_id));
-
-      if (userData.length === 0)
-        return await respond({
-          text: `Run /${prefix} register first to be able to run this command.`,
+      if (yswsData && Object.keys(yswsData).length === 0)
+        return respond({
+          text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
           response_type: "ephemeral",
         });
 
-      const checkKey = String(userData[0]?.apiKey);
+      const updateFields: Partial<UserRow> = {};
+      const apiKey = String(yswsData?.apiKey);
       const working = await checkAPIKey({
         db: pg,
-        apiKey: checkKey,
+        apiKey,
         logger,
+        yswsData: yswsData!,
         allowTheDisabled: true,
-        userId: command.user_id
+        userId: command.user_id,
       });
-      
+
       if (!working.works)
         return respond({
           text: "Flavortown API Key is invalid, provide a valid one.",
           response_type: "ephemeral",
         });
 
-      if (working.row![0]?.disabled === false)
+      if (yswsData?.disabled === false)
         return await respond({
-          text: "Silly you can't be reactivated if you are already active!",
+          text: "Silly you can't be reactivated if you are already active! :agabounce:",
           response_type: "ephemeral",
         });
 
-      const apiKey = checkKey!;
       updateFields.disabled = false;
       clients[apiKey] = new FT(apiKey, logger);
       await pg

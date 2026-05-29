@@ -12,7 +12,7 @@ export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client }: RequestHandler,
+    { pg, logger, client, yswsData }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const metadata = JSON.parse(view.private_metadata);
@@ -52,10 +52,11 @@ export default {
           user: userId,
           text: "Flavortown API Key is invalid, provide a valid one.",
         });
-      if(Number(working.row?.length) > 0)  return await client.chat.postEphemeral({
+      
+      if(yswsData && Object.keys(yswsData).length > 0)  return await client.chat.postEphemeral({
         channel: channelId,
         user: userId,
-        text: "You already exist in the db!",
+        text: "You are already registered to this YSWS.",
       });
 
       const apiKey = checkKey!;

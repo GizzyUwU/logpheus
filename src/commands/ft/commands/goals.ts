@@ -1,10 +1,10 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { eq } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
+import { yswsUsers } from "@/schema/ysws";
 
 export default {
   name: "goals",
@@ -12,26 +12,26 @@ export default {
   desc: "Look at your goals and perhaps remove or add one!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, prefix, logger, clients }: RequestHandler,
+    { pg, prefix, logger, clients, folder, yswsData }: RequestHandler,
   ) => {
-    const userData = await pg
-      .select()
-      .from(users)
-      .where(eq(users.userId, command.user_id))
-      .limit(1);
-
-    if (userData.length === 0)
+    if (yswsData && Object.keys(yswsData).length === 0)
       return respond({
-        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix}-register`,
+        text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
         response_type: "ephemeral",
       });
 
-    const [action, ...ids] = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(" ").filter(Boolean);
+    const [action, ...ids] = command.text
+      .replace(/[^a-zA-Z0-9\s]/g, "")
+      .trim()
+      .split(" ")
+      .filter(Boolean);
 
-    const checkKey = userData[0]?.apiKey;
+    const apiKey = String(yswsData?.apiKey);
     const working = await checkAPIKey({
       db: pg,
-      apiKey: checkKey!,
+      apiKey,
+      yswsData: yswsData!,
+      userId: command.user_id,
       logger,
     });
 
@@ -40,28 +40,9 @@ export default {
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
       });
-    const apiKey = checkKey!;
 
     let ftClient: FT = clients[apiKey]!;
-    if (!ftClient) {
-      ftClient = new FT(apiKey, logger);
-    }
-
-    let goalsRaw = (working.row![0]?.meta ?? []).find((item) =>
-      item.startsWith("Goals::"),
-    );
-
-    if (!goalsRaw) {
-      goalsRaw = "[]";
-    }
-    
-    const match = goalsRaw.match(/\[(.*?)\]/);
-    const goals = match?.[1]
-      ? match[1]
-          .split(",")
-          .map((v) => parseInt(v.trim()))
-          .filter((v) => !isNaN(v))
-      : [];
+    if (!ftClient) ftClient = new FT(apiKey, logger);
 
     const items = await ftClient.shop();
 
@@ -83,8 +64,8 @@ export default {
       }
     }
 
-    if (!action || action.length <= 0) {
-      const goalNames = goals
+    if (yswsData?.goals && (!action || action.length <= 0)) {
+      const goalNames = yswsData.goals
         .map((goalId) => items.data.find((item) => item.id === goalId))
         .filter(Boolean)
         .map((item) => ({
@@ -119,7 +100,7 @@ export default {
         ],
         response_type: "ephemeral",
       });
-    } else {
+    } else if (yswsData?.goals && action) {
       switch (action) {
         case "add": {
           const parsedIds = ids
@@ -144,19 +125,17 @@ export default {
             });
           }
 
-          let metaArr = working.row![0]?.meta ?? [];
 
-          const mergedGoals = Array.from(new Set([...goals, ...validGoalIds]));
-
-          metaArr = metaArr.filter((item) => !item.startsWith("Goals::"));
-          metaArr.push(`Goals::[${mergedGoals.join(",")}]`);
+          const mergedGoals = Array.from(
+            new Set([...yswsData.goals, ...validGoalIds]),
+          );
 
           await pg
-            .update(users)
+            .update(yswsUsers)
             .set({
-              meta: metaArr,
+              goals: mergedGoals
             })
-            .where(eq(users.apiKey, apiKey));
+            .where(eq(yswsUsers.userId, command.user_id));
 
           const goalNames = mergedGoals
             .map((goalId) => items.data.find((item) => item.id === goalId))
@@ -217,21 +196,16 @@ export default {
             });
           }
 
-          let metaArr = working.row![0]?.meta ?? [];
-
-          const updatedGoals = goals.filter(
+          const updatedGoals = yswsData.goals.filter(
             (goalId) => !validGoalIds.includes(goalId),
           );
 
-          metaArr = metaArr.filter((item) => !item.startsWith("Goals::"));
-          metaArr.push(`Goals::[${updatedGoals.join(",")}]`);
-
           await pg
-            .update(users)
+            .update(yswsUsers)
             .set({
-              meta: metaArr,
+              goals: updatedGoals
             })
-            .where(eq(users.apiKey, apiKey));
+            .where(eq(yswsUsers.userId, command.user_id));
 
           const goalNames = updatedGoals
             .map((goalId) => items.data.find((item) => item.id === goalId))
@@ -270,7 +244,7 @@ export default {
         }
 
         default: {
-          const goalNames = goals
+          const goalNames = yswsData.goals
             .map((goalId) => items.data.find((item) => item.id === goalId))
             .filter(Boolean)
             .map((item) => ({
@@ -307,6 +281,10 @@ export default {
           });
         }
       }
-    }
+    } else
+      return respond({
+        text: "You provided no action and have no goals! Provide an action next time.",
+        response_type: "ephemeral",
+      });
   },
 };
