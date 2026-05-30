@@ -4,7 +4,6 @@ import {
   type SlackCommandMiddlewareArgs,
   type SlackViewMiddlewareArgs,
 } from "@slack/bolt";
-import FT from "@/lib/ft/index";
 import fs from "fs";
 import path from "path";
 import { PGlite } from "@electric-sql/pglite";
@@ -26,6 +25,7 @@ import loadAPI from "./api/index";
 import migrateUsers from "./migrate";
 import ansiRegex from "ansi-regex";
 import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsRepliesResponse";
+import type { ApiAdapter } from "./lib/adapters/types";
 let sentryEnabled = false;
 let prefix: string;
 export type DatabaseType =
@@ -248,7 +248,7 @@ const app = new App({
   logLevel: LogLevel.ERROR,
 });
 
-let clients: Record<string, FT> = {};
+let clients: Record<string, ApiAdapter> = {};
 
 export const commands: {
   name: string;
@@ -262,7 +262,7 @@ export interface RequestHandler {
   logger: typeof logger;
   pg: DatabaseType;
   client: WebClient;
-  clients: Record<string, FT>;
+  clients: Record<string, ApiAdapter>;
   Sentry: typeof import("@sentry/bun");
   prefix?: string;
   folder?: string | undefined;

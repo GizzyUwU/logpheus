@@ -2,11 +2,13 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import FT from "@/lib/ft/index";
 import type { RequestHandler } from "@/index.ts";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
+import ysws from "@/ysws";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import {
   containsMarkdown,
   parseMarkdownToSlackBlocks,
 } from "@/lib/parseMarkdown";
+import { loadAdapter } from "@/lib/adapters";
 const utcFormatter = new Intl.DateTimeFormat("en-GB", {
   dateStyle: "short",
   timeStyle: "short",
@@ -68,9 +70,12 @@ export default {
     
     const apiKey = checkKey!;
 
-    let ftClient: FT = clients[apiKey]!;
+    let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!.raw as FT;
     if (!ftClient) {
-      ftClient = new FT(apiKey, logger);
+      const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+      const adapter = new AdapterClass(apiKey, logger);
+      ftClient = adapter.raw as FT;
+      clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
     }
 
     if (actionOrId.toLowerCase() !== "latest") {

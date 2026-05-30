@@ -1,12 +1,12 @@
 import type { SlackViewMiddlewareArgs } from "@slack/bolt";
 import { and, eq } from "drizzle-orm";
-import FT from "@/lib/ft/index";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { yswsUsers } from "@/schema/ysws";
 import ysws from "@/ysws";
+import { loadAdapter } from "@/lib/adapters";
 type UserRow = typeof users._.inferSelect;
 
 export default {
@@ -64,7 +64,6 @@ export default {
           });
 
         const apiKey = flatValues["api_input"]!;
-        const ftClient = new FT(apiKey, logger);
    
         if (yswsData && Object.keys(yswsData).length === 0)
           return await client.chat.postEphemeral({
@@ -77,8 +76,13 @@ export default {
         if (yswsData?.disabled) updateFields.disabled = false;
 
         if (!clients[apiKey]) {
-          clients[apiKey] = ftClient;
+          const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = new AdapterClass(apiKey, logger)
         }
+      }
+
+      if (flatValues["region"]) {
+        updateFields.region = flatValues["region"];
       }
 
       if (Object.keys(updateFields).length > 0) {

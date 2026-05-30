@@ -1,7 +1,6 @@
 import type { SlackViewMiddlewareArgs } from "@slack/bolt";
-import { users } from "@/schema/users";
 import { yswsUsers } from "@/schema/ysws";
-import { eq, and, type InferSelectModel } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
@@ -17,7 +16,6 @@ export default {
     try {
       const metadata = JSON.parse(view.private_metadata);
       const channelId = metadata.channel;
-      const userData = JSON.parse(metadata.userData) as InferSelectModel<typeof users>;;
       const userId = body.user.id;
 
       if (!channelId || !userId) {
@@ -39,7 +37,9 @@ export default {
 
       const values = view.state.values;
       const checkKey = values["ftApiKey"]?.["api_input"]?.value?.trim();
-
+      const regionOpt =
+        values?.["personal"]?.["region"]?.selected_option?.value?.trim();
+      
       const working = await checkAPIKey({
         db: pg,
         apiKey: checkKey,
@@ -83,7 +83,7 @@ export default {
         apiKey,
         userId,
         disabled: false,
-        region: userData.region,
+        region: regionOpt ?? "us",
         yswsId: ysws.flavortown.id
       };
 

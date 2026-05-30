@@ -5,6 +5,8 @@ import { getGenericErrorMessage } from "@/lib/genericError";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { yswsUsers } from "@/schema/ysws";
+import ysws from "@/ysws";
+import { loadAdapter } from "@/lib/adapters";
 
 export default {
   name: "goals",
@@ -41,8 +43,14 @@ export default {
         response_type: "ephemeral",
       });
 
-    let ftClient: FT = clients[apiKey]!;
-    if (!ftClient) ftClient = new FT(apiKey, logger);
+    let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!
+      .raw as FT;
+    if (!ftClient) {
+      const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+      const adapter = new AdapterClass(apiKey, logger);
+      ftClient = adapter.raw as FT;
+      clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
+    }
 
     const items = await ftClient.shop();
 
@@ -125,7 +133,6 @@ export default {
             });
           }
 
-
           const mergedGoals = Array.from(
             new Set([...yswsData.goals, ...validGoalIds]),
           );
@@ -133,7 +140,7 @@ export default {
           await pg
             .update(yswsUsers)
             .set({
-              goals: mergedGoals
+              goals: mergedGoals,
             })
             .where(eq(yswsUsers.userId, command.user_id));
 
@@ -203,7 +210,7 @@ export default {
           await pg
             .update(yswsUsers)
             .set({
-              goals: updatedGoals
+              goals: updatedGoals,
             })
             .where(eq(yswsUsers.userId, command.user_id));
 

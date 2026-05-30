@@ -2,14 +2,15 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { eq } from "drizzle-orm";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
-import type { AnyBlock } from "@slack/web-api";
+import type { PlainTextOption } from "@slack/web-api";
+import ysws from "@/ysws";
 
 export default {
   name: "config",
   desc: "Need to change the bots configuration on you?",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, callbackId, prefix }: RequestHandler,
+    { pg, logger, client, callbackId, prefix, yswsData }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -44,6 +45,22 @@ export default {
         ? prefix![0]!.toUpperCase() + prefix!.slice(1)
         : prefix!;
 
+      const regionOptions: PlainTextOption[] = Object.entries(
+        ysws.flavortown.regions,
+      ).map(([code, name]) => ({
+        text: {
+          type: "plain_text" as const,
+          text: String(name),
+          emoji: true,
+        },
+        value: code,
+      }));
+
+      const initialOption =
+        regionOptions.find(
+          (o) => o.value === (yswsData?.region ?? "us").toLowerCase(),
+        ) ?? regionOptions[0];
+
       await client.views.open({
         trigger_id: command.trigger_id,
         view: {
@@ -57,45 +74,46 @@ export default {
             channel: command.channel_id,
           }),
           blocks: [
-            ...(res[0]?.channel
-              ? ([
-                  {
-                    type: "input",
-                    block_id: "pingGroupBlock",
-                    label: {
-                      type: "plain_text",
-                      text: "Got a ping group? Want it to be pinged when a new log happens? Add it's id here!",
-                    },
-                    element: {
-                      type: "plain_text_input",
-                      action_id: "pingGroupId",
-                      multiline: false,
-                      initial_value:
-                        res[0]?.meta
-                          ?.find((s) => s.startsWith("PingGroup::"))
-                          ?.split("::")[1] ?? "",
-                    },
-                    optional: true,
-                  },
-                ] as AnyBlock[])
-              : []),
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "Get your API key here: <https://flavortown.hackclub.com/kitchen?settings=1#api_key|Flavortown Settings>",
+              },
+            },
             {
               type: "input",
-              block_id: "HCBId",
+              block_id: "ftApiKey",
               label: {
                 type: "plain_text",
-                text: "Want to get DM'd about transactions on your HCB account? Get your id from HCBScan!",
+                text: "What is your flavortown api key?",
               },
               element: {
                 type: "plain_text_input",
-                action_id: "HCBId",
+                action_id: "api_input",
                 multiline: false,
-                initial_value:
-                  res[0]?.meta
-                    ?.find((s) => s.startsWith("HCBId::"))
-                    ?.split("::")[1] ?? "",
+                initial_value: yswsData?.apiKey ?? "",
               },
-              optional: true,
+            },
+            {
+              type: "input",
+              block_id: "personal",
+              label: {
+                type: "plain_text",
+                text: "What is your region for regional pricing?",
+              },
+              element: {
+                type: "static_select",
+                action_id: "region",
+                placeholder: {
+                  type: "plain_text",
+                  text: "Select your region",
+                  emoji: true,
+                },
+                options: regionOptions,
+                initial_option: initialOption!
+              },
+              optional: false,
             },
           ],
           submit: {

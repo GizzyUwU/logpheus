@@ -6,7 +6,10 @@ import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { yswsUsers } from "@/schema/ysws";
-type UserRow = typeof yswsUsers._.inferSelect;
+import { users } from "@/schema/users";
+import ysws from "@/ysws";
+import { loadAdapter } from "@/lib/adapters";
+type YSWSRow = typeof yswsUsers._.inferSelect;
 
 export default {
   name: "add",
@@ -14,7 +17,16 @@ export default {
   desc: "Subscribe a project to get automated devlogs posts to your channel!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { logger, client, pg, prefix, userData, folder, yswsData }: RequestHandler,
+    {
+      logger,
+      client,
+      clients,
+      pg,
+      prefix,
+      userData,
+      folder,
+      yswsData,
+    }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -43,7 +55,7 @@ export default {
           response_type: "ephemeral",
         });
 
-      const updateFields: Partial<UserRow> = {};
+      const updateYSWSFields: Partial<YSWSRow> = {};
       const projectId = Number(
         command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim(),
       );
@@ -62,7 +74,15 @@ export default {
             response_type: "ephemeral",
           });
 
-        const ftClient = new FT(apiKey, logger);
+        let ftClient: FT =
+          clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!.raw as FT;
+        if (!ftClient) {
+          const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+          const adapter = new AdapterClass(apiKey, logger);
+          ftClient = adapter.raw as FT;
+          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
+        }
+
         const allProjects = await ftClient.userProjects({
           id: "me",
         });
@@ -111,17 +131,26 @@ export default {
           });
         }
 
-        updateFields.projects = [
+        updateYSWSFields.projects = [
           ...projectsArr,
           ...newProjects.map((p) => p.id),
         ];
 
-        updateFields.projects = projectsArr;
+        updateYSWSFields.projects = projectsArr;
         await pg
           .update(yswsUsers)
-          .set(updateFields)
+          .set(updateYSWSFields)
           .where(eq(yswsUsers.userId, command.user_id));
 
+        if (!userData?.channel) {
+          await pg
+            .update(users)
+            .set({
+              channel: command.channel_id
+            })
+            .where(eq(users.userId, command.user_id));
+        }
+        
         for (const project of newProjects) {
           const devlogIds = Array.isArray(project.devlog_ids)
             ? project.devlog_ids
@@ -205,7 +234,7 @@ export default {
           userId: command.user_id,
           logger,
         });
-        
+
         if (!working.works)
           return respond({
             text: "Flavortown API Key is invalid, provide a valid one.",
@@ -232,11 +261,20 @@ export default {
 
         projectsArr.push(projectId);
 
-        updateFields.projects = projectsArr;
+        updateYSWSFields.projects = projectsArr;
         await pg
           .update(yswsUsers)
-          .set(updateFields)
+          .set(updateYSWSFields)
           .where(eq(yswsUsers.userId, command.user_id));
+        
+        if (!userData?.channel) {
+          await pg
+            .update(users)
+            .set({
+              channel: command.channel_id
+            })
+            .where(eq(users.userId, command.user_id));
+        }
 
         const freshProject = await ftClient.project({ id: projectId });
         if (!freshProject || !freshProject.status) {

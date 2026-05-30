@@ -3,6 +3,8 @@ import FT from "@/lib/ft/index";
 import type { RequestHandler } from "@/index.ts";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
+import { loadAdapter } from "@/lib/adapters";
+import ysws from "@/ysws";
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
@@ -66,9 +68,15 @@ export default {
         text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
       });
-
-    let ftClient: FT = clients[apiKey]!;
-    if (!ftClient) ftClient = new FT(apiKey, logger);
+    
+      let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!
+        .raw as FT;
+      if (!ftClient) {
+        const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+        const adapter = new AdapterClass(apiKey, logger);
+        ftClient = adapter.raw as FT;
+        clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
+      }
 
     const project = await ftClient.project({
       id: projectId,

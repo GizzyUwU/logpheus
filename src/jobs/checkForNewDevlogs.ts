@@ -9,9 +9,12 @@ import { and, eq, isNull, not } from "drizzle-orm";
 import { containsMarkdown } from "@/lib/parseMarkdown";
 import { parseMarkdownToSlackBlocks } from "@/lib/parseMarkdown";
 import type { logger as LogtapeLogger, RequestHandler } from "@/index.ts";
-import FT from "@/lib/ft/index";
 import { z } from "zod";
+import ysws from "@/ysws";
+import { loadAdapter } from "@/lib/adapters";
 import type { GetDevlogResponse } from "@/lib/ft/types";
+import { yswsUsers } from "@/schema/ysws";
+import type { ApiAdapter, CanonicalShopItem } from "@/lib/adapters/types";
 type DB =
   | (NodePgDatabase<Record<string, never>> & { $client: Pool })
   | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
@@ -22,25 +25,35 @@ const utcFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
+export function resolveItemCost(item: CanonicalShopItem, region?: string | null): number {
+  if (region && region.length > 0) {
+    return item.regionalCosts[region.toLowerCase()] ?? item.baseCost;
+  }
+  return item.baseCost;
+}
+
 async function getNewDevlogs(params: {
   apiKey: string;
   projectId: number;
   app: WebClient;
-  clients: Record<string, FT>;
+  clients: Record<string, ApiAdapter>;
+  clientKey: string;
   db: DB;
   prefix: string;
   logger: typeof LogtapeLogger;
   userByAPIKey: Map<string, Partial<typeof users.$inferSelect>>;
+  userRow: typeof users.$inferSelect;
+  yswsRow: typeof yswsUsers.$inferSelect;
   projectsMap: Map<number, Partial<typeof projects.$inferSelect>>;
 }): Promise<{
   name: string;
   devlogs: z.infer<typeof GetDevlogResponse>[];
-  additionCookies?: number;
+  additionCurrency?: number;
   nextGoalItem?: string;
   distanceFromGoal?: number;
 } | void> {
   try {
-    let client = params.clients[params.apiKey];
+    let client = params.clients[params.clientKey];
     if (!client) {
       params.logger.error("No FT Client for the project", {
         project: {
@@ -119,8 +132,8 @@ async function getNewDevlogs(params: {
       }
     }
 
-    const devlogIds = Array.isArray(project?.data.devlog_ids)
-      ? project.data.devlog_ids
+    const devlogIds = Array.isArray(project?.data.devlogIds)
+      ? project.data.devlogIds
       : [];
 
     const row = params.projectsMap.get(params.projectId)
@@ -128,8 +141,8 @@ async function getNewDevlogs(params: {
       : [];
 
     if (row.length === 0) {
-      const initialDevlogIds = Array.isArray(project?.data.devlog_ids)
-        ? project.data.devlog_ids.map(Number)
+      const initialDevlogIds = Array.isArray(project?.data.devlogIds)
+        ? project.data.devlogIds.map(Number)
         : [];
 
       await params.db
@@ -177,68 +190,48 @@ async function getNewDevlogs(params: {
         );
         if (!res || !res.ok) break;
         const data = res.data;
-        if (data?.devlogs) {
-          for (const log of data.devlogs) {
+        if ((data?.items?.length ?? 0) > 0) {
+          for (const log of (data?.items ?? [])) {
             devlogS.push(Number(log.duration_seconds));
             if (newIds.includes(Number(log.id))) {
               devlogs.push(log);
             }
           }
         }
-        page = data?.pagination?.next_page ?? null;
+        page = data?.next_page ?? null;
       }
 
       const totalSeconds = (devlogS ?? []).reduce((sum, item) => sum + item, 0);
-      const predictedCookies = Math.round(
+      const predictedCurrency = Math.round(
         (row[0]?.multiplier ?? 10) * (totalSeconds / 3600),
       );
-      const userRow = params.userByAPIKey.get(params.apiKey);
-      const previousPredicted = row[0]?.predictedCookies ?? 0;
+      const previousPredicted = row[0]?.predictedCurrency ?? 0;
 
       let nextGoalItem = "";
       let distanceFromGoal = 0;
-      let additionCookies = 0;
+      let additionCurrency = 0;
 
       const meUser = await client.user({ id: "me" });
-      if (meUser.ok && Object.keys(meUser.data)?.length) {
+      if (meUser.ok && meUser.data && Object.keys(meUser?.data)?.length) {
         if (previousPredicted) {
-          additionCookies = Math.max(0, predictedCookies - previousPredicted);
+          additionCurrency = Math.max(0, predictedCurrency - previousPredicted);
         }
 
-        const goals =
-          userRow?.meta?.find((s) => s.startsWith("Goals::"))?.split("::")[1] ??
-          "";
-        if (goals.length > 0) {
+        if (params.yswsRow?.goals && params.yswsRow.goals.length > 0) {
           const shop = await client.shop();
           if (shop.ok && shop.data?.length) {
             const region =
-              userRow?.meta
-                ?.find((s) => s.startsWith("Region::"))
-                ?.split("::")[1] ?? "";
-            const match = goals.match(/\[(.*?)\]/);
-            const parsedGoals = match?.[1]
-              ? match[1]
-                  .split(",")
-                  .map((v) => parseInt(v.trim()))
-                  .filter((v) => !isNaN(v))
-              : [];
-            for (const goalId of parsedGoals) {
+              params.yswsRow?.region
+           
+            for (const goalId of params.yswsRow.goals) {
               const item = shop.data.find((s) => s.id === goalId);
               if (!item) continue;
 
-              const cost =
-                region && region.length > 0
-                  ? ((item.ticket_cost as Record<string, number | undefined>)[
-                      region.toLowerCase()
-                    ] ??
-                    item.ticket_cost?.base_cost ??
-                    0)
-                  : (item.ticket_cost?.base_cost ?? 0);
-
-              if (Number(meUser.data.cookies) + predictedCookies < cost) {
+              const cost = resolveItemCost(item, region);
+              if (Number(meUser.data.currency) + predictedCurrency < cost) {
                 nextGoalItem = String(item.name);
                 distanceFromGoal =
-                  cost - (Number(meUser.data.cookies) + predictedCookies);
+                  cost - (Number(meUser.data.currency) + predictedCurrency);
                 break;
               }
             }
@@ -262,14 +255,14 @@ async function getNewDevlogs(params: {
         .update(projects)
         .set({
           devlogIds: Array.from(new Set([...cachedIds, ...newIds])),
-          predictedCookies,
+          predictedCurrency,
         })
         .where(eq(projects.id, Number(params.projectId)));
 
       return {
         name: project.data.title ?? "Unknown",
         devlogs,
-        additionCookies: previousPredicted ? additionCookies : 0,
+        additionCurrency: previousPredicted ? additionCurrency : 0,
         nextGoalItem,
         distanceFromGoal,
       };
@@ -291,22 +284,26 @@ export default {
   execute: async ({ client, clients, prefix, pg, logger }: RequestHandler) => {
     try {
       const userRows = await pg
-        .select({
-          apiKey: users.apiKey,
-          userId: users.userId,
-          channel: users.channel,
-          projects: users.projects,
-          meta: users.meta,
-        })
+        .select()
         .from(users)
         .where(
           and(
             eq(users.disabled, false),
-            not(isNull(users.apiKey)),
             not(isNull(users.channel)),
-            not(isNull(users.projects)),
           ),
         );
+
+      const yswsRows = await pg
+        .select()
+        .from(yswsUsers)
+        .where(
+          and(
+            eq(yswsUsers.disabled, false),
+            not(isNull(yswsUsers.apiKey)),
+            not(isNull(yswsUsers.projects)),
+          ),
+        );
+      
       if (!userRows?.length) {
         for (const key of Object.keys(clients)) {
           delete clients[key];
@@ -316,29 +313,44 @@ export default {
       const userByAPIKey = new Map(
         userRows.filter((u) => u.apiKey).map((u) => [String(u.apiKey), u]),
       );
+
       const projectsMap = new Map(
         (await pg.select().from(projects)).map((r) => [r.id, r]),
       );
-      for (const row of userRows) {
-        if (!row || !row.apiKey || !row.channel || !row.projects) continue;
-        if (!clients[row.apiKey])
-          clients[row.apiKey] = new FT(row.apiKey, logger);
-        const userProjectIds = Array.isArray(row.projects)
-          ? row.projects.map(Number)
+      for (const yswsRow of yswsRows) {
+        const userRow = userRows.find((u) => u.ysws?.includes(yswsRow.yswsId));
+        if (!userRow?.channel || userRow.disabled) continue;
+      
+        const yswsConfig = Object.values(ysws).find((y) => y.id === yswsRow.yswsId);
+        if (!yswsConfig) continue;
+        if (!yswsConfig.jobs.includes("newDevlog")) continue;
+        if (yswsConfig.apiKeyRequired && !yswsRow.apiKey) continue;
+      
+        const clientKey = `${yswsRow.yswsId}:${yswsRow.userId ?? "no-key"}`;
+        if (!clients[clientKey]) {
+          const AdapterClass = await loadAdapter(yswsConfig.adapter);
+          clients[clientKey] = new AdapterClass(yswsRow.apiKey, logger);
+        }
+
+        const userProjectIds = Array.isArray(yswsRow.projects)
+          ? yswsRow.projects.map(Number)
           : [];
         for (const projectId of userProjectIds) {
           const projData = await getNewDevlogs({
-            apiKey: String(row.apiKey),
+            apiKey: String(yswsRow.apiKey),
             projectId,
             app: client,
             clients,
+            clientKey,
             db: pg,
             prefix: String(prefix),
             logger,
             userByAPIKey,
+            userRow,
+            yswsRow,
             projectsMap,
           });
-          if (!clients[row.apiKey]) break;
+          if (!clients[clientKey]) break;
           if (!projData) continue;
           if (projData.devlogs.length > 0) {
             for (const devlog of projData.devlogs) {
@@ -398,14 +410,14 @@ export default {
                   );
 
                 const pingGroupId =
-                  row?.meta
+                  userRow?.meta
                     ?.find((s) => s.startsWith("PingGroup::"))
                     ?.split("::")[1] ?? "";
 
                 try {
                   if (devlog.body && !containsMarkdown(devlog.body)) {
                     await client.chat.postMessage({
-                      channel: row.channel,
+                      channel: userRow.channel,
                       unfurl_links: true,
                       unfurl_media: true,
                       blocks: [
@@ -469,7 +481,7 @@ export default {
                           elements: [
                             {
                               type: "mrkdwn",
-                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}. ${projData.additionCookies && projData.additionCookies !== 0 ? `+${projData.additionCookies} based off predicted cookies.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} cookies away!` : ""}`,
+                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}. ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
                             },
                           ],
                         },
@@ -478,7 +490,7 @@ export default {
                     });
                   } else {
                     await client.chat.postMessage({
-                      channel: row.channel,
+                      channel: userRow.channel,
                       unfurl_links: true,
                       unfurl_media: true,
                       blocks: [
@@ -535,7 +547,7 @@ export default {
                           elements: [
                             {
                               type: "mrkdwn",
-                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}. ${projData.additionCookies && projData.additionCookies !== 0 ? `+${projData.additionCookies} based off predicted cookies.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} cookies away!` : ""}`,
+                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}. ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
                             },
                           ],
                         },
@@ -556,41 +568,43 @@ export default {
                       error?.code === "slack_webapi_platform_error" &&
                       error.data?.error === "channel_not_found"
                     ) {
-                      if (!row.userId) return;
-                      delete clients[row.apiKey];
+                      if (!userRow.userId) return;
+                      delete clients[clientKey];
                       await pg
-                        .update(users)
+                        .update(yswsUsers)
                         .set({
                           disabled: true,
                         })
-                        .where(eq(users.userId, row.userId));
+                        .where(and(eq(yswsUsers.userId, userRow.userId), eq(yswsUsers.yswsId, yswsRow.yswsId)));
                       await client.chat.postMessage({
-                        channel: row.userId,
+                        channel: userRow.userId,
                         text: `Hey! The automated devlog poster has been disabled for you because I am not in the channel where it's meant to be sent in. Add me to the channel and run /${prefix}-reactivate to get it enabled.`,
                       });
                       return;
                     }
-                    if (typeof error.message === "string" && error.message.includes("downloading image failed")) {
+                    if (
+                      typeof error.message === "string" &&
+                      error.message.includes("downloading image failed")
+                    ) {
                       await client.chat.postMessage({
-                        channel: row.channel,
+                        channel: userRow.channel,
                         text: `Hey! Your devlog post failed because the image URL isn't usable by slack. Looking at github issues of boltjs this is usually because it isn't accessible to slack but it may be other issues like slack not supporting it.`,
                       });
                       return;
                     }
                   }
-                
 
                   logger.error(
                     "Unexpected error occured when trying to post the automated message.",
                     {
                       error: err,
                       projectId,
-                      devlogId: devlog.id
+                      devlogId: devlog.id,
                     },
                   );
-                  
+
                   await client.chat.postMessage({
-                    channel: row.channel,
+                    channel: userRow.channel,
                     text: `Hey! The latest devlog post didn't take place because an error occurred! Just wanted to keep you in the loop.`,
                   });
                 }

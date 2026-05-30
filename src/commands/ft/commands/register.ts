@@ -3,6 +3,7 @@ import { eq, count } from "drizzle-orm";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import { yswsUsers } from "@/schema/ysws";
+import ysws from "@/ysws";
 
 export default {
   name: "register",
@@ -72,7 +73,7 @@ export default {
           },
           private_metadata: JSON.stringify({
             channel: command.channel_id,
-            userData: JSON.stringify(userData[0])
+            userData: JSON.stringify(userData[0]),
           }),
           blocks: [
             {
@@ -94,6 +95,34 @@ export default {
                 action_id: "api_input",
                 multiline: false,
               },
+            },
+            {
+              type: "input",
+              block_id: "personal",
+              label: {
+                type: "plain_text",
+                text: "What is your region for regional pricing?",
+              },
+              element: {
+                type: "static_select",
+                action_id: "region",
+                placeholder: {
+                  type: "plain_text",
+                  text: "Select your region",
+                  emoji: true,
+                },
+                options: Object.entries(ysws.flavortown.regions).map(
+                  ([code, name]) => ({
+                    text: {
+                      type: "plain_text",
+                      text: name,
+                      emoji: true,
+                    },
+                    value: code,
+                  }),
+                ),
+              },
+              optional: false,
             },
           ],
           submit: {

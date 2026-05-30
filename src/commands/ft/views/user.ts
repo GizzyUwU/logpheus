@@ -4,6 +4,8 @@ import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
+import { loadAdapter } from "@/lib/adapters";
+import ysws from "@/ysws";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -79,10 +81,14 @@ export default {
           text: `You're api key isn't working! Try re-entering it with /${prefix}-config`,
         });
 
-      let ftClient: FT = clients[apiKey]!;
-      if (!ftClient) {
-        ftClient = new FT(apiKey, logger);
-      }
+        let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!
+          .raw as FT;
+        if (!ftClient) {
+          const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+          const adapter = new AdapterClass(apiKey, logger);
+          ftClient = adapter.raw as FT;
+          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
+        }
 
       const queryWithTarget = await ftClient.users({
         query: targetId,

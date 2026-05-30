@@ -2,8 +2,9 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { eq } from "drizzle-orm";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
-import FT from "@/lib/ft/index.ts";
 import { yswsUsers } from "@/schema/ysws";
+import { loadAdapter } from "@/lib/adapters";
+import ysws from "@/ysws";
 type UserRow = typeof yswsUsers._.inferSelect;
 
 export default {
@@ -54,7 +55,11 @@ export default {
         });
 
       updateFields.disabled = false;
-      clients[apiKey] = new FT(apiKey, logger);
+
+      const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+      const adapter = new AdapterClass(apiKey, logger);
+      clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
+
       await pg
         .update(yswsUsers)
         .set(updateFields)

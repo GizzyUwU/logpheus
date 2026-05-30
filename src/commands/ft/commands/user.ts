@@ -5,6 +5,8 @@ import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import type { GetUserResponse } from "@/lib/ft/types";
 import { z } from "zod";
+import { loadAdapter } from "@/lib/adapters";
+import ysws from "@/ysws";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -119,8 +121,14 @@ export default {
           });
 
         const mentionId = match[1];
-        let ftClient: FT = clients[apiKey]!;
-        if (!ftClient) ftClient = new FT(apiKey, logger);
+        let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!
+          .raw as FT;
+        if (!ftClient) {
+          const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+          const adapter = new AdapterClass(apiKey, logger);
+          ftClient = adapter.raw as FT;
+          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
+        }
 
         const queryWithTarget = await ftClient.users({
           query: mentionId,

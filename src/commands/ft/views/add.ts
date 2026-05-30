@@ -7,13 +7,15 @@ import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
+import { loadAdapter } from "@/lib/adapters";
+import ysws from "@/ysws";
 type UserRow = typeof users._.inferSelect;
 
 export default {
   name: "add",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, prefix, yswsData, folder }: RequestHandler,
+    { pg, logger, client, clients, prefix, yswsData, folder }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
@@ -41,7 +43,7 @@ export default {
       const values = view.state.values;
       const projectId = Number(values["projId"]?.["proj_input"]?.value?.trim());
       const apiKey = String(yswsData?.apiKey);
-      
+
       if (!projectId || Number.isInteger(projectId) || projectId <= 0)
         return await client.chat.postEphemeral({
           channel: channelId,
@@ -61,7 +63,15 @@ export default {
           text: "Flavortown API Key is invalid, provide a valid one.",
         });
 
-      const ftClient = new FT(apiKey, logger);
+      let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!
+        .raw as FT;
+      if (!ftClient) {
+        const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+        const adapter = new AdapterClass(apiKey, logger);
+        ftClient = adapter.raw as FT;
+        clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
+      }
+
       const updateFields: Partial<UserRow> = {};
       const projectsArr = Array.isArray(yswsData?.projects)
         ? Array.from(

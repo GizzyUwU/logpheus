@@ -45,9 +45,6 @@ export default {
       
       const updateFields: Partial<UserRow> = {};
 
-      if (flatValues["region"]) {
-        updateFields.region = flatValues["region"];
-      }
 
       if (flatValues["pingGroupId"]) {
         const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("PingGroup::"));

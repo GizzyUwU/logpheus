@@ -58,42 +58,7 @@ export default {
             channel: command.channel_id,
           }),
           blocks: [
-            {
-              type: "input",
-              block_id: "personal",
-              label: {
-                type: "plain_text",
-                text: "What is your region for regional pricing?",
-              },
-              element: {
-                type: "static_select",
-                action_id: "region",
-                placeholder: {
-                  type: "plain_text",
-                  text: "Select your region",
-                  emoji: true,
-                },
-                options: Object.entries(
-                  {
-                    au: "Australia",
-                    ca: "Canada",
-                    eu: "Europe",
-                    in: "India",
-                    uk: "United Kingdom",
-                    us: "United States",
-                    xx: "Other / Unknown",
-                  }
-                ).map(([code, name]) => ({
-                  text: {
-                    type: "plain_text",
-                    text: name,
-                    emoji: true,
-                  },
-                  value: code,
-                }))
-              },
-              optional: true,
-            },
+   
           ],
           submit: {
             type: "plain_text",

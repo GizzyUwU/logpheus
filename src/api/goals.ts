@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { rateLimit } from "@/api/index.ts";
 import { yswsUsers } from "@/schema/ysws";
 import ysws, { YSWSId } from "@/ysws";
+import { loadAdapter } from "@/lib/adapters";
 async function readJson<T>(req: any): Promise<T | null> {
   try {
     const chunks: Buffer[] = [];
@@ -103,6 +104,14 @@ export default [
           return;
         }
 
+        let ftClient: FT = main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`]!.raw as FT;
+        if (!ftClient) {
+          const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+          const adapter = new AdapterClass(userYSWS[0]?.apiKey, main.logger);
+          ftClient = adapter.raw as FT;
+          main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`] = adapter;
+        }
+
         switch (req.method) {
           case "POST": {
             const body = await readJson<{ goals: number[] }>(req);
@@ -113,10 +122,6 @@ export default [
               return;
             }
 
-            let ftClient: FT | undefined = main.clients[apiKey];
-            if (!ftClient) {
-              ftClient = new FT(apiKey, main.logger);
-            }
             const shop = await ftClient.shop();
             if (!shop || !shop.status) {
               res.writeHead(500, {
@@ -179,11 +184,7 @@ export default [
               res.end(JSON.stringify({ goals: [] }));
               return;
             }
-
-            let ftClient: FT | undefined = main.clients[apiKey];
-            if (!ftClient) {
-              ftClient = new FT(apiKey, main.logger);
-            }
+            
             const shop = await ftClient.shop();
             if (!shop || !shop.status) {
               res.writeHead(500, {
