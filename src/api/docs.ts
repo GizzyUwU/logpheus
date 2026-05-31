@@ -7,7 +7,7 @@ const document = createDocument(openapiSpecification);
 
 export default [
   {
-    path: "/api/v1/docs",
+    path: "/api/docs",
     method: ["GET"],
     handler: async (
       req: ParamsIncomingMessage,
@@ -33,7 +33,7 @@ export default [
     },
   },
   {
-    path: "/api/v1/docs/:asset",
+    path: "/api/docs/:asset",
     method: ["GET"],
     handler: async (
       req: ParamsIncomingMessage,

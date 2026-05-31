@@ -26,7 +26,7 @@ async function readJson<T>(req: any): Promise<T | null> {
 
 export default [
   {
-    path: "/api/v1/:yswsId/:projectId/multiplier",
+    path: "/api/v2/:yswsId/:projectId/multiplier",
     method: ["GET", "POST"],
     handler: async (
       req: ParamsIncomingMessage,
@@ -46,7 +46,7 @@ export default [
           res.writeHead(400);
           res.end(
             JSON.stringify({
-              msg: "Pwovide pwoject id wike /api/v1/{yswsId}/${projectId}/multiplier",
+              msg: "Pwovide pwoject id wike /api/v2/{yswsId}/${projectId}/multiplier",
             }),
           );
           return;

@@ -4,7 +4,7 @@ import type { ServerResponse, IncomingMessage } from "node:http";
 
 export default [
   {
-    path: "/api/v1/ysws",
+    path: "/api/v2/ysws",
     method: ["GET"],
     handler: (_: ParamsIncomingMessage, res: ServerResponse<IncomingMessage>) => {
       res.writeHead(200, { "content-type": "application/json" });

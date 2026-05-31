@@ -25,7 +25,7 @@ const openapiSpecification = {
     },
   },
   paths: {
-    "/api/v1/ysws": {
+    "/api/v2/ysws": {
       get: {
         tags: ["YSWS"],
         responses: {
@@ -96,13 +96,13 @@ const openapiSpecification = {
         },
       },
     },
-    "/api/v1/ysws/{yswsId}": {
+    "/api/v2/ysws/{yswsId}": {
       parameters: [
         {
           in: "path",
           name: "yswsId",
           required: true,
-          description: "Identifier of the YSWS found in /api/v1/ysws",
+          description: "Identifier of the YSWS found in /api/v2/ysws",
           schema: {
             type: "integer",
             example: 1,
@@ -179,13 +179,13 @@ const openapiSpecification = {
         },
       },
     },
-    "/api/v1/{yswsId}/goals": {
+    "/api/v2/{yswsId}/goals": {
       parameters: [
         {
           in: "path",
           name: "yswsId",
           required: true,
-          description: "Identifier of the YSWS found in /api/v1/ysws",
+          description: "Identifier of the YSWS found in /api/v2/ysws",
           schema: {
             type: "integer",
             example: 1,
@@ -534,13 +534,13 @@ const openapiSpecification = {
         },
       },
     },
-    "/api/v1/{yswsId}/{projectId}/multiplier": {
+    "/api/v2/{yswsId}/{projectId}/multiplier": {
       parameters: [
         {
           in: "path",
           name: "yswsId",
           required: true,
-          description: "Identifier of the YSWS found in /api/v1/ysws",
+          description: "Identifier of the YSWS found in /api/v2/ysws",
           schema: {
             type: "integer",
             example: 1,
