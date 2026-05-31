@@ -10,7 +10,7 @@ export default {
   desc: "Need to change the bots configuration on you?",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, callbackId, prefix, yswsData }: RequestHandler,
+    { pg, logger, client, callbackId, prefix, folder, yswsData }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -31,13 +31,9 @@ export default {
         return;
       }
 
-      const res = await pg
-        .select()
-        .from(users)
-        .where(eq(users.userId, command.user_id));
-      if (res.length === 0)
+      if (!yswsData || Object.keys(yswsData).length)
         return await respond({
-          text: `Gng you don't even got an api key set to this channel run /${prefix}-add first.`,
+          text: `Gng you don't even got an api key set to this channel run /${prefix}-${folder} add first.`,
           response_type: "ephemeral",
         });
 

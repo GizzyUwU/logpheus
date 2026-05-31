@@ -26,10 +26,11 @@ export default {
       .split(" ")
       .filter(Boolean);
 
-    if (!yswsClient) return respond({
-      text: `Unexpected error has occured`,
-      response_type: "ephemeral",
-    });
+    if (!yswsClient)
+      return respond({
+        text: `Unexpected error has occured`,
+        response_type: "ephemeral",
+      });
 
     const mcClient: Macondo = yswsClient.raw as Macondo;
     const items = await mcClient.shop();
@@ -112,12 +113,9 @@ export default {
               response_type: "ephemeral",
             });
           }
-          
+
           const mergedGoals = Array.from(
-            new Set([
-              ...(yswsData?.goals ?? []),
-              ...validGoalIds,
-            ]),
+            new Set([...(yswsData?.goals ?? []), ...validGoalIds]),
           );
 
           await pg
@@ -125,10 +123,17 @@ export default {
             .set({
               goals: mergedGoals,
             })
-            .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.macondo.id)));
+            .where(
+              and(
+                eq(yswsUsers.userId, command.user_id),
+                eq(yswsUsers.yswsId, ysws.macondo.id),
+              ),
+            );
 
           const goalNames = mergedGoals
-            .map((goalId) => items.data.items.find((item) => item.id === goalId))
+            .map((goalId) =>
+              items.data.items.find((item) => item.id === goalId),
+            )
             .filter(Boolean)
             .map((item) => ({
               id: item!.id,
@@ -164,10 +169,11 @@ export default {
         }
 
         case "remove": {
-          if(!yswsData?.goals) return respond({
-            text: "Literally no goals to remove.",
-            response_type: "ephemeral",
-          });
+          if (!yswsData?.goals)
+            return respond({
+              text: "Literally no goals to remove.",
+              response_type: "ephemeral",
+            });
           const parsedIds = ids
             .map((v) => parseInt(v))
             .filter((v) => !isNaN(v));
@@ -199,10 +205,17 @@ export default {
             .set({
               goals: updatedGoals,
             })
-            .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.macondo.id)));
+            .where(
+              and(
+                eq(yswsUsers.userId, command.user_id),
+                eq(yswsUsers.yswsId, ysws.macondo.id),
+              ),
+            );
 
           const goalNames = updatedGoals
-            .map((goalId) => items.data.items.find((item) => item.id === goalId))
+            .map((goalId) =>
+              items.data.items.find((item) => item.id === goalId),
+            )
             .filter(Boolean)
             .map((item) => ({
               id: item!.id,
@@ -239,7 +252,9 @@ export default {
 
         default: {
           const goalNames = (yswsData?.goals ?? [])
-            .map((goalId) => items.data.items.find((item) => item.id === goalId))
+            .map((goalId) =>
+              items.data.items.find((item) => item.id === goalId),
+            )
             .filter(Boolean)
             .map((item) => ({
               id: item!.id,

@@ -2,7 +2,6 @@ import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsInc
 import type { ServerResponse, IncomingMessage } from "node:http";
 import main from "@/index";
 import checkAPIKey from "@/lib/apiKeyCheck";
-import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { and, eq } from "drizzle-orm";
 import { rateLimit } from "@/api/index.ts";
@@ -104,11 +103,11 @@ export default [
           return;
         }
 
-        let ftClient: FT = main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`]!.raw as FT;
-        if (!ftClient) {
-          const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+        let yswsClient = main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`];
+        if (!yswsClient) {
+          const AdapterClass = await loadAdapter(yswsData.adapter);
           const adapter = new AdapterClass(userYSWS[0]?.apiKey, main.logger);
-          ftClient = adapter.raw as FT;
+          yswsClient = adapter;
           main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`] = adapter;
         }
 
@@ -122,7 +121,7 @@ export default [
               return;
             }
 
-            const shop = await ftClient.shop();
+            const shop = await yswsClient.shop();
             if (!shop || !shop.status) {
               res.writeHead(500, {
                 "content-type": "application/json",
@@ -152,7 +151,7 @@ export default [
             }
 
             const validGoalIds = goals.filter((id) =>
-              shop.data.some((item) => item.id === id),
+              shop.data?.some((item) => item.id === id),
             );
 
             if (validGoalIds.length === 0) {
@@ -185,7 +184,7 @@ export default [
               return;
             }
             
-            const shop = await ftClient.shop();
+            const shop = await yswsClient.shop();
             if (!shop || !shop.status) {
               res.writeHead(500, {
                 "content-type": "application/json",
@@ -215,7 +214,7 @@ export default [
             }
 
             const validGoalIds = goals.filter((id) =>
-              shop.data.some((item) => item.id === id),
+              shop.data?.some((item) => item.id === id),
             );
 
             if (validGoalIds.length === 0) {

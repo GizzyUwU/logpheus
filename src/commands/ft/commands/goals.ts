@@ -143,7 +143,7 @@ export default {
             .where(
               and(
                 eq(yswsUsers.userId, command.user_id),
-                eq(yswsUsers.yswsId, ysws.macondo.id),
+                eq(yswsUsers.yswsId, ysws.flavortown.id),
               ),
             );
 
@@ -218,7 +218,7 @@ export default {
             .where(
               and(
                 eq(yswsUsers.userId, command.user_id),
-                eq(yswsUsers.yswsId, ysws.macondo.id),
+                eq(yswsUsers.yswsId, ysws.flavortown.id),
               ),
             );
 

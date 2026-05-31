@@ -63,7 +63,7 @@ export default {
       await pg
         .update(yswsUsers)
         .set(updateFields)
-        .where(eq(yswsUsers.userId, command.user_id));
+        .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.macondo.id)));
 
       return respond({
         text: "You have been reactivated!",

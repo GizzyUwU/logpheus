@@ -1,6 +1,6 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { yswsUsers } from "@/schema/ysws";
 import { loadAdapter } from "@/lib/adapters";
@@ -63,7 +63,7 @@ export default {
       await pg
         .update(yswsUsers)
         .set(updateFields)
-        .where(eq(yswsUsers.userId, command.user_id));
+        .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
 
       return respond({
         text: "You have been reactivated!",

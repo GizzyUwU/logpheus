@@ -63,7 +63,7 @@ export default {
         .where(
           and(
             eq(yswsUsers.accId, flatValues["acc_id"]!),
-            eq(yswsUsers.yswsId, ysws.flavortown.id),
+            eq(yswsUsers.yswsId, ysws.macondo.id),
           ),
         );
 

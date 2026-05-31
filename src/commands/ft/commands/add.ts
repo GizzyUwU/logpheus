@@ -1,12 +1,13 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { projects } from "@/schema/projects";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { yswsUsers } from "@/schema/ysws";
 import { users } from "@/schema/users";
+import ysws from "@/ysws";
 type YSWSRow = typeof yswsUsers._.inferSelect;
 
 export default {
@@ -137,7 +138,7 @@ export default {
         await pg
           .update(yswsUsers)
           .set(updateYSWSFields)
-          .where(eq(yswsUsers.userId, command.user_id));
+          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
 
         if (!userData?.channel) {
           await pg
@@ -261,7 +262,7 @@ export default {
         await pg
           .update(yswsUsers)
           .set(updateYSWSFields)
-          .where(eq(yswsUsers.userId, command.user_id));
+          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
 
         if (!userData?.channel) {
           await pg
