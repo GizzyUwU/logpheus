@@ -171,7 +171,7 @@ export namespace ZTypes {
     last_css_sha: zod.string().nullish(),
     invite_code: zod.string().nullish(),
     project_streak_days: zod.number().int(),
-    last_worked_date: zod.string().nullable,
+    last_worked_date: zod.string().nullable(),
     auto_use_streak_freezes: zod.boolean(),
     cart_screenshots: zod.array(zod.unknown()).nullish(),
     build_cost_cents: zod.number().int().nullish(),
