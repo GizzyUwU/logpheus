@@ -10,6 +10,7 @@ COPY --chown=bun:bun src/ /usr/src/app/src/
 COPY --chown=bun:bun migrations/ /usr/src/app/migrations
 COPY --chown=bun:bun drizzle.config.ts /usr/src/app/drizzle.config.ts
 COPY --chown=bun:bun entrypoint.sh /usr/src/app/entrypoint.sh
+COPY --chown=bun:bun tsconfig.json /usr/src/app/tsconfig.json
 
 RUN mkdir /usr/src/app/cache
 RUN chmod 700 /usr/src/app/cache
