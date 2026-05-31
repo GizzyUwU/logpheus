@@ -6,6 +6,7 @@ import { users } from "@/schema/users";
 import { and, eq } from "drizzle-orm";
 import { yswsUsers } from "@/schema/ysws";
 import ysws from "@/ysws";
+import { loadAdapter } from "@/lib/adapters";
 const commandHandlers = new Map<string, { execute: Function }>();
 
 const commandsDir = path.join(__dirname, "commands");
@@ -46,13 +47,13 @@ async function setup(app: App, ctx: RequestHandler) {
         .from(users)
         .where(eq(users.userId, args.body.user.id))
         .limit(1);
-  
+
       if (userData.length === 0)
         return args.respond({
           text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
           response_type: "ephemeral",
         });
-  
+
       const yswsData = await ctx.pg
         .select()
         .from(yswsUsers)
@@ -63,14 +64,14 @@ async function setup(app: App, ctx: RequestHandler) {
           ),
         )
         .limit(1);
-  
+
       if (yswsData.length === 0 && !callbackId.includes("register"))
         return args.client.chat.postEphemeral({
           channel: JSON.parse(args.view.private_metadata).channel,
           user: args.body.user.id,
           text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
         });
-      
+
       try {
         await mod.execute(args, {
           ...ctx,
@@ -119,14 +120,13 @@ export default {
         response_type: "ephemeral",
       });
 
-      if (!rawOption)
-        return args.respond({
-          text: "You must provide an option.",
-          response_type: "ephemeral",
-        });
-  
-      const option = rawOption.toLowerCase();
-    
+    if (!rawOption)
+      return args.respond({
+        text: "You must provide an option.",
+        response_type: "ephemeral",
+      });
+
+    const option = rawOption.toLowerCase();
     const handler = commandHandlers.get(option);
 
     if (!handler)
@@ -134,6 +134,20 @@ export default {
         text: `Unknown option \`${option}\`. Check /${ctx.prefix} help to know the commands!`,
         response_type: "ephemeral",
       });
+
+    const loggerCTX = ctx.logger.with({
+      command: ctx.prefix + "-" + ctx.folder + " " + option,
+    });
+    
+    let yswsClient = ctx.clients[
+      `${yswsData[0]?.yswsId}:${yswsData[0]?.userId}`
+    ]
+    if (!yswsClient) {
+      const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
+      const adapter = new AdapterClass(yswsData[0]?.apiKey, loggerCTX);
+      yswsClient = adapter;
+      ctx.clients[`${yswsData[0]?.yswsId}:${yswsData[0]?.userId}`] = adapter;
+    }
 
     await handler.execute(
       {
@@ -145,9 +159,11 @@ export default {
       },
       {
         ...ctx,
+        logger: loggerCTX,
         callbackId: ctx.namespacedPrefix + "_" + option,
         yswsData: yswsData[0]!,
-        userData: userData[0]!
+        userData: userData[0]!,
+        yswsClient,
       } satisfies RequestHandler,
     );
   },

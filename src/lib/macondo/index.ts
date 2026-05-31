@@ -28,6 +28,10 @@ export default class Macondo {
   > {
     await this.ready;
 
+    const ctx = this.logger.with({
+      request: config.url
+    });
+    
     try {
       const res = await this.fetch.request(config);
       this.lastCode = res.status;
@@ -39,13 +43,25 @@ export default class Macondo {
         };
       } catch (error) {
         if (error instanceof z.ZodError) {
-          this.logger.error("Zod validation failed", {
+          const formatted = error.issues.map((issue) => {
+            const path = issue.path
+              .map((p) => (typeof p === "number" ? `[${p}]` : p))
+              .join(".");
+        
+            const received = issue.path.reduce(
+              (obj: any, key) => obj?.[key],
+              res.data
+            );
+        
+            return `${path}: expected ${(issue as any).expected ?? "?"}, got ${JSON.stringify(received)} — ${issue.message}`;
+          });
+          ctx.error("Zod validation failed", {
             schemaDesc: schema.description,
-            error: error.issues,
+            error: formatted,
           });
           return { ok: false, status: res.status, msg: error.issues };
         } else {
-          this.logger.error("Unknown parsing error", {
+          ctx.error("Unknown parsing error", {
             error,
           });
           return { ok: false, status: res.status, msg: error };
@@ -100,6 +116,66 @@ export default class Macondo {
         url: "/projects/" + parsedParam.id,
       },
       ZTypes.ProjectResponse,
+    );
+  }
+
+  hackatimeProjects(query: z.infer<typeof ZTypes.HackatimeProjectsQuerys>) {
+    const parsedQuery = query
+      ? ZTypes.HackatimeProjectsQuerys.parse(query)
+      : undefined;
+
+    const queries = new URLSearchParams(
+      Object.entries(parsedQuery ?? {}).reduce((acc, [key, value]) => {
+        if (value !== undefined) acc[key] = String(value);
+        return acc;
+      }, {} as Record<string, string>)
+    );
+
+    return this.request(
+      {
+        method: "GET",
+        url: "/hackatime/projects" + (queries.toString() ? `?${queries.toString()}` : ""),
+      },
+      ZTypes.HackatimeProjectsResponse,
+    );
+  }
+
+  async hackatimeProject(params: z.infer<typeof ZTypes.HackatimeProjectsParams>, query: z.infer<typeof ZTypes.HackatimeProjectsQuerys>) {
+    const parsedParam = params ? ZTypes.HackatimeProjectsParams.parse(params) : undefined;
+    if (!parsedParam) throw new Error("Missing Params");
+    const hackatimeProjects = await this.hackatimeProjects(query);
+    if (!hackatimeProjects.ok) return hackatimeProjects;
+
+    const project = hackatimeProjects.data.projects.find(
+      (entry) => entry.name === parsedParam.name,
+    );
+
+    if (!project) {
+      return {
+        ok: false as const,
+        status: 404,
+        msg: "Hackatime project not found",
+      };
+    }
+
+    return {
+      ok: true as const,
+      status: hackatimeProjects.status,
+      data: project,
+    };
+  }
+
+  
+  hackatimeBreakdown(params: z.infer<typeof ZTypes.HackatimeBreakdownParams>) {
+    const parsedParam = params ? ZTypes.HackatimeBreakdownParams.parse(params) : undefined;
+    if (!parsedParam) throw new Error("Missing Params");
+
+    return this.request(
+      {
+        method: "GET",
+        url: "/projects/" + parsedParam.projectId + "/hackatime-breakdown",
+      },
+      ZTypes.HackatimeBreakdownResponse,
     );
   }
 
@@ -179,6 +255,27 @@ export default class Macondo {
     );
   }
 
+  async userProjects(param: z.infer<typeof ZTypes.UserParams>) {
+    const parsedParam = param ? ZTypes.UserParams.parse(param) : undefined;
+    if (!parsedParam) throw new Error("Missing Params");
+
+    const user = await this.user(parsedParam);
+    if (!user.ok) return user;
+    if (!user.data.projects) {
+      return {
+        ok: false as const,
+        status: 404,
+        msg: "No projects not found",
+      };
+    }
+
+    return {
+      ok: true as const,
+      status: user.status,
+      data: user.data.projects,
+    };
+  }
+
   // userProjects(param: z.infer<typeof FTTypes.ListUserProjectsQueryParams>) {
   //   const parsedParam = param
   //     ? FTTypes.ListUserProjectsQueryParams.parse(param)
@@ -193,27 +290,41 @@ export default class Macondo {
   //   );
   // }
 
-  // shop() {
-  //   return this.request(
-  //     {
-  //       method: "GET",
-  //       url: "/store",
-  //     },
-  //     FTTypes.ListStoreItemsResponse,
-  //   );
-  // }
+  shop() {
+    return this.request(
+      {
+        method: "GET",
+        url: "/shop/items",
+      },
+      ZTypes.ShopItemsResponse,
+    );
+  }
 
-  // item(param: z.infer<typeof FTTypes.GetStoreItemParams>) {
-  //   const parsedParam = param
-  //     ? FTTypes.GetStoreItemParams.parse(param)
-  //     : undefined;
-  //   if (!parsedParam) throw new Error("Missing Params");
-  //   return this.request(
-  //     {
-  //       method: "GET",
-  //       url: "/store/" + parsedParam.id,
-  //     },
-  //     FTTypes.GetStoreItemResponse,
-  //   );
-  // }
+  async shopItem(param: z.infer<typeof ZTypes.ShopItemParams>) {
+    const parsedParam = param
+      ? ZTypes.ShopItemParams.parse(param)
+      : undefined;
+
+    if (!parsedParam) throw new Error("Missing Params");
+    const shop = await this.shop();
+    if (!shop.ok) return shop;
+
+    const itemData = shop.data.items.find(
+      (entry) => entry.id === parsedParam.itemId,
+    );
+
+    if (!shop) {
+      return {
+        ok: false as const,
+        status: 404,
+        msg: "Item not found",
+      };
+    }
+
+    return {
+      ok: true as const,
+      status: shop.status,
+      data: itemData,
+    };
+  }
 }

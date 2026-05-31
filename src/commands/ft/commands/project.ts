@@ -3,8 +3,6 @@ import FT from "@/lib/ft/index";
 import type { RequestHandler } from "@/index.ts";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
-import { loadAdapter } from "@/lib/adapters";
-import ysws from "@/ysws";
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
@@ -37,9 +35,11 @@ export default {
   desc: "Look at a project's stats by providing its id!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, clients, prefix, folder, yswsData }: RequestHandler,
+    { pg, logger,  yswsClient, prefix, folder, yswsData }: RequestHandler,
   ) => {
-    const projectId = Number(command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim());
+    const projectId = Number(
+      command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim(),
+    );
 
     if (!projectId || !Number.isInteger(projectId) || projectId <= 0)
       return respond({
@@ -65,18 +65,17 @@ export default {
 
     if (!working.works)
       return respond({
-        text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
+        text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-${folder} config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
       });
-    
-      let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!
-        .raw as FT;
-      if (!ftClient) {
-        const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-        const adapter = new AdapterClass(apiKey, logger);
-        ftClient = adapter.raw as FT;
-        clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
-      }
+
+    if (!yswsClient)
+      return respond({
+        text: `Unexpected error has occured`,
+        response_type: "ephemeral",
+      });
+
+    let ftClient: FT = yswsClient.raw as FT;
 
     const project = await ftClient.project({
       id: projectId,

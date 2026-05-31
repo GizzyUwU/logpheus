@@ -8,9 +8,11 @@ export const yswsItem = z.object({
   currencyName: z.string(),
   adapter: z.string(),
   apiKeyRequired: z.boolean(),
+  mediaUrl: z.string(),
+  url: z.string(),
   maxMult: z.number(),
   jobs: z.array(jobOptions),
-   regions: regionsSchema,
+  regions: regionsSchema,
 });
 
 export const yswsSchema = z.record(z.string(), yswsItem);
@@ -22,9 +24,11 @@ export default {
     humanName: "Flavortown",
     adapter: "flavortown/adapter.ts",
     currencyName: "cookies",
+    mediaUrl: "https://flavortown.hackclub.com",
+    url: "https://flavortown.hackclub.com",
     apiKeyRequired: true,
     maxMult: 30,
-    jobs: ["newDevlog"],
+    jobs: [] as z.infer<typeof jobOptions>[],
     regions: {
       au: "Australia",
       ca: "Canada",
@@ -39,10 +43,12 @@ export default {
     id: 2,
     humanName: "Macondo",
     currencyName: "gold",
-    adapter: "macondo.ts",
+    adapter: "macondo/adapter.ts",
+    mediaUrl: "https://cdn.hackclub.com",
+    url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: [] as z.infer<typeof jobOptions>[],
+    jobs: ["newDevlog"] as z.infer<typeof jobOptions>[],
     regions: {
       NA: "North America",
       SA: "South America",

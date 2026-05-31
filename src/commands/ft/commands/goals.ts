@@ -1,12 +1,11 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { yswsUsers } from "@/schema/ysws";
 import ysws from "@/ysws";
-import { loadAdapter } from "@/lib/adapters";
 
 export default {
   name: "goals",
@@ -14,7 +13,7 @@ export default {
   desc: "Look at your goals and perhaps remove or add one!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, prefix, logger, clients, folder, yswsData }: RequestHandler,
+    { pg, prefix, logger, yswsClient, folder, yswsData }: RequestHandler,
   ) => {
     if (yswsData && Object.keys(yswsData).length === 0)
       return respond({
@@ -39,18 +38,17 @@ export default {
 
     if (!working.works)
       return respond({
-        text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-config to re-enter your api key to fix it.`,
+        text: `Hey! Your api key is currently failing the test to see if it works, run /${prefix}-${folder} config to re-enter your api key to fix it.`,
         response_type: "ephemeral",
       });
 
-    let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!
-      .raw as FT;
-    if (!ftClient) {
-      const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-      const adapter = new AdapterClass(apiKey, logger);
-      ftClient = adapter.raw as FT;
-      clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
-    }
+    if (!yswsClient)
+      return respond({
+        text: `Unexpected error has occured`,
+        response_type: "ephemeral",
+      });
+
+    let ftClient: FT = yswsClient.raw as FT;
 
     const items = await ftClient.shop();
 
@@ -142,7 +140,12 @@ export default {
             .set({
               goals: mergedGoals,
             })
-            .where(eq(yswsUsers.userId, command.user_id));
+            .where(
+              and(
+                eq(yswsUsers.userId, command.user_id),
+                eq(yswsUsers.yswsId, ysws.macondo.id),
+              ),
+            );
 
           const goalNames = mergedGoals
             .map((goalId) => items.data.find((item) => item.id === goalId))
@@ -212,7 +215,12 @@ export default {
             .set({
               goals: updatedGoals,
             })
-            .where(eq(yswsUsers.userId, command.user_id));
+            .where(
+              and(
+                eq(yswsUsers.userId, command.user_id),
+                eq(yswsUsers.yswsId, ysws.macondo.id),
+              ),
+            );
 
           const goalNames = updatedGoals
             .map((goalId) => items.data.find((item) => item.id === goalId))

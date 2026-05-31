@@ -41,7 +41,7 @@ async function getNewDevlogs(params: {
   db: DB;
   prefix: string;
   logger: typeof LogtapeLogger;
-  userByAPIKey: Map<string, Partial<typeof users.$inferSelect>>;
+  userByUserId: Map<string, Partial<typeof users.$inferSelect>>;
   userRow: typeof users.$inferSelect;
   yswsRow: typeof yswsUsers.$inferSelect;
   projectsMap: Map<number, Partial<typeof projects.$inferSelect>>;
@@ -66,7 +66,7 @@ async function getNewDevlogs(params: {
     let project = await client.project({ id: Number(params.projectId) });
 
     if (!project || !project.status) {
-      const row = params.userByAPIKey.get(params.apiKey);
+      const row = params.userByUserId.get(params.userRow.userId);
       params.logger.error("Unexpected project response", {
         project,
         user: row,
@@ -84,17 +84,17 @@ async function getNewDevlogs(params: {
     }
 
     if (!Object.keys(project).length || !project.ok || !project.data) {
-      const row = params.userByAPIKey.get(params.apiKey);
+      const row = params.userByUserId.get(params.userRow.userId);
 
       if (project.status === 401) {
-        delete params.clients[params.apiKey];
+        delete params.clients[params.clientKey];
         await params.db
-          .update(users)
+          .update(yswsUsers)
           .set({
             disabled: true,
           })
-          .where(eq(users.apiKey, params.apiKey));
-
+          .where(and(eq(yswsUsers.userId, params.userRow.userId), eq(yswsUsers.yswsId, params.yswsRow.yswsId)));
+        
         if (!row?.channel) return;
         await params.app.chat.postMessage({
           channel: row?.channel,
@@ -102,13 +102,13 @@ async function getNewDevlogs(params: {
         });
         return;
       } else if (project.status === 404) {
-        delete params.clients[params.apiKey];
+        delete params.clients[params.clientKey];
         await params.db
-          .update(users)
+          .update(yswsUsers)
           .set({
             disabled: true,
           })
-          .where(eq(users.apiKey, params.apiKey));
+          .where(and(eq(yswsUsers.userId, params.userRow.userId), eq(yswsUsers.yswsId, params.yswsRow.yswsId)));
 
         if (!row?.channel) return;
         await params.app.chat.postMessage({
@@ -126,6 +126,9 @@ async function getNewDevlogs(params: {
         params.logger.error(client.lastCode + " " + "Failed to get project", {
           project: {
             id: params.projectId,
+            yswsId: params.yswsRow.yswsId,
+            user: params.userRow.userId,
+            accId: params.yswsRow.accId ? params.yswsRow.accId : "Not set"
           },
         });
         return;
@@ -299,7 +302,6 @@ export default {
         .where(
           and(
             eq(yswsUsers.disabled, false),
-            not(isNull(yswsUsers.apiKey)),
             not(isNull(yswsUsers.projects)),
           ),
         );
@@ -310,8 +312,8 @@ export default {
         }
         return;
       }
-      const userByAPIKey = new Map(
-        userRows.filter((u) => u.apiKey).map((u) => [String(u.apiKey), u]),
+      const userByUserId = new Map(
+        userRows.filter((u) => u.userId).map((u) => [String(u.userId), u]),
       );
 
       const projectsMap = new Map(
@@ -320,7 +322,6 @@ export default {
       for (const yswsRow of yswsRows) {
         const userRow = userRows.find((u) => u.ysws?.includes(yswsRow.yswsId));
         if (!userRow?.channel || userRow.disabled) continue;
-      
         const yswsConfig = Object.values(ysws).find((y) => y.id === yswsRow.yswsId);
         if (!yswsConfig) continue;
         if (!yswsConfig.jobs.includes("newDevlog")) continue;
@@ -329,12 +330,13 @@ export default {
         const clientKey = `${yswsRow.yswsId}:${yswsRow.userId ?? "no-key"}`;
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsConfig.adapter);
-          clients[clientKey] = new AdapterClass(yswsRow.apiKey, logger);
+          clients[clientKey] = new AdapterClass(yswsConfig.apiKeyRequired ? yswsRow.apiKey : undefined, logger);
         }
 
         const userProjectIds = Array.isArray(yswsRow.projects)
           ? yswsRow.projects.map(Number)
           : [];
+
         for (const projectId of userProjectIds) {
           const projData = await getNewDevlogs({
             apiKey: String(yswsRow.apiKey),
@@ -345,7 +347,7 @@ export default {
             db: pg,
             prefix: String(prefix),
             logger,
-            userByAPIKey,
+            userByUserId,
             userRow,
             yswsRow,
             projectsMap,
@@ -389,7 +391,7 @@ export default {
 
                 const mediaBlocks: Block[] = (devlog.media || [])
                   .map((m, i): Block | null => {
-                    const url = "https://flavortown.hackclub.com" + m.url;
+                    const url = m.url?.includes("https") ? m.url : yswsConfig.mediaUrl + m.url;
                     const alt = String(i + 1);
 
                     if (m.content_type && m.content_type.startsWith("image")) {
@@ -406,7 +408,7 @@ export default {
                   )
                   .map(
                     (m, i) =>
-                      `<https://flavortown.hackclub.com${m.url}|Video ${i + 1}>`,
+                      `<${m.url?.includes("https") ? m.url : yswsConfig.mediaUrl + m.url}|Video ${i + 1}>`,
                   );
 
                 const pingGroupId =
@@ -418,14 +420,14 @@ export default {
                   if (devlog.body && !containsMarkdown(devlog.body)) {
                     await client.chat.postMessage({
                       channel: userRow.channel,
-                      unfurl_links: true,
+                      unfurl_links: false,
                       unfurl_media: true,
                       blocks: [
                         {
                           type: "section",
                           text: {
                             type: "mrkdwn",
-                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                            text: `:shipitparrot: <${yswsConfig.url}/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
                           },
                         },
                         {
@@ -481,7 +483,7 @@ export default {
                           elements: [
                             {
                               type: "mrkdwn",
-                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}. ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
+                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> ${seconds !== 0 ? `and took ${durationString}.` : ""} ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
                             },
                           ],
                         },
@@ -491,14 +493,14 @@ export default {
                   } else {
                     await client.chat.postMessage({
                       channel: userRow.channel,
-                      unfurl_links: true,
+                      unfurl_links: false,
                       unfurl_media: true,
                       blocks: [
                         {
                           type: "section",
                           text: {
                             type: "mrkdwn",
-                            text: `:shipitparrot: <https://flavortown.hackclub.com/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                            text: `:shipitparrot: <${yswsConfig.url}/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
                           },
                         },
                         ...(devlog.body
@@ -547,7 +549,7 @@ export default {
                           elements: [
                             {
                               type: "mrkdwn",
-                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> and took ${durationString}. ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
+                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> ${seconds !== 0 ? `and took ${durationString}.` : ""} ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
                             },
                           ],
                         },

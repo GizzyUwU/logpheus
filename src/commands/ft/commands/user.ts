@@ -5,8 +5,6 @@ import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import type { GetUserResponse } from "@/lib/ft/types";
 import { z } from "zod";
-import { loadAdapter } from "@/lib/adapters";
-import ysws from "@/ysws";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -33,9 +31,8 @@ export default {
     {
       pg,
       client,
-      clients,
+      yswsClient,
       logger,
-      callbackId,
       prefix,
       folder,
       yswsData,
@@ -73,211 +70,169 @@ export default {
         });
 
       const mention = command.text.trim();
-      if (!mention) {
-        await client.views.open({
-          trigger_id: command.trigger_id,
-          view: {
-            type: "modal",
-            callback_id: callbackId!,
-            title: {
-              type: "plain_text",
-              text: /^[a-z]/i.test(prefix!)
-                ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-                : prefix!,
-            },
-            private_metadata: JSON.stringify({
-              channel: command.channel_id,
-            }),
-            blocks: [
-              {
-                type: "input",
-                block_id: "target_user",
-                element: {
-                  type: "users_select",
-                  action_id: "user",
-                  placeholder: {
-                    type: "plain_text",
-                    text: "Pick a user",
-                  },
-                },
-                label: {
-                  type: "plain_text",
-                  text: "User",
-                },
-              },
-            ],
-            submit: {
-              type: "plain_text",
-              text: "Submit",
-            },
-          },
+      if (!mention)
+        return respond({
+          text: `You need to mention a user to view their profile.`,
+          response_type: "ephemeral",
         });
-      } else {
-        const match = mention.match(/<@([A-Z0-9]+)(?:\|[^>]+)?>/);
-        if (!match)
-          return respond({
-            text: `This wasn't a valid user mention try actually mentioning a user for the argument in this command.`,
-            response_type: "ephemeral",
-          });
-
-        const mentionId = match[1];
-        let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!
-          .raw as FT;
-        if (!ftClient) {
-          const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-          const adapter = new AdapterClass(apiKey, logger);
-          ftClient = adapter.raw as FT;
-          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
-        }
-
-        const queryWithTarget = await ftClient.users({
-          query: mentionId,
+      const match = mention.match(/<@([A-Z0-9]+)(?:\|[^>]+)?>/);
+      if (!match)
+        return respond({
+          text: `This wasn't a valid user mention try actually mentioning a user for the argument in this command.`,
+          response_type: "ephemeral",
         });
 
-        if (!queryWithTarget || !queryWithTarget.status) {
-          return respond({
-            text: "Unexpected error has occurred.",
-          });
-        }
+      const mentionId = match[1];
+      if (!yswsClient) return respond({
+        text: `Unexpected error has occured`,
+        response_type: "ephemeral",
+      });
 
-        if (!queryWithTarget.ok || !queryWithTarget.data.users?.length) {
-          switch (queryWithTarget.status) {
-            case 404:
-              return respond({
-                text: "User doesn't have an FT account.",
-                response_type: "ephemeral",
-              });
-            default:
-              const msg = getGenericErrorMessage(
-                queryWithTarget.status,
-                prefix!,
-              );
-              return respond({
-                text: msg ?? "Unexpected error has occured!",
-                response_type: "ephemeral",
-              });
-          }
-        }
+      let ftClient: FT = yswsClient.raw as FT;
 
-        const targetUser = await ftClient.user({
-          id: String(queryWithTarget.data.users[0]?.id),
+      const queryWithTarget = await ftClient.users({
+        query: mentionId,
+      });
+
+      if (!queryWithTarget || !queryWithTarget.status) {
+        return respond({
+          text: "Unexpected error has occurred.",
         });
+      }
 
-        if (!targetUser || !targetUser.status) {
-          return respond({
-            text: "Unexpected error has occurred.",
-            response_type: "ephemeral",
-          });
+      if (!queryWithTarget.ok || !queryWithTarget.data.users?.length) {
+        switch (queryWithTarget.status) {
+          case 404:
+            return respond({
+              text: "User doesn't have an FT account.",
+              response_type: "ephemeral",
+            });
+          default:
+            const msg = getGenericErrorMessage(queryWithTarget.status, prefix!);
+            return respond({
+              text: msg ?? "Unexpected error has occured!",
+              response_type: "ephemeral",
+            });
         }
+      }
 
-        if (!targetUser.ok || !Object.keys(targetUser.data)?.length) {
-          switch (targetUser.status) {
-            case 404:
-              return respond({
-                text: "User doesn't have an FT account.",
-                response_type: "ephemeral",
-              });
-            default:
-              const msg = getGenericErrorMessage(targetUser.status, prefix!);
-              return respond({
-                text: msg ?? "Unexpected error has occured!",
-                response_type: "ephemeral",
-              });
-          }
-        }
+      const targetUser = await ftClient.user({
+        id: String(queryWithTarget.data.users[0]?.id),
+      });
 
-        const userText = [
-          { label: "Account ID", value: targetUser.data.id },
-          { label: "Cookies", value: targetUser.data.cookies ?? "Disabled" },
-          { label: "Votes Count", value: targetUser.data.vote_count },
-          { label: "Like Count", value: targetUser.data.like_count },
-          {
-            label: "Time today",
-            value: targetUser.data.devlog_seconds_today
-              ? formatDuration(targetUser.data.devlog_seconds_today)
-              : "0s",
-          },
-          {
-            label: "Total Time",
-            value: targetUser.data.devlog_seconds_total
-              ? formatDuration(targetUser.data.devlog_seconds_total)
-              : "0s",
-          },
-          {
-            label: "Projects",
-            value:
-              targetUser.data.project_ids &&
-              targetUser.data.project_ids.length > 0
-                ? targetUser.data.project_ids
-                    .map(
-                      (id: string | number) =>
-                        `<https://flavortown.hackclub.com/projects/${id}|${id}>`,
-                    )
-                    .join(", ")
-                : "No projects",
-          },
-          {
-            label: "Achievements",
-            value:
-              targetUser.data.achievements &&
-              targetUser.data.achievements.length > 0
-                ? targetUser.data.achievements
-                    .map(
-                      (
-                        item: NonNullable<
-                          z.infer<typeof GetUserResponse>["achievements"]
-                        >[number],
-                      ) => item.name,
-                    )
-                    .join(", ")
-                : "No projects",
-          },
-        ]
-          .map((f) => `*${f.label}*: ${f.value}`)
-          .join("\n");
-        return await respond({
-          blocks: [
-            {
-              type: "header",
-              text: {
-                type: "plain_text",
-                text: targetUser.data.display_name ?? "Unknown",
-                emoji: true,
-              },
-            },
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: userText,
-              },
-              accessory: {
-                type: "image",
-                image_url:
-                  targetUser.data.avatar ??
-                  "https://avatars.slack-edge.com/2026-02-16/10546676907328_5d442ad696e294c5feb7_512.png",
-                alt_text:
-                  (targetUser.data.display_name ?? "Unknown") + "'s avatar",
-              },
-            },
-            {
-              type: "divider",
-            },
-            {
-              type: "context",
-              elements: [
-                {
-                  type: "mrkdwn",
-                  text:
-                    "https://flavortown.hackclub.com/users/" +
-                    targetUser.data.id,
-                },
-              ],
-            },
-          ],
+      if (!targetUser || !targetUser.status) {
+        return respond({
+          text: "Unexpected error has occurred.",
           response_type: "ephemeral",
         });
       }
+
+      if (!targetUser.ok || !Object.keys(targetUser.data)?.length) {
+        switch (targetUser.status) {
+          case 404:
+            return respond({
+              text: "User doesn't have an FT account.",
+              response_type: "ephemeral",
+            });
+          default:
+            const msg = getGenericErrorMessage(targetUser.status, prefix!);
+            return respond({
+              text: msg ?? "Unexpected error has occured!",
+              response_type: "ephemeral",
+            });
+        }
+      }
+
+      const userText = [
+        { label: "Account ID", value: targetUser.data.id },
+        { label: "Cookies", value: targetUser.data.cookies ?? "Disabled" },
+        { label: "Votes Count", value: targetUser.data.vote_count },
+        { label: "Like Count", value: targetUser.data.like_count },
+        {
+          label: "Time today",
+          value: targetUser.data.devlog_seconds_today
+            ? formatDuration(targetUser.data.devlog_seconds_today)
+            : "0s",
+        },
+        {
+          label: "Total Time",
+          value: targetUser.data.devlog_seconds_total
+            ? formatDuration(targetUser.data.devlog_seconds_total)
+            : "0s",
+        },
+        {
+          label: "Projects",
+          value:
+            targetUser.data.project_ids &&
+            targetUser.data.project_ids.length > 0
+              ? targetUser.data.project_ids
+                  .map(
+                    (id: string | number) =>
+                      `<https://flavortown.hackclub.com/projects/${id}|${id}>`,
+                  )
+                  .join(", ")
+              : "No projects",
+        },
+        {
+          label: "Achievements",
+          value:
+            targetUser.data.achievements &&
+            targetUser.data.achievements.length > 0
+              ? targetUser.data.achievements
+                  .map(
+                    (
+                      item: NonNullable<
+                        z.infer<typeof GetUserResponse>["achievements"]
+                      >[number],
+                    ) => item.name,
+                  )
+                  .join(", ")
+              : "No projects",
+        },
+      ]
+        .map((f) => `*${f.label}*: ${f.value}`)
+        .join("\n");
+      return await respond({
+        blocks: [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: targetUser.data.display_name ?? "Unknown",
+              emoji: true,
+            },
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: userText,
+            },
+            accessory: {
+              type: "image",
+              image_url:
+                targetUser.data.avatar ??
+                "https://avatars.slack-edge.com/2026-02-16/10546676907328_5d442ad696e294c5feb7_512.png",
+              alt_text:
+                (targetUser.data.display_name ?? "Unknown") + "'s avatar",
+            },
+          },
+          {
+            type: "divider",
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text:
+                  "https://flavortown.hackclub.com/users/" + targetUser.data.id,
+              },
+            ],
+          },
+        ],
+        response_type: "ephemeral",
+      });
     } catch (error: any) {
       if (
         error.code === "slack_webapi_platform_error" &&

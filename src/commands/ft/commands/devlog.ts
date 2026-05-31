@@ -2,13 +2,11 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import FT from "@/lib/ft/index";
 import type { RequestHandler } from "@/index.ts";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
-import ysws from "@/ysws";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import {
   containsMarkdown,
   parseMarkdownToSlackBlocks,
 } from "@/lib/parseMarkdown";
-import { loadAdapter } from "@/lib/adapters";
 const utcFormatter = new Intl.DateTimeFormat("en-GB", {
   dateStyle: "short",
   timeStyle: "short",
@@ -21,7 +19,7 @@ export default {
   desc: "Read a devlog's content!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, clients, prefix, folder, yswsData }: RequestHandler,
+    { pg, logger,yswsClient, prefix, folder, yswsData }: RequestHandler,
   ) => {
     const cleanText = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
     const [actionOrId, id] = cleanText.split(" ").filter(Boolean);
@@ -68,16 +66,13 @@ export default {
         response_type: "ephemeral",
       });
     
-    const apiKey = checkKey!;
+    if (!yswsClient) return respond({
+      text: `Unexpected error has occured`,
+      response_type: "ephemeral",
+    });
 
-    let ftClient: FT = clients[`${yswsData?.yswsId}:${yswsData?.userId}`]!.raw as FT;
-    if (!ftClient) {
-      const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-      const adapter = new AdapterClass(apiKey, logger);
-      ftClient = adapter.raw as FT;
-      clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
-    }
-
+    let ftClient: FT = yswsClient.raw as FT;
+    
     if (actionOrId.toLowerCase() !== "latest") {
       const devlog = await ftClient.devlog({
         id: Number(actionOrId),

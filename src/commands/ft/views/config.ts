@@ -1,13 +1,12 @@
 import type { SlackViewMiddlewareArgs } from "@slack/bolt";
 import { and, eq } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { yswsUsers } from "@/schema/ysws";
 import ysws from "@/ysws";
 import { loadAdapter } from "@/lib/adapters";
-type UserRow = typeof users._.inferSelect;
+type UserRow = typeof yswsUsers._.inferSelect;
 
 export default {
   name: "config",
@@ -75,7 +74,7 @@ export default {
         updateFields.apiKey = apiKey;
         if (yswsData?.disabled) updateFields.disabled = false;
 
-        if (!clients[apiKey]) {
+        if (!clients[`${yswsData?.yswsId}:${yswsData?.userId}`]) {
           const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
           clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = new AdapterClass(apiKey, logger)
         }

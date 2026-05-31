@@ -1,8 +1,5 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { eq, count } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
-import { yswsUsers } from "@/schema/ysws";
 import ysws from "@/ysws";
 
 export default {
@@ -10,7 +7,7 @@ export default {
   desc: "Register to use the bot!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, callbackId, prefix }: RequestHandler,
+    { logger, client, yswsData, folder, callbackId, userData, prefix }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -32,12 +29,7 @@ export default {
         return;
       }
 
-      const userData = await pg
-        .select()
-        .from(users)
-        .limit(1)
-        .where(eq(users.userId, command.user_id));
-      if (userData.length === 0)
+      if (userData && Object.keys(userData)?.length === 0)
         return await respond({
           text:
             "You aren't registed to the bot yet! Run /" +
@@ -46,18 +38,12 @@ export default {
           response_type: "ephemeral",
         });
 
-      const res = (await pg
-        .select({ count: count() })
-        .from(yswsUsers)
-        .limit(1)
-        .where(eq(yswsUsers.userId, command.user_id))) as { count: number }[];
-      const existingCount = res[0]?.count ?? 0;
-      if (existingCount !== 0)
+      if (yswsData && Object.keys(yswsData).length > 0)
         return await respond({
           text:
             "You already got an api key setup in db. Run /" +
             prefix +
-            "-config to change it",
+            "-" + folder + " " + "config to change it",
           response_type: "ephemeral",
         });
       await client.views.open({
@@ -73,7 +59,7 @@ export default {
           },
           private_metadata: JSON.stringify({
             channel: command.channel_id,
-            userData: JSON.stringify(userData[0]),
+            userData: JSON.stringify(userData),
           }),
           blocks: [
             {

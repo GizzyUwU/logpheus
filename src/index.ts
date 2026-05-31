@@ -270,6 +270,7 @@ export interface RequestHandler {
   commands?: typeof commands;
   yswsData?: typeof yswsUsers.$inferSelect
   userData?: typeof users.$inferSelect
+  yswsClient?: ApiAdapter
 }
 
 const main = {

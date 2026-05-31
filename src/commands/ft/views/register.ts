@@ -5,13 +5,14 @@ import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import ysws from "@/ysws";
+import { users } from "@/schema/users";
 type UserInsert = typeof yswsUsers.$inferInsert;
 
 export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, yswsData }: RequestHandler,
+    { pg, logger, client, yswsData, userData }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const metadata = JSON.parse(view.private_metadata);
@@ -88,7 +89,13 @@ export default {
       };
 
       await pg.insert(yswsUsers).values(insertFields);
-
+      await pg
+        .update(users)
+        .set({
+          ysws: [...(userData?.ysws ?? []), ysws.macondo.id],
+        })
+        .where(eq(users.userId, userId));
+      
       await client.chat.postEphemeral({
         channel: channelId,
         user: userId,
