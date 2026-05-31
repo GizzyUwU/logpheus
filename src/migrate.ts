@@ -21,6 +21,7 @@ export default async function (db: DatabaseType, logger: typeof LogtapeLogger) {
   const usersToUpdate = await db
     .select()
     .from(users)
+    .then(rows => rows.filter(u => (u.ysws ?? []).length === 0));
 
   if (usersToUpdate.length === 0) return;
 
