@@ -64,7 +64,7 @@ export class MacondoAdapter implements ApiAdapter {
       status: res.status,
       data: {
         id: res.data.id,
-        title: res.data.name,
+        title: String(res.data.name),
         devlogIds: res.data.journals.map((j) => j.id),
       },
     };
@@ -96,7 +96,7 @@ export class MacondoAdapter implements ApiAdapter {
           return {
             id: j.id,
             body,
-            duration_seconds: Math.round(j.hours * 3600),
+            duration_seconds: Math.round(j.hours ?? 0 * 3600),
             created_at: j.created_at ?? null,
             media: mediaUrls.map((url) => ({
               url,

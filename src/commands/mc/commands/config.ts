@@ -1,6 +1,4 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { eq } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import type { PlainTextOption } from "@slack/web-api";
 import ysws from "@/ysws";
