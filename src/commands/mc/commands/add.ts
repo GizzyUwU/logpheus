@@ -2,7 +2,6 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index";
 import { and, eq } from "drizzle-orm";
 import { projects } from "@/schema/projects";
-import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { yswsUsers } from "@/schema/ysws";
 import { users } from "@/schema/users";
@@ -234,22 +233,6 @@ export default {
         if (!Number.isInteger(projectId))
           return respond({
             text: `Project ID has to be a integer`,
-            response_type: "ephemeral",
-          });
-
-        const apiKey = String(yswsData?.apiKey);
-
-        const working = await checkAPIKey({
-          db: pg,
-          apiKey,
-          yswsData: yswsData!,
-          userId: command.user_id,
-          logger,
-        });
-
-        if (!working.works)
-          return respond({
-            text: "Flavortown API Key is invalid, provide a valid one.",
             response_type: "ephemeral",
           });
 

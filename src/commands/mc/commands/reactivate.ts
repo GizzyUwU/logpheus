@@ -1,9 +1,7 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
-import { eq } from "drizzle-orm";
-import checkAPIKey from "@/lib/ft/apiKeyCheck";
+import { and, eq } from "drizzle-orm";
 import { yswsUsers } from "@/schema/ysws";
-import { loadAdapter } from "@/lib/adapters";
 import ysws from "@/ysws";
 type UserRow = typeof yswsUsers._.inferSelect;
 
@@ -12,7 +10,7 @@ export default {
   desc: "Got deactivated because of a bad config? Run this get reactivated!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { logger, client, clients, pg, prefix, folder, yswsData }: RequestHandler,
+    { logger, client, pg, prefix, folder, yswsData }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -32,22 +30,6 @@ export default {
         });
 
       const updateFields: Partial<UserRow> = {};
-      const apiKey = String(yswsData?.apiKey);
-      const working = await checkAPIKey({
-        db: pg,
-        apiKey,
-        logger,
-        yswsData: yswsData!,
-        allowTheDisabled: true,
-        userId: command.user_id,
-      });
-
-      if (!working.works)
-        return respond({
-          text: "Flavortown API Key is invalid, provide a valid one.",
-          response_type: "ephemeral",
-        });
-
       if (yswsData?.disabled === false)
         return await respond({
           text: "Silly you can't be reactivated if you are already active! :agabounce:",
@@ -55,10 +37,6 @@ export default {
         });
 
       updateFields.disabled = false;
-
-      const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-      const adapter = new AdapterClass(apiKey, logger);
-      clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
 
       await pg
         .update(yswsUsers)

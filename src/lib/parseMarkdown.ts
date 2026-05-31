@@ -311,3 +311,16 @@ export function htmlToMarkdown(html: string): string {
     .replace(/<[^>]+>/g, "")
     .trim();
 }
+
+
+export function stripMrkdwn(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`]+`/g, "")
+    .replace(/\*/g, "")
+    .replace(/_/g, "")
+    .replace(/~/g, "")
+    .replace(/^>/gm, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/:[a-z0-9_+-]+:/g, "")
+}

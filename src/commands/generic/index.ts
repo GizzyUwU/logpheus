@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs";
 import type { SlackCommandMiddlewareArgs, App } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
+import { stripMrkdwn } from "@/lib/parseMarkdown";
 const commandHandlers = new Map<string, { execute: Function }>();
 
 const commandsDir = path.join(__dirname, "commands");
@@ -60,7 +61,7 @@ export default {
         response_type: "ephemeral",
       });
 
-    const option = rawOption.toLowerCase();
+    const option = stripMrkdwn(rawOption.toLowerCase());
     const handler = commandHandlers.get(option);
 
     if (!handler)
@@ -74,7 +75,7 @@ export default {
         ...args,
         command: {
           ...args.command,
-          text: args.command.text.replace(rawOption, "").trim(),
+          text: stripMrkdwn(args.command.text.replace(rawOption, "").trim()),
         },
       },
       {

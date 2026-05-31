@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { yswsUsers } from "@/schema/ysws";
 import ysws from "@/ysws";
 import { loadAdapter } from "@/lib/adapters";
+import { stripMrkdwn } from "@/lib/parseMarkdown";
 const commandHandlers = new Map<string, { execute: Function }>();
 
 const commandsDir = path.join(__dirname, "commands");
@@ -126,7 +127,7 @@ export default {
         response_type: "ephemeral",
       });
 
-    const option = rawOption.toLowerCase();
+    const option = stripMrkdwn(rawOption.toLowerCase());
     const handler = commandHandlers.get(option);
 
     if (!handler)
@@ -154,7 +155,7 @@ export default {
         ...args,
         command: {
           ...args.command,
-          text: args.command.text.replace(rawOption, "").trim(),
+          text: stripMrkdwn(args.command.text.replace(rawOption, "").trim()),
         },
       },
       {
