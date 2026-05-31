@@ -14,4 +14,6 @@
 */
 
 -- ALTER TABLE "ysws" DROP CONSTRAINT "<constraint_name>";--> statement-breakpoint
+ALTER TABLE "ysws" DROP CONSTRAINT IF EXISTS "ysws_pkey";
+ALTER TABLE "ysws" DROP CONSTRAINT IF EXISTS "ysws_yswsId_pk";
 ALTER TABLE "ysws" ADD CONSTRAINT "ysws_ysws_id_user_id_pk" PRIMARY KEY("ysws_id","user_id");
