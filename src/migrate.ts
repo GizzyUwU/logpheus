@@ -111,8 +111,7 @@ export default async function (db: DatabaseType, logger: typeof LogtapeLogger) {
     };
   });
 
-  console.log(rows.map(r => r.apiKey))
-  await db.insert(yswsUsers).values(rows);
+  await db.insert(yswsUsers).values(rows).onConflictDoNothing();
 
   logger.info(
     `Inserted ${rows.length} rows into ysws table, updating users...`,
