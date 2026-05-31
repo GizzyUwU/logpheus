@@ -8,6 +8,6 @@ export async function loadAdapter(filename: string): Promise<new (...args: unkno
   const mod = await import(`./${filename}`);
   const key = Object.keys(mod)[0] as string;
   const AdapterClass = mod.default ?? mod[key as keyof typeof mod];
-  adapterCache.set(filename, mod.default);
+  adapterCache.set(filename, AdapterClass);
   return AdapterClass;
 }
