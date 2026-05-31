@@ -1,6 +1,6 @@
 import type { logger as LogtapeLogger, DatabaseType } from "@/index.ts";
-import { users } from "@/schema/users.ts";
-import { yswsUsers } from "@/schema/ysws.ts";
+import { users } from "@/schema/users";
+import { yswsUsers } from "@/schema/ysws";
 import { projects } from "@/schema/projects";
 import { eq, inArray } from "drizzle-orm";
 import ysws from "@/ysws.ts";
