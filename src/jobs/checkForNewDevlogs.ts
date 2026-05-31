@@ -44,7 +44,7 @@ async function getNewDevlogs(params: {
   userByUserId: Map<string, Partial<typeof users.$inferSelect>>;
   userRow: typeof users.$inferSelect;
   yswsRow: typeof yswsUsers.$inferSelect;
-  projectsMap: Map<number, Partial<typeof projects.$inferSelect>>;
+  projectsMap: Map<string, Partial<typeof projects.$inferSelect>>;
 }): Promise<{
   name: string;
   devlogs: z.infer<typeof GetDevlogResponse>[];
@@ -139,8 +139,9 @@ async function getNewDevlogs(params: {
       ? project.data.devlogIds
       : [];
 
-    const row = params.projectsMap.get(params.projectId)
-      ? [params.projectsMap.get(params.projectId)!]
+    const projectKey = `${params.yswsRow.yswsId}:${params.projectId}`;
+    const row = params.projectsMap.get(projectKey)
+      ? [params.projectsMap.get(projectKey)!]
       : [];
 
     if (row.length === 0) {
@@ -153,11 +154,13 @@ async function getNewDevlogs(params: {
         .values({
           id: Number(params.projectId),
           devlogIds: initialDevlogIds,
+          ysws: params.yswsRow.yswsId,
         })
         .onConflictDoUpdate({
           target: projects.id,
           set: {
             devlogIds: initialDevlogIds,
+            ysws: params.yswsRow.yswsId,
           },
         });
 
@@ -260,7 +263,12 @@ async function getNewDevlogs(params: {
           devlogIds: Array.from(new Set([...cachedIds, ...newIds])),
           predictedCurrency,
         })
-        .where(eq(projects.id, Number(params.projectId)));
+        .where(
+          and(
+            eq(projects.id, Number(params.projectId)),
+            eq(projects.ysws, params.yswsRow.yswsId),
+          ),
+        );
 
       return {
         name: project.data.title ?? "Unknown",
@@ -317,7 +325,7 @@ export default {
       );
 
       const projectsMap = new Map(
-        (await pg.select().from(projects)).map((r) => [r.id, r]),
+        (await pg.select().from(projects)).map((r) => [`${r.ysws}:${r.id}`, r]),
       );
       for (const yswsRow of yswsRows) {
         const userRow = userRows.find((u) => u.ysws?.includes(yswsRow.yswsId));
