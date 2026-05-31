@@ -118,6 +118,11 @@ export default async function (db: DatabaseType, logger: typeof LogtapeLogger) {
     `Inserted ${rows.length} rows into ysws table, updating users...`,
   );
 
+  const newKeys = new Map<string, string>();
+  for (const user of usersToUpdate) {
+    newKeys.set(user.userId, await genAPIKey(db));
+  }
+
   for (const user of usersToUpdate) {
     const region =
       user?.meta?.find((s) => s.startsWith("Region::"))?.split("::")[1] ?? "";
@@ -127,14 +132,14 @@ export default async function (db: DatabaseType, logger: typeof LogtapeLogger) {
         ysws: [...new Set([...(user.ysws ?? []), ysws.flavortown.id])],
         projects: [],
         region,
-        apiKey: await genAPIKey(db),
+        apiKey: newKeys.get(user.userId)!,
         ...(user.meta
           ? {
               meta: user.meta.filter((item) => !item.startsWith("Goals::")),
             }
           : {}),
       })
-      .where(eq(users.apiKey, user.apiKey!));
+      .where(eq(users.userId, user.userId));
   }
 
   logger.info(
