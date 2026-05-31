@@ -145,7 +145,7 @@ export default {
     ]
     if (!yswsClient) {
       const AdapterClass = await loadAdapter(ysws.macondo.adapter);
-      const adapter = new AdapterClass(loggerCTX);
+      const adapter = new AdapterClass(undefined, loggerCTX);
       yswsClient = adapter;
       ctx.clients[`${yswsData[0]?.yswsId}:${yswsData[0]?.userId}`] = adapter;
     }
