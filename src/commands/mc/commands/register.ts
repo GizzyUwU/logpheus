@@ -29,12 +29,12 @@ export default {
         return;
       }
 
-      if (userData && Object.keys(userData).length > 0)
+      if (userData && Object.keys(userData).length === 0)
         return await respond({
           text:
-            "You already got an api key setup in db. Run /" +
+            "You don't exist in db! Run /" +
             prefix +
-            "-config to change it",
+            " register first",
           response_type: "ephemeral",
         });
 

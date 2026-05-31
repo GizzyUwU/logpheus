@@ -29,15 +29,15 @@ export default {
         return;
       }
 
-      if (userData && Object.keys(userData)?.length === 0)
+      if (userData && Object.keys(userData).length === 0)
         return await respond({
           text:
-            "You aren't registed to the bot yet! Run /" +
+            "You don't exist in db! Run /" +
             prefix +
-            " register first before registering to a ysws.",
+            " register first",
           response_type: "ephemeral",
         });
-
+      
       if (yswsData && Object.keys(yswsData).length > 0)
         return await respond({
           text:
