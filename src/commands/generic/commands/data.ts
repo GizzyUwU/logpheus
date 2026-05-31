@@ -4,6 +4,7 @@ import type {
 import { eq } from "drizzle-orm";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
+import ysws from "@/ysws";
 
 export default {
   name: "data",
@@ -28,11 +29,13 @@ export default {
       { label: "Channel Id", value: userData[0]?.channel},
       { label: "Disabled", value: userData[0]?.disabled},
       {
-        label: "Projects",
-        value:  (userData[0]?.projects && userData[0]?.projects.length > 0 ? userData[0].projects
+        label: "YSWSs",
+        value:  (userData[0]?.ysws && userData[0]?.ysws.length > 0 ? userData[0].ysws
           .map(
-            (id: string | number) =>
-              `<https://flavortown.hackclub.com/projects/${id}|${id}>`
+            (id: string | number) => {
+              const yswsConfig = Object.values(ysws).find((record) => record.id === id);
+              return `<${yswsConfig?.url}|${yswsConfig?.humanName}>`
+            }
           )
           .join(", ") : "No projects"),
       },
