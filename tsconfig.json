@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
     "lib": ["ESNext"],
+    "baseUrl": ".",
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
     "allowJs": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
     },
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -38,6 +39,6 @@
     "noImplicitUseStrict": false,
     "suppressExcessPropertyErrors": false,
     "suppressImplicitAnyIndexErrors": false,
-    "noStrictGenericChecks": false
-  }
+    "noStrictGenericChecks": false,
+  },
 }
