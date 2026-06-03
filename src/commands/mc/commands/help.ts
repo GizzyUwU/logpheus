@@ -81,7 +81,7 @@ export default {
           elements: [
             {
               type: "mrkdwn",
-              text: "Logpheus offically condones the projects <https://flavortown.hackclub.com/projects/135|Flavortown Utils> and <https://flavortown.hackclub.com/projects/140|Spicetown> with both having Logpheus integration for goals!",
+              text: "Logpheus offically condones the projects <https://macondo.hackclub.com/projects/5820|Macondo Utils> and <https://macondo.hackclub.com/projects/349|Macondo+>!",
             },
           ],
         },

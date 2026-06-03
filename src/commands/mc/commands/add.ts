@@ -324,7 +324,7 @@ export default {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `:woah-dino: <https://flavortown.hackclub.com/projects/${projectId}|${freshProject.data.name}'s> devlogs just got subscribed to the channel. :yay:`,
+                text: `:woah-dino: <https://macondo.hackclub.com/projects/${projectId}|${freshProject.data.name}'s> devlogs just got subscribed to the channel. :yay:`,
               },
             },
             ...(freshProject.data.description
