@@ -40,7 +40,7 @@ export default {
         : prefix!;
 
       const regionOptions: PlainTextOption[] = Object.entries(
-        ysws.flavortown.regions,
+        ysws.macondo.regions,
       ).map(([code, name]) => ({
         text: {
           type: "plain_text" as const,
@@ -72,7 +72,7 @@ export default {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: "Get your API key here: <https://flavortown.hackclub.com/kitchen?settings=1#api_key|Flavortown Settings>",
+                text: "Go to explore, people, search your name, click it, open in new tab, grab it from user id from url 'https://macondo.hackclub.com/u/{userId}'",
               },
             },
             {
@@ -80,13 +80,13 @@ export default {
               block_id: "ftApiKey",
               label: {
                 type: "plain_text",
-                text: "What is your flavortown api key?",
+                text: "What is your account id?",
               },
               element: {
                 type: "plain_text_input",
-                action_id: "api_input",
+                action_id: "acc_id",
                 multiline: false,
-                initial_value: yswsData?.apiKey ?? "",
+                initial_value: yswsData?.accId ?? ""
               },
             },
             {
