@@ -9,35 +9,39 @@ Logpheus is a project built to take your FT devlogs and send them to your person
 
 It has an already hosted version which is usable at @logpheus.
 
-To make use of it, in a channel made by you run the command:
+To make use of it, run the following command below to register
 
 ```
-/logpheus-add
+/logpheus register
+```
+
+and to then view all the commands provided run the following
+
+```
+/logpheus help
 ```
 
 It should open up a model asking for your FT Project Id and FT API Key unless you don't own the channel then it will error. Once you enter the data it will send a successfully added notification and the bot will start poll every minute using your api key to see if any new devlog has been posted and if one has it will send a message in your channel like this:
 
+![Example of a Devlog notification in a channel](/screenshots/devlog.png)
+
 ### Not a personal channel owner?
 
-You can still make use# of the bot for general flavourtown commands like the user command by registering with
+You can still make use of the bot for general flavourtown commands like the user command by registering with
 
 ```
-/logpheus-register
+/logpheus register
 ```
-
-It opens a slack modal asking for your api key to register you so you can use the general FT commands.
-
-![Example of a Devlog notification in a channel](/screenshots/devlog.png)
 
 ## Decided you don't want it posting anymore?
 
 If you don't want it posting anymore just run
 
 ```
-/logpheus-remove [project-id]
+/logpheus-(ysws) remove [project-id]
 ```
 
-The project-id parameter isn't needed for it to run but if it is provided it will only stop polling for that project if no id is provided it will deleted the api key from the store preventing any polling from happening.
+The project-id parameter isn't needed for it to run but if it is provided it will only stop polling for that project.
 
 ## Self Hosted Version
 
@@ -107,7 +111,7 @@ bot-id-last-2-chars-bot-name-command
 as an example of a command using this might be (this is from someone's self hosted instance used as example)
 
 ```
-/89-logpheus_snowflake-stats
+/89-logpheus_snowflake stats
 ```
 
 For a more detailed look of how it's generated here's the exact code
@@ -128,24 +132,3 @@ logger.info(
   Bun.color("darkseagreen", "ansi") + prefix + "\x1b[0m",
 );
 ```
-
-The current set out commands for the bot that need to be added manually when using webhook mode is
-
-- (prefix)-add
-- (prefix)-config
-- (prefix)-data
-- (prefix)-devlog
-- (prefix)-goals
-- (prefix)-help
-- (prefix)-project
-- (prefix)-projects
-- (prefix)-reactivate
-- (prefix)-register
-- (prefix)-remove
-- (prefix)-report
-- (prefix)-request
-- (prefix)-revoke
-- (prefix)-shop
-- (prefix)-stats
-- (prefix)-user
-- (prefix)-view
