@@ -469,6 +469,7 @@ async function loadJobs() {
       prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
     }
 
+    console.log(prefix)
     main.prefix = prefix;
     if (checkEnvs("HCAI_API_KEY", false)) {
       const aiClient = new OpenRouter({

@@ -1,5 +1,7 @@
 import path from "path";
 import fs from "fs";
+import { users } from "@/schema/users";
+import { eq } from "drizzle-orm";
 import type { SlackCommandMiddlewareArgs, App } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { stripMrkdwn } from "@/lib/parseMarkdown";
@@ -21,10 +23,7 @@ if (fs.existsSync(commandsDir)) {
   }
 }
 
-async function setup(
-  app: App,
-  ctx: RequestHandler,
-) {
+async function setup(app: App, ctx: RequestHandler) {
   const viewsDir = path.join(__dirname, "views");
   if (!fs.existsSync(viewsDir)) return;
 
@@ -42,7 +41,10 @@ async function setup(
     app.view(callbackId, async (args) => {
       await args.ack();
       try {
-        await mod.execute(args, { ...ctx, callbackId } satisfies RequestHandler);
+        await mod.execute(args, {
+          ...ctx,
+          callbackId,
+        } satisfies RequestHandler);
       } catch (err) {
         ctx.logger.error({ err });
       }
@@ -55,6 +57,18 @@ export default {
   setup: async (app: App, ctx: RequestHandler) => setup(app, ctx),
   execute: async (args: SlackCommandMiddlewareArgs, ctx: RequestHandler) => {
     const [rawOption] = args.command.text.split(" ").filter(Boolean);
+    const userData = await ctx.pg
+      .select()
+      .from(users)
+      .where(eq(users.userId, args.command.user_id))
+      .limit(1);
+
+    if (userData.length === 0)
+      return args.respond({
+        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
+        response_type: "ephemeral",
+      });
+
     if (!rawOption)
       return args.respond({
         text: "You must provide an option.",
@@ -70,6 +84,10 @@ export default {
         response_type: "ephemeral",
       });
 
+    const loggerCTX = ctx.logger.with({
+      command: ctx.prefix + "-" + ctx.folder + " " + option,
+    });
+
     await handler.execute(
       {
         ...args,
@@ -80,7 +98,9 @@ export default {
       },
       {
         ...ctx,
-        callbackId: ctx.namespacedPrefix + "_" + option
+        callbackId: ctx.namespacedPrefix + "_" + option,
+        logger: loggerCTX,
+        userData: userData[0]!
       },
     );
   },

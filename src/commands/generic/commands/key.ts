@@ -5,7 +5,7 @@ export default {
   desc: "Want your logpheus key for the api? Come get it!",
   execute: async (
     { respond }: SlackCommandMiddlewareArgs,
-    { pg, prefix, userData }: RequestHandler,
+    { prefix, userData }: RequestHandler,
   ) => {
     return respond({
       blocks: [

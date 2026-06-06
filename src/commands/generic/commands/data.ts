@@ -11,26 +11,15 @@ export default {
   desc: "Look through what data the bot has on you!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, prefix }: RequestHandler,
+    { pg, prefix, userData }: RequestHandler,
   ) => {
-    const userData = (await pg
-      .select()
-      .from(users)
-      .where(eq(users.userId, command.user_id))
-      .limit(1));
-
-    if (userData.length === 0)
-      return respond({
-        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix}-register`,
-        response_type: "ephemeral",
-      });
-
+    console.log(userData)
     const userText = [
-      { label: "Channel Id", value: userData[0]?.channel},
-      { label: "Disabled", value: userData[0]?.disabled},
+      { label: "Channel Id", value: userData?.channel},
+      { label: "Disabled", value: userData?.disabled},
       {
         label: "YSWSs",
-        value:  (userData[0]?.ysws && userData[0]?.ysws.length > 0 ? userData[0].ysws
+        value:  (userData?.ysws && userData?.ysws.length > 0 ? userData.ysws
           .map(
             (id: string | number) => {
               const yswsConfig = Object.values(ysws).find((record) => record.id === id);
@@ -41,11 +30,11 @@ export default {
       },
       {
         label: "Opt Outs",
-        value: (userData[0]?.optOuts ? userData[0]?.optOuts.join(", ") : "No data")
+        value: (userData?.optOuts ? userData?.optOuts.join(", ") : "No data")
       },
         {
         label: "Metadata",
-        value: (userData[0]?.meta && userData[0]?.meta.length > 0 ? userData[0]?.meta.join(", ") : "No metadata")
+        value: (userData?.meta && userData?.meta.length > 0 ? userData?.meta.join(", ") : "No metadata")
       }
     ].map(f => `*${f.label}*: ${f.value}`).join("\n");
     return respond({
@@ -55,7 +44,7 @@ export default {
           text: {
             type: "plain_text",
             text: (/^[a-z]/i.test(prefix!)
-                ? prefix![0]!.toUpperCase() + prefix!.slice(1)
+                ? prefix![0]?.toUpperCase() + prefix!.slice(1)
                 : prefix!) + "'s data on you",
             emoji: true,
           },
