@@ -58,7 +58,6 @@ export default {
       const optoutsBlock = view.state.values?.["personal"]?.["optouts"] as any;
       
       if (optoutsBlock?.selected_options) {
-        console.log(optoutsBlock?.selected_options)
         const incoming = optoutsBlock.selected_options
           .map((o: any) => o.value)
           .filter(Boolean);
