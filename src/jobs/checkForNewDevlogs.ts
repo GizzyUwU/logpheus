@@ -469,7 +469,7 @@ export default {
                                     elements: [
                                       {
                                         type: "usergroup",
-                                        usergroup_id: "S0AKABM82UF",
+                                        usergroup_id: pingGroupId,
                                       },
                                     ],
                                   },
@@ -535,7 +535,7 @@ export default {
                                     elements: [
                                       {
                                         type: "usergroup",
-                                        usergroup_id: "S0AKABM82UF",
+                                        usergroup_id: pingGroupId,
                                       },
                                     ],
                                   },
@@ -589,7 +589,7 @@ export default {
                       error?.code === "slack_webapi_platform_error" &&
                       error.data?.error === "channel_not_found"
                     ) {
-                      if (!userRow.userId) return;
+                      if (!userRow.userId) continue;
                       delete clients[clientKey];
                       await pg
                         .update(yswsUsers)
@@ -606,7 +606,7 @@ export default {
                         channel: userRow.userId,
                         text: `Hey! The automated devlog poster has been disabled for you because I am not in the channel where it's meant to be sent in. Add me to the channel and run /${prefix}-reactivate to get it enabled.`,
                       });
-                      return;
+                      continue;
                     }
                     if (
                       typeof error.message === "string" &&
@@ -616,7 +616,7 @@ export default {
                         channel: userRow.channel,
                         text: `Hey! Your devlog post failed because the image URL isn't usable by slack. Looking at github issues of boltjs this is usually because it isn't accessible to slack but it may be other issues like slack not supporting it.`,
                       });
-                      return;
+                      continue;
                     }
                   }
 
