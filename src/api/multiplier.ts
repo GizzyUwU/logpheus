@@ -10,6 +10,7 @@ import { MultiplierProjectID } from "@/apiSchema/multiplier";
 import ysws, { YSWSId } from "@/ysws";
 import { yswsUsers } from "@/schema/ysws";
 import { rateLimit } from "@/api/index";
+import { opClient } from "@/index";
 type ProjectRow = typeof projects.$inferSelect;
 
 async function readJson<T>(req: any): Promise<T | null> {
@@ -39,6 +40,16 @@ export default [
           res.end(
             JSON.stringify({ msg: "Too many wequests, try a-again watew." }),
           );
+          if (opClient) {
+            opClient.identify({
+              profileId: String(req.socket.remoteAddress)
+            })
+            opClient.track("api", {
+              endpoint: req.url,
+              ratelimit: true
+            })
+            opClient.clear()
+          }
           return;
         }
 
@@ -237,6 +248,17 @@ export default [
           "content-type": "application/json",
         });
 
+        if (opClient) {
+          opClient.identify({
+            profileId: req.socket.remoteAddress ?? "noip"
+          })
+          opClient.track("error", {
+            api: true,
+            endpoint: req.url,
+            error: err,
+          });
+          opClient?.clear();
+        }
         res.end(
           JSON.stringify({ msg: "Internal server error" } as z.infer<
             typeof MultiplierError

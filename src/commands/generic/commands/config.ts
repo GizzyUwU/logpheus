@@ -2,14 +2,14 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { eq } from "drizzle-orm";
 import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
-import type { AnyBlock } from "@slack/web-api";
+import type { AnyBlock, PlainTextOption } from "@slack/web-api";
 
 export default {
   name: "config",
   desc: "Need to change the bots configuration on you?",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, callbackId, prefix }: RequestHandler,
+    { pg, logger, client, callbackId, prefix, userData }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -44,6 +44,17 @@ export default {
         ? prefix![0]!.toUpperCase() + prefix!.slice(1)
         : prefix!;
 
+      const optOuts: PlainTextOption[] = Object.entries({
+        analytics: "Analytics",
+      }).map(([code, name]) => ({
+        text: {
+          type: "plain_text",
+          text: String(name),
+          emoji: true,
+        },
+        value: code,
+      }));
+
       await client.views.open({
         trigger_id: command.trigger_id,
         view: {
@@ -57,6 +68,28 @@ export default {
             channel: command.channel_id,
           }),
           blocks: [
+            {
+              type: "input",
+              block_id: "personal",
+              label: {
+                type: "plain_text",
+                text: "Want to opt out of something? Chosoe from below's options!",
+              },
+              element: {
+                type: "multi_static_select",
+                action_id: "optouts",
+                placeholder: {
+                  type: "plain_text",
+                  text: "Select an opt out",
+                  emoji: true,
+                },
+                options: optOuts,
+                initial_options: optOuts.filter((o) =>
+                  (userData?.optOuts ?? []).includes(o.value ?? ""),
+                ),
+              },
+              optional: true,
+            },
             ...(res[0]?.channel
               ? ([
                   {

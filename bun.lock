@@ -10,6 +10,7 @@
         "@logtape/logtape": "^2.0.2",
         "@logtape/redaction": "^2.0.2",
         "@logtape/sentry": "^2.0.2",
+        "@openpanel/sdk": "^1.3.1",
         "@openrouter/sdk": "^0.12.21",
         "@sentry/bun": "^10.36.0",
         "@slack/bolt": "^4.6.0",
@@ -169,6 +170,8 @@
     "@octokit/webhooks": ["@octokit/webhooks@14.2.0", "", { "dependencies": { "@octokit/openapi-webhooks-types": "12.1.0", "@octokit/request-error": "^7.0.0", "@octokit/webhooks-methods": "^6.0.0" } }, "sha512-da6KbdNCV5sr1/txD896V+6W0iamFWrvVl8cHkBSPT+YlvmT3DwXa4jxZnQc+gnuTEqSWbBeoSZYTayXH9wXcw=="],
 
     "@octokit/webhooks-methods": ["@octokit/webhooks-methods@6.0.0", "", {}, "sha512-MFlzzoDJVw/GcbfzVC1RLR36QqkTLUf79vLVO3D+xn7r0QgxnFoLZgtrzxiQErAjFUOdH6fas2KeQJ1yr/qaXQ=="],
+
+    "@openpanel/sdk": ["@openpanel/sdk@1.3.1", "", {}, "sha512-mQ5xaBUGXnyRg3qYxwnbVaUYyW7w8u+munrWk/ClnqxEeR2j+FYPiA6noHbHMCFC2aZutYD5OoRzEvw3FBNFxw=="],
 
     "@openrouter/sdk": ["@openrouter/sdk@0.12.21", "", { "dependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-iKAlh0RbWzV6KphuE6NZFwsSjKJr6SsK5145LbxDB87Wa92imB5I9mpbv3hGHmacdnz/zCY/gokFSJXAxuO2/A=="],
 

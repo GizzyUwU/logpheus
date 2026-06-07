@@ -7,7 +7,7 @@ export default [
     method: ["GET"],
     handler: (_: ParamsIncomingMessage, res: ServerResponse<IncomingMessage>) => {
       res.writeHead(301, {
-        Location: "https://flavortown.hackclub.com/projects/1865",
+        Location: "https://macondo.hackclub.com/projects/5464",
       });
       res.end();
     },

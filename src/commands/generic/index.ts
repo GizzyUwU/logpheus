@@ -40,6 +40,32 @@ async function setup(app: App, ctx: RequestHandler) {
     const callbackId = `${ctx.namespacedPrefix}_${fileStem}`;
     app.view(callbackId, async (args) => {
       await args.ack();
+      const userData = await ctx.pg
+        .select()
+        .from(users)
+        .where(eq(users.userId, args.body.user.id))
+        .limit(1);
+
+      if (userData.length === 0 && !callbackId.includes("register"))
+        return args.respond({
+          text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
+          response_type: "ephemeral",
+        });
+
+      if (ctx.opClient && !userData[0]?.optOuts?.includes("analytics")) {
+        ctx.opClient.identify({
+          profileId: args.body.user.id,
+          firstName: args.body.user.name,
+          properties: {
+            friendlyName: "generic",
+          },
+        });
+        ctx.opClient.track("commandViews", {
+          view: callbackId,
+        });
+        ctx.opClient.clear();
+      }
+      
       try {
         await mod.execute(args, {
           ...ctx,
@@ -63,7 +89,7 @@ export default {
       .where(eq(users.userId, args.command.user_id))
       .limit(1);
 
-    if (userData.length === 0)
+    if (userData.length === 0 && !rawOption?.includes("register"))
       return args.respond({
         text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
         response_type: "ephemeral",
@@ -85,8 +111,24 @@ export default {
       });
 
     const loggerCTX = ctx.logger.with({
-      command: ctx.prefix + "-" + ctx.folder + " " + option,
+      command: ctx.prefix + " " + option,
     });
+
+    if (ctx.opClient && !userData[0]?.optOuts?.includes("analytics")) {
+      ctx.opClient.identify({
+        profileId: args.command.user_id,
+        firstName: args.command.user_name,
+        properties: {
+          friendlyName: "generic",
+          channelId: args.command.channel_id,
+          channelName: args.command.channel_name,
+        },
+      });
+      ctx.opClient.track("commands", {
+        command: option,
+      });
+      ctx.opClient.clear();
+    }
 
     await handler.execute(
       {

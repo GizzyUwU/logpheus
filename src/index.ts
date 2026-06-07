@@ -19,6 +19,7 @@ import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
+import { OpenPanel } from "@openpanel/sdk";
 import { yswsUsers } from "./schema/ysws";
 import { users } from "./schema/users";
 import loadAPI from "./api/index";
@@ -210,6 +211,20 @@ function checkEnvs(name: string, optional: boolean): string {
   }
 }
 
+export let opClient: OpenPanel | undefined = undefined;
+if (
+  checkEnvs("OPENPANEL_CLIENT_ID", true) &&
+  checkEnvs("OPENPANEL_CLIENT_SECRET", true)
+) {
+  const apiUrl = process.env["OPENPANEL_API_URL"];
+  opClient = new OpenPanel({
+    ...(apiUrl ? { apiUrl: String(apiUrl) } : {}),
+    clientId: String(process.env["OPENPANEL_CLIENT_ID"]),
+    clientSecret: String(process.env["OPENPANEL_CLIENT_SECRET"]),
+  });
+  opClient.ready();
+}
+
 export let vikClient: VikunjaClient | undefined = undefined;
 if (
   checkEnvs("VIKUNJA_URL", true) &&
@@ -271,6 +286,7 @@ export interface RequestHandler {
   yswsData?: typeof yswsUsers.$inferSelect;
   userData?: typeof users.$inferSelect;
   yswsClient?: ApiAdapter;
+  opClient?: OpenPanel | undefined;
 }
 
 const main = {
@@ -357,6 +373,7 @@ function loadRequestHandlers(
             commands,
             folder: subFolder,
             namespacedPrefix,
+            opClient: opClient ? opClient : undefined,
           } satisfies RequestHandler);
         } catch (err) {
           logger.error({ err });
@@ -377,6 +394,7 @@ function loadRequestHandlers(
         commands,
         folder: subFolder,
         namespacedPrefix,
+        opClient: opClient ? opClient : undefined,
       } satisfies RequestHandler);
     }
 
@@ -429,6 +447,7 @@ async function loadJobs() {
             prefix: prefix,
             clients,
             Sentry,
+            opClient: opClient ? opClient : undefined,
           } satisfies RequestHandler);
         } catch (err) {
           const ctx = logger.with({
@@ -469,7 +488,6 @@ async function loadJobs() {
       prefix = self.user_id?.slice(-2).toLowerCase() + "-" + self.user;
     }
 
-    console.log(prefix)
     main.prefix = prefix;
     if (checkEnvs("HCAI_API_KEY", false)) {
       const aiClient = new OpenRouter({

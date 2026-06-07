@@ -9,7 +9,7 @@ export default {
   name: "config",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client }: RequestHandler,
+    { pg, logger, client, userData }: RequestHandler,
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
@@ -45,7 +45,6 @@ export default {
       
       const updateFields: Partial<UserRow> = {};
 
-
       if (flatValues["pingGroupId"]) {
         const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("PingGroup::"));
         updateFields.meta = [...filteredMeta, "PingGroup::" + flatValues["pingGroupId"]];
@@ -54,6 +53,21 @@ export default {
       if (flatValues["HCBId"]) {
         const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("HCBId::"));
         updateFields.meta = [...filteredMeta, "HCBId::" + flatValues["HCBId"]];
+      }
+
+      const optoutsBlock = view.state.values?.["personal"]?.["optouts"] as any;
+      
+      if (optoutsBlock?.selected_options) {
+        console.log(optoutsBlock?.selected_options)
+        const incoming = optoutsBlock.selected_options
+          .map((o: any) => o.value)
+          .filter(Boolean);
+      
+        const existing = userData?.optOuts ?? [];
+      
+        updateFields.optOuts = Array.from(
+          new Set([...existing, ...incoming]),
+        );
       }
 
       if (Object.keys(updateFields).length > 0) {

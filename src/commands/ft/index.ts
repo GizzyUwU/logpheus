@@ -73,6 +73,21 @@ async function setup(app: App, ctx: RequestHandler) {
           text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
         });
 
+      if (ctx.opClient && !userData[0]?.optOuts?.includes("analytics")) {
+        ctx.opClient.identify({
+          profileId: args.body.user.id,
+          firstName: args.body.user.name,
+          properties: {
+            yswsId: yswsData[0]?.yswsId,
+            friendlyName: ysws.flavortown.humanName,
+          },
+        });
+        ctx.opClient.track("commandViews", {
+          view: callbackId,
+        });
+        ctx.opClient.clear();
+      }
+
       try {
         await mod.execute(args, {
           ...ctx,
@@ -136,13 +151,29 @@ export default {
         response_type: "ephemeral",
       });
 
+    if (ctx.opClient && !userData[0]?.optOuts?.includes("analytics")) {
+      ctx.opClient.identify({
+        profileId: args.command.user_id,
+        firstName: args.command.user_name,
+        properties: {
+          yswsId: yswsData[0]?.yswsId,
+          channelId: args.command.channel_id,
+          channelName: args.command.channel_name,
+          friendlyName: ysws.flavortown.humanName,
+        },
+      });
+      ctx.opClient.track("commands", {
+        command: option,
+      });
+      ctx.opClient.clear();
+    }
+
     const loggerCTX = ctx.logger.with({
       command: ctx.prefix + "-" + ctx.folder + " " + option,
     });
-    
-    let yswsClient = ctx.clients[
-      `${yswsData[0]?.yswsId}:${yswsData[0]?.userId}`
-    ]
+
+    let yswsClient =
+      ctx.clients[`${yswsData[0]?.yswsId}:${yswsData[0]?.userId}`];
     if (!yswsClient) {
       const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
       const adapter = new AdapterClass(yswsData[0]?.apiKey, loggerCTX);

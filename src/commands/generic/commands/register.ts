@@ -60,7 +60,7 @@ export default {
       await pg.insert(users).values(insertFields);
 
       await respond({
-        markdown_text: "Yay! You are now a user of logpheus! :yay-nb:",
+        text: "Yay! You are now a user of logpheus! :yay-nb:",
         response_type: "ephemeral"
       });
     } catch (error: any) {

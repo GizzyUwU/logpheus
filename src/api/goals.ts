@@ -8,6 +8,7 @@ import { rateLimit } from "@/api/index.ts";
 import { yswsUsers } from "@/schema/ysws";
 import ysws, { YSWSId } from "@/ysws";
 import { loadAdapter } from "@/lib/adapters";
+import { opClient } from "@/index";
 async function readJson<T>(req: any): Promise<T | null> {
   try {
     const chunks: Buffer[] = [];
@@ -29,16 +30,26 @@ export default [
       res: ServerResponse<IncomingMessage>,
     ) => {
       try {
+        let useOP = false;
         const ip = req.socket.remoteAddress || "unknown";
         if (!rateLimit(ip)) {
           res.writeHead(429, { "Content-Type": "application/json" });
           res.end(
             JSON.stringify({ msg: "Too many wequests, try a-again watew." }),
           );
+          if (opClient) {
+            opClient.identify({
+              profileId: String(req.socket.remoteAddress)
+            })
+            opClient.track("api", {
+              endpoint: req.url,
+              ratelimit: true
+            })
+            opClient.clear()
+          }
           return;
         }
 
-        
         if (!req.params!["yswsId"]) {
           res.writeHead(400);
           res.end(
@@ -49,8 +60,10 @@ export default [
           return;
         }
 
-        const yswsId = YSWSId.parse(req.params!["yswsId"])
-        const yswsData = Object.values(ysws).find((record) => record.id === yswsId);
+        const yswsId = YSWSId.parse(req.params!["yswsId"]);
+        const yswsData = Object.values(ysws).find(
+          (record) => record.id === yswsId,
+        );
         if (!yswsData) {
           res.writeHead(404);
           res.end(
@@ -64,7 +77,9 @@ export default [
         const preReplaceAPIKey = req.headers["authorization"];
         if (!preReplaceAPIKey?.startsWith("Bearer ")) {
           res.writeHead(401);
-          res.end("You nyeed pwovide youw api key to make use of this endpoint!!");
+          res.end(
+            "You nyeed pwovide youw api key to make use of this endpoint!!",
+          );
           return;
         }
 
@@ -103,12 +118,25 @@ export default [
           return;
         }
 
-        let yswsClient = main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`];
+        if (opClient && !working.row?.optOuts?.includes("analytics")) {
+          opClient.identify({
+            profileId: working.row.userId,
+            properties: {
+              yswsId: userYSWS[0]?.yswsId,
+              friendlyName: yswsData.humanName,
+            },
+          });
+          useOP = true;
+        }
+
+        let yswsClient =
+          main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`];
         if (!yswsClient) {
           const AdapterClass = await loadAdapter(yswsData.adapter);
           const adapter = new AdapterClass(userYSWS[0]?.apiKey, main.logger);
           yswsClient = adapter;
-          main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`] = adapter;
+          main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`] =
+            adapter;
         }
 
         switch (req.method) {
@@ -131,6 +159,14 @@ export default [
                   msg: "Unyexpected ewwow has occuwwed",
                 }),
               );
+              if (useOP && opClient) {
+                opClient.track("error", {
+                  api: true,
+                  endpoint: req.url,
+                  error: shop,
+                });
+                opClient.clear();
+              }
               return;
             }
 
@@ -146,6 +182,14 @@ export default [
                       msg: msg ?? "Unyexpected ewwow has occuwwed",
                     }),
                   );
+                  if (useOP && opClient) {
+                    opClient.track("error", {
+                      api: true,
+                      endpoint: req.url,
+                      error: shop,
+                    });
+                    opClient.clear();
+                  }
                   return;
               }
             }
@@ -163,15 +207,21 @@ export default [
             await main.pg
               .update(yswsUsers)
               .set({
-                goals
+                goals,
               })
-              .where(and(eq(yswsUsers.userId, working.row.userId), eq(yswsUsers.yswsId, yswsId)));
+              .where(
+                and(
+                  eq(yswsUsers.userId, working.row.userId),
+                  eq(yswsUsers.yswsId, yswsId),
+                ),
+              );
 
             res.writeHead(200, {
               "content-type": "application/json",
             });
 
             res.end(JSON.stringify({ goals }));
+            if (useOP && opClient) opClient.clear();
             return;
           }
 
@@ -183,7 +233,7 @@ export default [
               res.end(JSON.stringify({ goals: [] }));
               return;
             }
-            
+
             const shop = await yswsClient.shop();
             if (!shop || !shop.status) {
               res.writeHead(500, {
@@ -194,6 +244,14 @@ export default [
                   msg: "Unyexpected ewwow has occuwwed",
                 }),
               );
+              if (useOP && opClient) {
+                opClient.track("error", {
+                  api: true,
+                  endpoint: req.url,
+                  error: shop,
+                });
+                opClient.clear();
+              }
               return;
             }
 
@@ -209,6 +267,14 @@ export default [
                       msg: msg ?? "Unyexpected ewwow has occuwwed",
                     }),
                   );
+                  if (useOP && opClient) {
+                    opClient.track("error", {
+                      api: true,
+                      endpoint: req.url,
+                      error: shop,
+                    });
+                    opClient.clear();
+                  }
                   return;
               }
             }
@@ -224,24 +290,27 @@ export default [
             }
 
             const mergedGoals = [
-              ...new Set([
-                ...(userYSWS?.[0]?.goals ?? []),
-                ...(goals ?? [])
-              ])
+              ...new Set([...(userYSWS?.[0]?.goals ?? []), ...(goals ?? [])]),
             ];
-            
+
             await main.pg
               .update(yswsUsers)
               .set({
-                goals: mergedGoals
+                goals: mergedGoals,
               })
-              .where(and(eq(yswsUsers.userId, working.row.userId), eq(yswsUsers.yswsId, yswsId)));
+              .where(
+                and(
+                  eq(yswsUsers.userId, working.row.userId),
+                  eq(yswsUsers.yswsId, yswsId),
+                ),
+              );
 
             res.writeHead(200, {
               "content-type": "application/json",
             });
 
             res.end(JSON.stringify({ goals: mergedGoals }));
+            if (useOP && opClient) opClient.clear();
             return;
           }
 
@@ -253,14 +322,13 @@ export default [
               res.end(JSON.stringify({ goals: [] }));
               return;
             }
-      
 
             if (!userYSWS[0]?.goals) {
               res.writeHead(200, { "content-type": "application/json" });
               res.end(JSON.stringify({ goals: [] }));
               return;
             }
-            
+
             const remainingGoals = userYSWS[0]?.goals.filter(
               (id) => !goals.includes(id),
             );
@@ -274,12 +342,18 @@ export default [
             await main.pg
               .update(yswsUsers)
               .set({
-                goals: remainingGoals
+                goals: remainingGoals,
               })
-              .where(and(eq(yswsUsers.userId, working.row.userId), eq(yswsUsers.yswsId, yswsId)));
+              .where(
+                and(
+                  eq(yswsUsers.userId, working.row.userId),
+                  eq(yswsUsers.yswsId, yswsId),
+                ),
+              );
 
             res.writeHead(200, { "content-type": "application/json" });
             res.end(JSON.stringify({ goals: remainingGoals }));
+            if (useOP && opClient) opClient.clear();
             return;
           }
 
@@ -300,7 +374,8 @@ export default [
               "content-type": "application/json",
             });
 
-            res.end(JSON.stringify({ goals: userYSWS[0]?.goals }));
+            res.end(JSON.stringify({ goals: userYSWS[0]?.goals }));   
+            if (useOP && opClient) opClient.clear();
             return;
           }
         }
@@ -316,6 +391,17 @@ export default [
           "content-type": "application/json",
         });
 
+        if (opClient) {
+          opClient.identify({
+            profileId: req.socket.remoteAddress ?? "noip"
+          })
+          opClient.track("error", {
+            api: true,
+            endpoint: req.url,
+            error: err,
+          });
+          opClient?.clear();
+        }
         res.end(JSON.stringify({ msg: "Internal server error" }));
       }
     },
