@@ -25,7 +25,10 @@ const utcFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-export function resolveItemCost(item: CanonicalShopItem, region?: string | null): number {
+export function resolveItemCost(
+  item: CanonicalShopItem,
+  region?: string | null,
+): number {
   if (region && region.length > 0) {
     return item.regionalCosts[region.toLowerCase()] ?? item.baseCost;
   }
@@ -93,8 +96,13 @@ async function getNewDevlogs(params: {
           .set({
             disabled: true,
           })
-          .where(and(eq(yswsUsers.userId, params.userRow.userId), eq(yswsUsers.yswsId, params.yswsRow.yswsId)));
-        
+          .where(
+            and(
+              eq(yswsUsers.userId, params.userRow.userId),
+              eq(yswsUsers.yswsId, params.yswsRow.yswsId),
+            ),
+          );
+
         if (!row?.channel) return;
         await params.app.chat.postMessage({
           channel: row?.channel,
@@ -108,7 +116,12 @@ async function getNewDevlogs(params: {
           .set({
             disabled: true,
           })
-          .where(and(eq(yswsUsers.userId, params.userRow.userId), eq(yswsUsers.yswsId, params.yswsRow.yswsId)));
+          .where(
+            and(
+              eq(yswsUsers.userId, params.userRow.userId),
+              eq(yswsUsers.yswsId, params.yswsRow.yswsId),
+            ),
+          );
 
         if (!row?.channel) return;
         await params.app.chat.postMessage({
@@ -128,7 +141,7 @@ async function getNewDevlogs(params: {
             id: params.projectId,
             yswsId: params.yswsRow.yswsId,
             user: params.userRow.userId,
-            accId: params.yswsRow.accId ? params.yswsRow.accId : "Not set"
+            accId: params.yswsRow.accId ? params.yswsRow.accId : "Not set",
           },
         });
         return;
@@ -197,7 +210,7 @@ async function getNewDevlogs(params: {
         if (!res || !res.ok) break;
         const data = res.data;
         if ((data?.items?.length ?? 0) > 0) {
-          for (const log of (data?.items ?? [])) {
+          for (const log of data?.items ?? []) {
             devlogS.push(Number(log.duration_seconds));
             if (newIds.includes(Number(log.id))) {
               devlogs.push(log);
@@ -226,9 +239,8 @@ async function getNewDevlogs(params: {
         if (params.yswsRow?.goals && params.yswsRow.goals.length > 0) {
           const shop = await client.shop();
           if (shop.ok && shop.data?.length) {
-            const region =
-              params.yswsRow?.region
-           
+            const region = params.yswsRow?.region;
+
             for (const goalId of params.yswsRow.goals) {
               const item = shop.data.find((s) => s.id === goalId);
               if (!item) continue;
@@ -297,23 +309,15 @@ export default {
       const userRows = await pg
         .select()
         .from(users)
-        .where(
-          and(
-            eq(users.disabled, false),
-            not(isNull(users.channel)),
-          ),
-        );
+        .where(and(eq(users.disabled, false), not(isNull(users.channel))));
 
       const yswsRows = await pg
         .select()
         .from(yswsUsers)
         .where(
-          and(
-            eq(yswsUsers.disabled, false),
-            not(isNull(yswsUsers.projects)),
-          ),
+          and(eq(yswsUsers.disabled, false), not(isNull(yswsUsers.projects))),
         );
-      
+
       if (!userRows?.length) {
         for (const key of Object.keys(clients)) {
           delete clients[key];
@@ -328,17 +332,22 @@ export default {
         (await pg.select().from(projects)).map((r) => [`${r.ysws}:${r.id}`, r]),
       );
       for (const yswsRow of yswsRows) {
-        const userRow = userRows.find((u) => u.ysws?.includes(yswsRow.yswsId));
+        const userRow = userRows.find((u) => u.userId === yswsRow?.userId);
         if (!userRow?.channel || userRow.disabled) continue;
-        const yswsConfig = Object.values(ysws).find((y) => y.id === yswsRow.yswsId);
+        const yswsConfig = Object.values(ysws).find(
+          (y) => y.id === yswsRow.yswsId,
+        );
         if (!yswsConfig) continue;
         if (!yswsConfig.jobs.includes("newDevlog")) continue;
         if (yswsConfig.apiKeyRequired && !yswsRow.apiKey) continue;
-      
+
         const clientKey = `${yswsRow.yswsId}:${yswsRow.userId ?? "no-key"}`;
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsConfig.adapter);
-          clients[clientKey] = new AdapterClass(yswsConfig.apiKeyRequired ? yswsRow.apiKey : undefined, logger);
+          clients[clientKey] = new AdapterClass(
+            yswsConfig.apiKeyRequired ? yswsRow.apiKey : undefined,
+            logger,
+          );
         }
 
         const userProjectIds = Array.isArray(yswsRow.projects)
@@ -399,7 +408,9 @@ export default {
 
                 const mediaBlocks: Block[] = (devlog.media || [])
                   .map((m, i): Block | null => {
-                    const url = m.url?.includes("https") ? m.url : yswsConfig.mediaUrl + m.url;
+                    const url = m.url?.includes("https")
+                      ? m.url
+                      : yswsConfig.mediaUrl + m.url;
                     const alt = String(i + 1);
 
                     if (m.content_type && m.content_type.startsWith("image")) {
@@ -585,7 +596,12 @@ export default {
                         .set({
                           disabled: true,
                         })
-                        .where(and(eq(yswsUsers.userId, userRow.userId), eq(yswsUsers.yswsId, yswsRow.yswsId)));
+                        .where(
+                          and(
+                            eq(yswsUsers.userId, userRow.userId),
+                            eq(yswsUsers.yswsId, yswsRow.yswsId),
+                          ),
+                        );
                       await client.chat.postMessage({
                         channel: userRow.userId,
                         text: `Hey! The automated devlog poster has been disabled for you because I am not in the channel where it's meant to be sent in. Add me to the channel and run /${prefix}-reactivate to get it enabled.`,
