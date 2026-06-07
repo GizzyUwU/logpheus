@@ -8,7 +8,7 @@ export default {
   desc: "Need to change the bots configuration on you?",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, callbackId, prefix, folder, yswsData }: RequestHandler,
+    { logger, client, callbackId, prefix, folder, yswsData }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({

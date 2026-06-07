@@ -1,8 +1,6 @@
 import type {
   SlackCommandMiddlewareArgs,
 } from "@slack/bolt";
-import { eq } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import ysws from "@/ysws";
 
@@ -10,10 +8,9 @@ export default {
   name: "data",
   desc: "Look through what data the bot has on you!",
   execute: async (
-    { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, prefix, userData }: RequestHandler,
+    { respond }: SlackCommandMiddlewareArgs,
+    { prefix, userData }: RequestHandler,
   ) => {
-    console.log(userData)
     const userText = [
       { label: "Channel Id", value: userData?.channel},
       { label: "Disabled", value: userData?.disabled},
