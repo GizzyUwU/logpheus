@@ -3,7 +3,6 @@ import { yswsUsers } from "@/schema/ysws";
 import { eq, and } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
-import ysws from "@/ysws";
 import { users } from "@/schema/users";
 type UserInsert = typeof yswsUsers.$inferInsert;
 
@@ -11,7 +10,7 @@ export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, userData, yswsData }: RequestHandler,
+    { pg, logger, client, userData, yswsData, yswsId }: RequestHandler & { yswsId: number },
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const metadata = JSON.parse(view.private_metadata);
