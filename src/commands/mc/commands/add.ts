@@ -5,7 +5,6 @@ import { projects } from "@/schema/projects";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { yswsUsers } from "@/schema/ysws";
 import { users } from "@/schema/users";
-import ysws from "@/ysws";
 import type Macondo from "@/lib/macondo";
 type YSWSRow = typeof yswsUsers._.inferSelect;
 
@@ -24,7 +23,8 @@ export default {
       folder,
       yswsData,
       yswsClient,
-    }: RequestHandler,
+      yswsId
+    }: RequestHandler & { yswsId: number },
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -122,7 +122,7 @@ export default {
         await pg
           .update(yswsUsers)
           .set(updateYSWSFields)
-          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.macondo.id)));
+          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, yswsId)));
 
         if (!userData?.channel) {
           await pg
@@ -259,7 +259,7 @@ export default {
         await pg
           .update(yswsUsers)
           .set(updateYSWSFields)
-          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.macondo.id)));
+          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, yswsId)));
         
         if (!userData?.channel) {
           await pg

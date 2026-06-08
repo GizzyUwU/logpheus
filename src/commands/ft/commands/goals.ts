@@ -5,7 +5,6 @@ import { getGenericErrorMessage } from "@/lib/genericError";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import FT from "@/lib/ft/index";
 import { yswsUsers } from "@/schema/ysws";
-import ysws from "@/ysws";
 
 export default {
   name: "goals",
@@ -13,7 +12,7 @@ export default {
   desc: "Look at your goals and perhaps remove or add one!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, prefix, logger, yswsClient, folder, yswsData }: RequestHandler,
+    { pg, prefix, logger, yswsClient, folder, yswsData, yswsId }: RequestHandler & { yswsId: number },
   ) => {
     if (yswsData && Object.keys(yswsData).length === 0)
       return respond({
@@ -143,7 +142,7 @@ export default {
             .where(
               and(
                 eq(yswsUsers.userId, command.user_id),
-                eq(yswsUsers.yswsId, ysws.flavortown.id),
+                eq(yswsUsers.yswsId, yswsId),
               ),
             );
 
@@ -218,7 +217,7 @@ export default {
             .where(
               and(
                 eq(yswsUsers.userId, command.user_id),
-                eq(yswsUsers.yswsId, ysws.flavortown.id),
+                eq(yswsUsers.yswsId, yswsId),
               ),
             );
 

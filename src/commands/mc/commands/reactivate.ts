@@ -2,7 +2,6 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { and, eq } from "drizzle-orm";
 import { yswsUsers } from "@/schema/ysws";
-import ysws from "@/ysws";
 type UserRow = typeof yswsUsers._.inferSelect;
 
 export default {
@@ -10,7 +9,7 @@ export default {
   desc: "Got deactivated because of a bad config? Run this get reactivated!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { logger, client, pg, prefix, folder, yswsData }: RequestHandler,
+    { logger, client, pg, prefix, folder, yswsData, yswsId }: RequestHandler & { yswsId: number },
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -41,7 +40,7 @@ export default {
       await pg
         .update(yswsUsers)
         .set(updateFields)
-        .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.macondo.id)));
+        .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, yswsId)));
 
       return respond({
         text: "You have been reactivated!",

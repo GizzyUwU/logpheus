@@ -3,7 +3,6 @@ import { and, eq } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import { projects } from "@/schema/projects";
 import { yswsUsers } from "@/schema/ysws";
-import ysws from "@/ysws";
 
 export default {
   name: "remove",
@@ -11,7 +10,7 @@ export default {
   desc: "Unsubscribe a project or all projects from the automated devlog poster",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, clients, prefix, yswsData, folder }: RequestHandler,
+    { pg, logger, client, clients, prefix, yswsData, folder, yswsId }: RequestHandler & { yswsId: number },
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -42,7 +41,7 @@ export default {
 
       if (!projectId) {
         for (const pid of subscribedProjects) {
-          await pg.delete(projects).where(and(eq(projects.id, pid), eq(projects.ysws, ysws.macondo.id)));
+          await pg.delete(projects).where(and(eq(projects.id, pid), eq(projects.ysws, yswsId)));
         }
 
         await pg
@@ -50,7 +49,7 @@ export default {
           .set({
             projects: [],
           })
-          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
+          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, yswsId)));
 
         if (yswsData?.apiKey && clients[yswsData.apiKey]) delete clients[yswsData.apiKey];
         return await respond({
@@ -70,7 +69,7 @@ export default {
               response_type: "ephemeral",
             });
 
-          await pg.delete(projects).where(and(eq(projects.id, projectId), eq(projects.ysws, ysws.macondo.id)));
+          await pg.delete(projects).where(and(eq(projects.id, projectId), eq(projects.ysws, yswsId)));
 
           const updatedProjects = subscribedProjects.filter(
             (p) => p !== projectId,
@@ -81,7 +80,7 @@ export default {
             .set({
               projects: updatedProjects,
             })
-            .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
+            .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, yswsId)));
 
           return await respond({
             text: `Project ${projectId} has been disconnected from this channel.`,

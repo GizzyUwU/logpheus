@@ -63,7 +63,7 @@ export default {
         .where(
           and(
             eq(yswsUsers.accId, flatValues["acc_id"]!),
-            eq(yswsUsers.yswsId, ysws.macondo.id),
+            eq(yswsUsers.yswsId, yswsId),
           ),
         );
 
@@ -79,7 +79,7 @@ export default {
         accId: flatValues["acc_id"]!,
         disabled: false,
         region: regionOpt ?? "EU",
-        yswsId: ysws.macondo.id,
+        yswsId: yswsId,
       };
 
       await pg.insert(yswsUsers).values(insertFields);
@@ -87,7 +87,7 @@ export default {
       await pg
         .update(users)
         .set({
-          ysws: [...(userData?.ysws ?? []), ysws.macondo.id],
+          ysws: [...(userData?.ysws ?? []), yswsId],
         })
         .where(eq(users.userId, userId));
       await client.chat.postEphemeral({

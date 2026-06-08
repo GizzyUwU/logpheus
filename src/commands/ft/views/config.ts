@@ -12,7 +12,7 @@ export default {
   name: "config",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, clients, prefix, folder, yswsData }: RequestHandler,
+    { pg, logger, client, clients, prefix, folder, yswsData, yswsId }: RequestHandler & { yswsId: number },
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
@@ -88,7 +88,7 @@ export default {
         await pg
           .update(yswsUsers)
           .set(updateFields)
-          .where(and(eq(yswsUsers.userId, userId), eq(yswsUsers.yswsId, ysws.flavortown.id)));
+          .where(and(eq(yswsUsers.userId, userId), eq(yswsUsers.yswsId, yswsId)));
 
         await client.chat.postEphemeral({
           channel: channelId,

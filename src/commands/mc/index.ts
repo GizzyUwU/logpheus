@@ -94,6 +94,7 @@ async function setup(app: App, ctx: RequestHandler) {
           callbackId,
           yswsData: yswsData[0]!,
           userData: userData[0]!,
+          yswsId: ysws.macondo.id,
         } satisfies RequestHandler);
       } catch (err) {
         ctx.logger.error({ err });
@@ -196,6 +197,7 @@ export default {
         yswsData: yswsData[0]!,
         userData: userData[0]!,
         yswsClient,
+        yswsId: ysws.macondo.id,
       } satisfies RequestHandler,
     );
   },

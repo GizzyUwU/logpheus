@@ -12,7 +12,7 @@ export default {
   desc: "Got deactivated because of a bad config? Run this get reactivated!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { logger, client, clients, pg, prefix, folder, yswsData }: RequestHandler,
+    { logger, client, clients, pg, prefix, folder, yswsData, yswsId }: RequestHandler & { yswsId: number },
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -63,7 +63,7 @@ export default {
       await pg
         .update(yswsUsers)
         .set(updateFields)
-        .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
+        .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, yswsId)));
 
       return respond({
         text: "You have been reactivated!",

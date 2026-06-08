@@ -42,31 +42,28 @@ export default {
         },
         {} as Record<string, string | undefined>,
       );
-      
+
       const updateFields: Partial<UserRow> = {};
-
+      let updatedMeta = userData?.meta ?? [];
       if (flatValues["pingGroupId"]) {
-        const filteredMeta = (userData?.meta ?? []).filter(entry => !entry.startsWith("PingGroup::"));
-        updateFields.meta = [...filteredMeta, "PingGroup::" + flatValues["pingGroupId"]];
+        updatedMeta = [...updatedMeta.filter(e => !e.startsWith("PingGroup::")), "PingGroup::" + flatValues["pingGroupId"]];
       }
-
       if (flatValues["HCBId"]) {
-        const filteredMeta = (userData?.meta ?? []).filter(entry => !entry.startsWith("HCBId::"));
-        updateFields.meta = [...filteredMeta, "HCBId::" + flatValues["HCBId"]];
+        updatedMeta = [...updatedMeta.filter(e => !e.startsWith("HCBId::")), "HCBId::" + flatValues["HCBId"]];
       }
+    
+      updateFields.meta = updatedMeta
 
       const optoutsBlock = view.state.values?.["personal"]?.["optouts"] as any;
-      
+
       if (optoutsBlock?.selected_options) {
         const incoming = optoutsBlock.selected_options
           .map((o: any) => o.value)
           .filter(Boolean);
-      
+
         const existing = userData?.optOuts ?? [];
-      
-        updateFields.optOuts = Array.from(
-          new Set([...existing, ...incoming]),
-        );
+
+        updateFields.optOuts = Array.from(new Set([...existing, ...incoming]));
       }
 
       if (Object.keys(updateFields).length > 0) {

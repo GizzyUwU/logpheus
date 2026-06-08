@@ -69,7 +69,7 @@ export default {
         await pg
           .update(yswsUsers)
           .set(updateFields)
-          .where(and(eq(yswsUsers.userId, userId), eq(yswsUsers.yswsId, ysws.macondo.id)));
+          .where(and(eq(yswsUsers.userId, userId), eq(yswsUsers.yswsId, yswsId)));
 
         await client.chat.postEphemeral({
           channel: channelId,

@@ -7,7 +7,6 @@ import FT from "@/lib/ft/index";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { yswsUsers } from "@/schema/ysws";
 import { users } from "@/schema/users";
-import ysws from "@/ysws";
 type YSWSRow = typeof yswsUsers._.inferSelect;
 
 export default {
@@ -19,14 +18,14 @@ export default {
     {
       logger,
       client,
-  
       pg,
       prefix,
       userData,
       folder,
       yswsData,
-      yswsClient
-    }: RequestHandler,
+      yswsClient,
+      yswsId
+    }: RequestHandler & { yswsId: number },
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -138,7 +137,7 @@ export default {
         await pg
           .update(yswsUsers)
           .set(updateYSWSFields)
-          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
+          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, yswsId)));
 
         if (!userData?.channel) {
           await pg
@@ -262,7 +261,7 @@ export default {
         await pg
           .update(yswsUsers)
           .set(updateYSWSFields)
-          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, ysws.flavortown.id)));
+          .where(and(eq(yswsUsers.userId, command.user_id), eq(yswsUsers.yswsId, yswsId)));
 
         if (!userData?.channel) {
           await pg

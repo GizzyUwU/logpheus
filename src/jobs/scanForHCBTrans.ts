@@ -26,6 +26,11 @@ const formatDate = (iso: string) => {
   )}`;
 };
 
+const withUpdatedHCBRan = (meta: string[]) => [
+  ...meta.filter(entry => !entry.startsWith("HCBRan::")),
+  "HCBRan::" + Date.now(),
+];
+
 export default {
   name: "scanForHCBTrans",
   execute: async ({ client, pg, logger }: RequestHandler) => {
@@ -105,8 +110,7 @@ export default {
             ids: newIds,
           });
 
-          const filteredMeta = (user.meta ?? []).filter(entry => !entry.startsWith("HCBRan::"));
-          updateFields.meta = [...filteredMeta, "HCBRan::" + Date.now()];
+          updateFields.meta = withUpdatedHCBRan(user.meta ?? []);
           
           await pg.update(users).set(updateFields).where(eq(users.userId, user.userId));
 
@@ -121,8 +125,7 @@ export default {
             .set({ ids: mergedIds })
             .where(eq(hcb.user_id, HCBId));
 
-          const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("HCBRan::"));
-          updateFields.meta = [...filteredMeta, "HCBRan::" + Date.now()];
+          updateFields.meta = withUpdatedHCBRan(user.meta ?? []);
           await pg.update(users).set(updateFields).where(eq(users.userId, user.userId));
           continue;
         }
@@ -176,9 +179,8 @@ export default {
             .update(hcb)
             .set({ ids: mergedIds })
             .where(eq(hcb.user_id, HCBId));
-
-          const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("HCBRan::"));
-          updateFields.meta = [...filteredMeta, "HCBRan::" + Date.now()];
+          
+          updateFields.meta = withUpdatedHCBRan(user.meta ?? []);
           await pg.update(users).set(updateFields).where(eq(users.userId, user.userId));
           
           await client.chat.postMessage({

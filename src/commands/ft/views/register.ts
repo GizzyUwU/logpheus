@@ -4,7 +4,6 @@ import { eq, and } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
-import ysws from "@/ysws";
 import { users } from "@/schema/users";
 type UserInsert = typeof yswsUsers.$inferInsert;
 
@@ -12,7 +11,7 @@ export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, yswsData, userData }: RequestHandler,
+    { pg, logger, client, yswsData, userData, yswsId }: RequestHandler & { yswsId: number },
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const metadata = JSON.parse(view.private_metadata);
@@ -69,7 +68,7 @@ export default {
         .where(
           and(
             eq(yswsUsers.apiKey, apiKey),
-            eq(yswsUsers.yswsId, ysws.flavortown.id),
+            eq(yswsUsers.yswsId, yswsId),
           ),
         );
       
@@ -85,14 +84,14 @@ export default {
         userId,
         disabled: false,
         region: regionOpt ?? "us",
-        yswsId: ysws.flavortown.id
+        yswsId: yswsId
       };
 
       await pg.insert(yswsUsers).values(insertFields);
       await pg
         .update(users)
         .set({
-          ysws: [...(userData?.ysws ?? []), ysws.macondo.id],
+          ysws: [...(userData?.ysws ?? []), yswsId],
         })
         .where(eq(users.userId, userId));
       

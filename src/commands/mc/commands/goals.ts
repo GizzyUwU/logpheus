@@ -3,7 +3,6 @@ import { and, eq } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import { yswsUsers } from "@/schema/ysws";
-import ysws from "@/ysws";
 import type Macondo from "@/lib/macondo";
 
 export default {
@@ -12,7 +11,7 @@ export default {
   desc: "Look at your goals and perhaps remove or add one!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, prefix, yswsClient, folder, yswsData }: RequestHandler,
+    { pg, prefix, yswsClient, folder, yswsData, yswsId }: RequestHandler & { yswsId: number },
   ) => {
     if (yswsData && Object.keys(yswsData).length === 0)
       return respond({
@@ -126,7 +125,7 @@ export default {
             .where(
               and(
                 eq(yswsUsers.userId, command.user_id),
-                eq(yswsUsers.yswsId, ysws.macondo.id),
+                eq(yswsUsers.yswsId, yswsId),
               ),
             );
 
@@ -208,7 +207,7 @@ export default {
             .where(
               and(
                 eq(yswsUsers.userId, command.user_id),
-                eq(yswsUsers.yswsId, ysws.macondo.id),
+                eq(yswsUsers.yswsId, yswsId),
               ),
             );
 

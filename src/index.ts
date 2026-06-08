@@ -287,6 +287,7 @@ export interface RequestHandler {
   userData?: typeof users.$inferSelect;
   yswsClient?: ApiAdapter;
   opClient?: OpenPanel | undefined;
+  yswsId?: number;
 }
 
 const main = {
