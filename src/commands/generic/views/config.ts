@@ -46,12 +46,12 @@ export default {
       const updateFields: Partial<UserRow> = {};
 
       if (flatValues["pingGroupId"]) {
-        const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("PingGroup::"));
+        const filteredMeta = (userData?.meta ?? []).filter(entry => !entry.startsWith("PingGroup::"));
         updateFields.meta = [...filteredMeta, "PingGroup::" + flatValues["pingGroupId"]];
       }
 
       if (flatValues["HCBId"]) {
-        const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("HCBId::"));
+        const filteredMeta = (userData?.meta ?? []).filter(entry => !entry.startsWith("HCBId::"));
         updateFields.meta = [...filteredMeta, "HCBId::" + flatValues["HCBId"]];
       }
 

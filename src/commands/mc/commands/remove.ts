@@ -42,7 +42,7 @@ export default {
 
       if (!projectId) {
         for (const pid of subscribedProjects) {
-          await pg.delete(projects).where(and(eq(projects.id, pid), eq(projects.ysws, ysws.flavortown.id)));
+          await pg.delete(projects).where(and(eq(projects.id, pid), eq(projects.ysws, ysws.macondo.id)));
         }
 
         await pg
@@ -70,7 +70,7 @@ export default {
               response_type: "ephemeral",
             });
 
-          await pg.delete(projects).where(eq(projects.id, projectId));
+          await pg.delete(projects).where(and(eq(projects.id, projectId), eq(projects.ysws, ysws.macondo.id)));
 
           const updatedProjects = subscribedProjects.filter(
             (p) => p !== projectId,

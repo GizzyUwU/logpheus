@@ -70,7 +70,7 @@ export default {
               response_type: "ephemeral",
             });
 
-          await pg.delete(projects).where(eq(projects.id, projectId));
+          await pg.delete(projects).where(and(eq(projects.id, projectId), eq(projects.ysws, ysws.flavortown.id)));
 
           const updatedProjects = subscribedProjects.filter(
             (p) => p !== projectId,

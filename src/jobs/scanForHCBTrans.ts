@@ -105,7 +105,7 @@ export default {
             ids: newIds,
           });
 
-          const filteredMeta = (updateFields.meta ?? []).filter(entry => !entry.startsWith("HCBRan::"));
+          const filteredMeta = (user.meta ?? []).filter(entry => !entry.startsWith("HCBRan::"));
           updateFields.meta = [...filteredMeta, "HCBRan::" + Date.now()];
           
           await pg.update(users).set(updateFields).where(eq(users.userId, user.userId));
