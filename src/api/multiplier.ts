@@ -156,7 +156,7 @@ export default [
               })
               .from(projects)
               .limit(1)
-              .where(eq(projects.id, projectId));
+              .where(and(eq(yswsUsers.yswsId, yswsId), eq(projects.id, projectId)));
 
             if (!project || project.length === 0) {
               res.writeHead(400, { "content-type": "application/json" });
@@ -185,7 +185,7 @@ export default [
               await main.pg
                 .update(projects)
                 .set(updateFields)
-                .where(eq(projects.id, projectId));
+                .where(and(eq(yswsUsers.yswsId, yswsId), eq(projects.id, projectId)));
             }
 
             res.writeHead(200, { "content-type": "application/json" });
@@ -204,7 +204,7 @@ export default [
               })
               .from(projects)
               .limit(1)
-              .where(eq(projects.id, projectId));
+              .where(and(eq(yswsUsers.yswsId, yswsId), eq(projects.id, projectId)));
 
             if (!project || project.length === 0) {
               res.writeHead(400, { "content-type": "application/json" });
