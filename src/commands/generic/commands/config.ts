@@ -1,6 +1,4 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { eq } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
 import type { AnyBlock, PlainTextOption } from "@slack/web-api";
 
@@ -9,7 +7,7 @@ export default {
   desc: "Need to change the bots configuration on you?",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, callbackId, prefix, userData }: RequestHandler,
+    { logger, client, callbackId, prefix, userData }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -29,16 +27,6 @@ export default {
         logger.error("There is no channel id for this channel?");
         return;
       }
-
-      const res = await pg
-        .select()
-        .from(users)
-        .where(eq(users.userId, command.user_id));
-      if (res.length === 0)
-        return await respond({
-          text: `Gng you don't even got an api key set to this channel run /${prefix}-add first.`,
-          response_type: "ephemeral",
-        });
 
       const name = /^[a-z]/i.test(prefix!)
         ? prefix![0]!.toUpperCase() + prefix!.slice(1)
@@ -90,7 +78,7 @@ export default {
               },
               optional: true,
             },
-            ...(res[0]?.channel
+            ...(userData?.channel
               ? ([
                   {
                     type: "input",
@@ -104,7 +92,7 @@ export default {
                       action_id: "pingGroupId",
                       multiline: false,
                       initial_value:
-                        res[0]?.meta
+                        userData?.meta
                           ?.find((s) => s.startsWith("PingGroup::"))
                           ?.split("::")[1] ?? "",
                     },
@@ -124,7 +112,7 @@ export default {
                 action_id: "HCBId",
                 multiline: false,
                 initial_value:
-                  res[0]?.meta
+                  userData?.meta
                     ?.find((s) => s.startsWith("HCBId::"))
                     ?.split("::")[1] ?? "",
               },
