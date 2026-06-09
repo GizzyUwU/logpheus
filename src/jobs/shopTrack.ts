@@ -48,6 +48,7 @@ export default {
         if (!shop.ok || !shop.data?.length) {
           if (shop.status === 408) continue;
           const msg = getGenericErrorMessage(shop.status, prefix!);
+          if (msg === "Server is down!" || msg === "Server timed out!") continue;
           const ctx = logger.with({
             error: shop.data,
             msg,

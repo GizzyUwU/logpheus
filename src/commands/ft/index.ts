@@ -94,7 +94,7 @@ async function setup(app: App, ctx: RequestHandler) {
           callbackId,
           yswsData: yswsData[0]!,
           userData: userData[0]!,
-          yswsId: ysws.flavortown.id
+          yswsId: Number(yswsData[0]?.yswsId)
         } satisfies RequestHandler);
       } catch (err) {
         ctx.logger.error({ err });
@@ -144,7 +144,6 @@ export default {
       });
 
     const option = stripMrkdwn(rawOption);
-    
     const handler = commandHandlers.get(option);
 
     if (!handler)
@@ -198,7 +197,7 @@ export default {
         yswsData: yswsData[0]!,
         userData: userData[0]!,
         yswsClient,
-        yswsId: ysws.flavortown.id
+        yswsId: Number(yswsData[0]?.yswsId)
       } satisfies RequestHandler,
     );
   },

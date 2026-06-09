@@ -312,7 +312,6 @@ export function htmlToMarkdown(html: string): string {
     .trim();
 }
 
-
 export function stripMrkdwn(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, "")
