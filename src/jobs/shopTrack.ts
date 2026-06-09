@@ -83,14 +83,11 @@ export default {
 
         for (const [id, stored] of storedMap) {
           if (liveIds.has(id)) continue;
-        
+
           await pg
             .delete(shopTrack)
             .where(
-              and(
-                eq(shopTrack.yswsId, yswsData.id),
-                eq(shopTrack.id, id),
-              ),
+              and(eq(shopTrack.yswsId, yswsData.id), eq(shopTrack.id, id)),
             );
 
           const changeText = [
@@ -122,8 +119,8 @@ export default {
                 type: "header",
                 text: {
                   type: "plain_text",
-                  text: `Shop has updated!`
-                }
+                  text: `Shop has updated!`,
+                },
               },
               {
                 type: "section",
@@ -134,7 +131,9 @@ export default {
                 },
                 accessory: {
                   type: "image",
-                  image_url: stored.imageUrl ?? "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
+                  image_url:
+                    stored.imageUrl ??
+                    "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
                   alt_text: stored.name,
                 },
               },
@@ -149,12 +148,12 @@ export default {
                 ],
               },
               {
-                type: "divider"
+                type: "divider",
               },
             ],
           });
         }
-        
+
         for (const shopItem of shop.data) {
           const stored = storedMap.get(shopItem.id);
           if (!stored) {
@@ -186,7 +185,7 @@ export default {
             ]
               .map((f) => `*${f.label}*: ${f.value}`)
               .join("\n");
-            
+
             await client.chat.postMessage({
               channel: yswsData.jobConfig.shopTrack.channelId,
               unfurl_links: false,
@@ -246,6 +245,19 @@ export default {
                       type: string;
                       text: TextObject;
                     }[])),
+                {
+                  type: "context",
+                  elements: [
+                    {
+                      type: "mrkdwn",
+                      text: `<${yswsData.url + "/shop"}|View Shop> - @channel`,
+                      verbatim: false,
+                    },
+                  ],
+                },
+                {
+                  type: "divider",
+                },
               ],
             });
             continue;
@@ -286,12 +298,12 @@ export default {
               );
 
             const changes: string[] = [];
-            
+
             if (stored.name !== shopItem.name) changes.push("Name");
             if (descChange) changes.push("Description");
             if (baseCostChange) changes.push("Base Price");
             if (regionalChanges.length > 0) changes.push("Regional Pricing");
-            
+
             const changeText = [
               {
                 label:
@@ -345,8 +357,8 @@ export default {
                   type: "header",
                   text: {
                     type: "plain_text",
-                    text: `${changes.length} change${changes.length > 1 ? "s" : ""} to the shop detected!`
-                  }
+                    text: `${changes.length} change${changes.length > 1 ? "s" : ""} to the shop detected!`,
+                  },
                 },
                 {
                   type: "section",
@@ -372,7 +384,7 @@ export default {
                   ],
                 },
                 {
-                  type: "divider"
+                  type: "divider",
                 },
               ],
             });
