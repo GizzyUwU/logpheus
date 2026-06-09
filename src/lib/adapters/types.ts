@@ -16,11 +16,20 @@ export interface CanonicalUser {
   currency: number;
 }
 
+export interface RegionalCost {
+  available: boolean;
+  currency: number;
+  hours: number;
+}
+
 export interface CanonicalShopItem {
   id: number;
   name: string;
+  description: string;
   baseCost: number;
-  regionalCosts: Record<string, number>;
+  baseHours: number;
+  image_url: string;
+  regionalCosts: Record<string, RegionalCost>;
 }
 
 export interface ApiResult<T> {

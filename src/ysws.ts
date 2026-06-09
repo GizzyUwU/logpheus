@@ -1,5 +1,11 @@
 import { z } from "zod";
-export const jobOptions = z.enum(["newDevlog"]);
+export const jobOptions = z.enum(["newDevlog", "shopTrack"]);
+export const jobConfigSchema = z
+  .object({
+    shopTrack: z
+      .object({ channelId: z.string(), jobApiKey: z.string().nullable() })
+  }).partial();
+
 const regionsSchema = z.record(z.string(), z.string());
 
 export const yswsItem = z.object({
@@ -13,6 +19,7 @@ export const yswsItem = z.object({
   maxMult: z.number(),
   jobs: z.array(jobOptions),
   regions: regionsSchema,
+  jobConfig: jobConfigSchema,
 });
 
 export const yswsSchema = z.record(z.string(), yswsItem);
@@ -38,6 +45,7 @@ export default {
       us: "United States",
       xx: "Other / Unknown",
     },
+    jobConfig: {} as z.infer<typeof jobConfigSchema>,
   },
   macondo: {
     id: 2,
@@ -48,7 +56,7 @@ export default {
     url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: ["newDevlog"] as z.infer<typeof jobOptions>[],
+    jobs: ["newDevlog", "shopTrack"] as z.infer<typeof jobOptions>[],
     regions: {
       NA: "North America",
       SA: "South America",
@@ -59,6 +67,12 @@ export default {
       AF: "Africa",
       ME: "Middle East",
     },
+    jobConfig: {
+      shopTrack: {
+        channelId: "C0B99K6H2SW",
+        jobApiKey: null
+      }
+    } as z.infer<typeof jobConfigSchema>,
   },
   stardance: {
     id: 3,
@@ -79,5 +93,6 @@ export default {
       AU: "Australia",
       XX: "Rest of World",
     },
+    jobConfig: {} as z.infer<typeof jobConfigSchema>,
   },
 } satisfies z.infer<typeof yswsSchema>;

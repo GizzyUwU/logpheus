@@ -30,7 +30,7 @@ export function resolveItemCost(
   region?: string | null,
 ): number {
   if (region && region.length > 0) {
-    return item.regionalCosts[region.toLowerCase()] ?? item.baseCost;
+    return item.regionalCosts[region.toLowerCase()]?.currency ?? item.baseCost;
   }
   return item.baseCost;
 }

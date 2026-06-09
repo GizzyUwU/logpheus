@@ -3,6 +3,11 @@ import type { ParamsIncomingMessage } from "@slack/bolt/dist/receivers/ParamsInc
 import type { ServerResponse, IncomingMessage } from "node:http";
 import { opClient } from "@/index";
 
+function stripJobApiKey<T>(obj: T) {
+  const { jobApiKey, ...rest } = obj as any;
+  return rest as Omit<T, "jobApiKey">;
+}
+
 export default [
   {
     path: "/api/v2/ysws",
@@ -21,7 +26,13 @@ export default [
         opClient.clear();
       }
       res.writeHead(200, { "content-type": "application/json" });
-      return res.end(JSON.stringify(ysws));
+      const clean = Object.fromEntries(
+        Object.entries(ysws).map(([k, v]) => [
+          k,
+          stripJobApiKey(v),
+        ]),
+      );
+      return res.end(JSON.stringify(clean));
     },
   },
   {
@@ -33,7 +44,13 @@ export default [
     ) => {
       if (!req.params!["yswsId"]) {
         res.writeHead(200, { "content-type": "application/json" });
-        return res.end(JSON.stringify(ysws));
+        const clean = Object.fromEntries(
+          Object.entries(ysws).map(([k, v]) => [
+            k,
+            stripJobApiKey(v),
+          ]),
+        );
+        return res.end(JSON.stringify(clean));
       }
 
       const data = YSWSId.parse(req.params!["yswsId"]);
@@ -67,7 +84,8 @@ export default [
       if (opClient) {
         opClient.clear();
       }
-      return res.end(JSON.stringify(item));
+
+      return res.end(JSON.stringify(stripJobApiKey(item)));
     },
   },
 ];

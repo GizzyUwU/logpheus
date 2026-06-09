@@ -143,7 +143,8 @@ export default {
         response_type: "ephemeral",
       });
 
-    const option = stripMrkdwn(rawOption.toLowerCase());
+    const option = stripMrkdwn(rawOption);
+    
     const handler = commandHandlers.get(option);
 
     if (!handler)
@@ -175,7 +176,7 @@ export default {
 
     let yswsClient =
       ctx.clients[`${yswsData[0]?.yswsId}:${yswsData[0]?.userId}`];
-    if (!yswsClient) {
+    if (rawOption !== "register" && !yswsClient) {
       const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
       const adapter = new AdapterClass(yswsData[0]?.apiKey, loggerCTX);
       yswsClient = adapter;
@@ -187,7 +188,7 @@ export default {
         ...args,
         command: {
           ...args.command,
-          text: stripMrkdwn(args.command.text.replace(rawOption, "").trim()),
+          text: args.command.text.replace(rawOption, "").trim(),
         },
       },
       {

@@ -1,0 +1,1 @@
+ALTER TABLE "shop" ADD CONSTRAINT "shop_ysws_id_id_pk" PRIMARY KEY("ysws_id","id");

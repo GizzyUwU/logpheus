@@ -29,9 +29,9 @@ export default {
         return;
       }
 
-      if (!yswsData || Object.keys(yswsData).length)
+      if (!yswsData || Object.keys(yswsData).length === 0)
         return await respond({
-          text: `Gng you don't even got an api key set to this channel run /${prefix}-${folder} add first.`,
+          text: `Gng you don't even got an api key set to this channel run /${prefix}-${folder} register first.`,
           response_type: "ephemeral",
         });
 

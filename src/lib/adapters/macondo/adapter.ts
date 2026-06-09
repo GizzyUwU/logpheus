@@ -126,18 +126,25 @@ export class MacondoAdapter implements ApiAdapter {
   async shop(): Promise<ApiResult<CanonicalShopItem[]>> {
     const res = await this.client.shop();
     if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null };
-
     return {
       ok: true,
       status: res.status,
       data: res.data.items.map((item) => ({
         id: item.id,
         name: item.name,
-        baseCost: item.price_hours,
+        description: item.description ?? "",
+        baseHours: ((item.price_hours * 10) / 50),
+        baseCost: item.price_gold,
+        image_url: item.image_url ?? "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
         regionalCosts: Object.fromEntries(
-          Object.entries(item.regional_pricing ?? {}).flatMap(([region, pricing]) =>
-            pricing.price_hours !== undefined ? [[region, pricing.price_hours]] : [],
-          ),
+          Object.entries(item.regional_pricing ?? {}).map(([region, data]) => [
+            region,
+            {
+              available: data.available || true,
+              currency: (data.price_hours ?? 0) * 10,
+              hours: Math.ceil(((data.price_hours ?? 0) * 10) / 50),
+            },
+          ])
         ),
       })),
     };
