@@ -79,6 +79,82 @@ export default {
         }
 
         const storedMap = new Map(storedItems.map((item) => [item.id, item]));
+        const liveIds = new Set(shop.data.map((item) => item.id));
+
+        for (const [id, stored] of storedMap) {
+          if (liveIds.has(id)) continue;
+        
+          await pg
+            .delete(shopTrack)
+            .where(
+              and(
+                eq(shopTrack.yswsId, yswsData.id),
+                eq(shopTrack.id, id),
+              ),
+            );
+
+          const changeText = [
+            {
+              label: "1 item was removed from the shop!",
+              value: "",
+            },
+            {
+              label: `${stored.name} was removed.`,
+              value: "",
+            },
+            {
+              label: "Base price was",
+              value: `${stored.baseCost} Gold (${stored.baseHours}hrs)`,
+            },
+          ]
+            .map((f) =>
+              f.label && (!f.value || f.value.length === 0)
+                ? `*${f.label}*`
+                : `*${f.label}*: ${f.value}`,
+            )
+            .join("\n");
+
+          await client.chat.postMessage({
+            channel: yswsData.jobConfig.shopTrack.channelId,
+            unfurl_links: false,
+            blocks: [
+              {
+                type: "header",
+                text: {
+                  type: "plain_text",
+                  text: `Shop has updated!`
+                }
+              },
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: changeText,
+                  verbatim: false,
+                },
+                accessory: {
+                  type: "image",
+                  image_url: stored.imageUrl ?? "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
+                  alt_text: stored.name,
+                },
+              },
+              {
+                type: "context",
+                elements: [
+                  {
+                    type: "mrkdwn",
+                    text: `<${yswsData.url + "/shop"}|View Shop> - @channel`,
+                    verbatim: false,
+                  },
+                ],
+              },
+              {
+                type: "divider"
+              },
+            ],
+          });
+        }
+        
         for (const shopItem of shop.data) {
           const stored = storedMap.get(shopItem.id);
           if (!stored) {
@@ -89,6 +165,7 @@ export default {
               description: shopItem.description,
               baseHours: shopItem.baseHours,
               baseCost: shopItem.baseCost,
+              imageUrl: shopItem.image_url,
               regionalCosts: JSON.stringify(shopItem.regionalCosts),
             });
 
@@ -109,7 +186,7 @@ export default {
             ]
               .map((f) => `*${f.label}*: ${f.value}`)
               .join("\n");
-
+            
             await client.chat.postMessage({
               channel: yswsData.jobConfig.shopTrack.channelId,
               unfurl_links: false,
@@ -198,6 +275,7 @@ export default {
                 description: shopItem.description,
                 baseCost: shopItem.baseCost,
                 baseHours: shopItem.baseHours,
+                imageUrl: shopItem.image_url,
                 regionalCosts: JSON.stringify(shopItem.regionalCosts),
               })
               .where(

@@ -6,6 +6,7 @@ export const shopTrack = pgTable("shop", {
   description: text(),
   baseHours: real(),
   baseCost: integer().notNull(),
+  imageUrl: text(),
   regionalCosts: text()
 }, (table) => [
   primaryKey({ columns: [table.yswsId, table.id] }),
