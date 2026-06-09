@@ -21,7 +21,7 @@ export default {
   desc: "Register to use the bot!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, client, userData, prefix }: RequestHandler,
+    { pg, logger, client, userData, prefix, opClient }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -63,6 +63,19 @@ export default {
         text: "Yay! You are now a user of logpheus! :yay-nb:",
         response_type: "ephemeral"
       });
+
+      if (opClient) {
+        opClient.identify({
+          profileId: command.user_id,
+          properties: {
+            friendlyName: "generic",
+          },
+        });
+        opClient.track("signup", {
+          ysws: "none"
+        });
+        opClient.clear();
+      }
     } catch (error: any) {
       if (
         error.code === "slack_webapi_platform_error" &&

@@ -5,13 +5,14 @@ import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
 import { users } from "@/schema/users";
+import ysws from "@/ysws";
 type UserInsert = typeof yswsUsers.$inferInsert;
 
 export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, yswsData, userData, yswsId }: RequestHandler & { yswsId: number },
+    { pg, logger, client, yswsData, userData, yswsId, opClient }: RequestHandler & { yswsId: number },
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const metadata = JSON.parse(view.private_metadata);
@@ -115,6 +116,18 @@ export default {
         user: body.user.id ?? "",
         text: "An unexpected error occurred!",
       });
+      if (opClient && !userData?.meta?.includes("analytics")) {
+        opClient.identify({
+          profileId: body.user.id,
+          properties: {
+            friendlyName: "generic",
+          },
+        });
+        opClient.track("signup", {
+          ysws: Object.values(ysws).find((x) => x.id === yswsId)?.humanName ?? "unknown"
+        });
+        opClient.clear();
+      }
     }
   },
 };

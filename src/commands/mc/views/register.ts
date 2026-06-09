@@ -4,13 +4,14 @@ import { eq, and } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import { users } from "@/schema/users";
+import ysws from "@/ysws";
 type UserInsert = typeof yswsUsers.$inferInsert;
 
 export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, userData, yswsData, yswsId }: RequestHandler & { yswsId: number },
+    { pg, logger, client, userData, yswsData, yswsId, opClient }: RequestHandler & { yswsId: number },
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const metadata = JSON.parse(view.private_metadata);
@@ -95,6 +96,19 @@ export default {
         markdown_text:
           "You are now able to use all Macondo based commands! :yay:",
       });
+
+      if (opClient && !userData?.meta?.includes("analytics")) {
+        opClient.identify({
+          profileId: body.user.id,
+          properties: {
+            friendlyName: "generic",
+          },
+        });
+        opClient.track("signup", {
+          ysws: Object.values(ysws).find((x) => x.id === yswsId)?.humanName ?? "unknown"
+        });
+        opClient.clear();
+      }
     } catch (err) {
       const ctx = logger.with({
         data: {
