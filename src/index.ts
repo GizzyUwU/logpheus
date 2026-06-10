@@ -124,21 +124,21 @@ await configure({
     {
       category: ["logtape", "meta"],
       sinks: [...(sentryEnabled ? ["sentry"] : []), "console"],
-      lowestLevel: "error",
+      lowestLevel: "info",
     },
     {
       category: ["drizzle-orm"],
       sinks: [sentryEnabled ? "sentry" : "console"],
       lowestLevel:
         logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
-        "error",
+        "info",
     },
     {
       category: ["logpheus"],
       sinks: [...(sentryEnabled ? ["sentry"] : []), "console"],
       lowestLevel:
         logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
-        "error",
+        "info",
     },
   ],
 });
