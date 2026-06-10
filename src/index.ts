@@ -15,7 +15,7 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun";
 import type { WebClient } from "@slack/web-api";
-import { configure, getConsoleSink, getLogger } from "@logtape/logtape";
+import { configure, getConsoleSink, getLogger, type AsyncSink } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
@@ -80,6 +80,43 @@ const consoleAdapter = redactByField(getConsoleSink(), {
   action: () => "[REDACTED]",
 });
 
+
+function checkEnvs(name: string, optional: boolean): string {
+  const value = process.env[name];
+  if (!value && !optional) {
+    throw new Error(`Missing environment variable: ${name}`);
+  } else if (!value && optional) {
+    return "";
+  } else if (value) {
+    return value;
+  } else {
+    return "";
+  }
+}
+
+export let opClient: OpenPanel | undefined = undefined;
+if (
+  checkEnvs("OPENPANEL_CLIENT_ID", true) &&
+  checkEnvs("OPENPANEL_CLIENT_SECRET", true)
+) {
+  const apiUrl = process.env["OPENPANEL_API_URL"];
+  opClient = new OpenPanel({
+    ...(apiUrl ? { apiUrl: String(apiUrl) } : {}),
+    clientId: String(process.env["OPENPANEL_CLIENT_ID"]),
+    clientSecret: String(process.env["OPENPANEL_CLIENT_SECRET"]),
+  });
+  opClient.ready();
+}
+
+const openPanelSink: AsyncSink = async (record) => {
+  if (!opClient) return;
+  opClient.track("error", {
+    timestamp: record.timestamp,
+    level: record.level
+  })
+  return;
+}
+
 if (process.env["SENTRY_DSN"]) {
   Sentry.init({
     dsn: process.env["SENTRY_DSN"],
@@ -119,23 +156,24 @@ await configure({
   sinks: {
     sentry: sentryAdapter,
     console: consoleAdapter,
+    openpanel: openPanelSink
   },
   loggers: [
     {
       category: ["logtape", "meta"],
-      sinks: [...(sentryEnabled ? ["sentry"] : []), "console"],
+      sinks: [...(sentryEnabled ? ["sentry"] : []), "console", ...(opClient ? ["openpanel"] : [])],
       lowestLevel: "info",
     },
     {
       category: ["drizzle-orm"],
-      sinks: [sentryEnabled ? "sentry" : "console"],
+      sinks: [sentryEnabled ? "sentry" : "console", ...(opClient ? ["openpanel"] : [])],
       lowestLevel:
         logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
-        "info",
+        "error",
     },
     {
       category: ["logpheus"],
-      sinks: [...(sentryEnabled ? ["sentry"] : []), "console"],
+      sinks: [...(sentryEnabled ? ["sentry"] : []), "console", ...(opClient ? ["openpanel"] : [])],
       lowestLevel:
         logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
         "info",
@@ -196,33 +234,6 @@ if (process.env["PGLITE"] === "false") {
     migrationsFolder: "./migrations",
   });
   await migrateUsers(db, logger);
-}
-
-function checkEnvs(name: string, optional: boolean): string {
-  const value = process.env[name];
-  if (!value && !optional) {
-    throw new Error(`Missing environment variable: ${name}`);
-  } else if (!value && optional) {
-    return "";
-  } else if (value) {
-    return value;
-  } else {
-    return "";
-  }
-}
-
-export let opClient: OpenPanel | undefined = undefined;
-if (
-  checkEnvs("OPENPANEL_CLIENT_ID", true) &&
-  checkEnvs("OPENPANEL_CLIENT_SECRET", true)
-) {
-  const apiUrl = process.env["OPENPANEL_API_URL"];
-  opClient = new OpenPanel({
-    ...(apiUrl ? { apiUrl: String(apiUrl) } : {}),
-    clientId: String(process.env["OPENPANEL_CLIENT_ID"]),
-    clientSecret: String(process.env["OPENPANEL_CLIENT_SECRET"]),
-  });
-  opClient.ready();
 }
 
 export let vikClient: VikunjaClient | undefined = undefined;
