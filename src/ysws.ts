@@ -69,7 +69,7 @@ export default {
     },
     jobConfig: {
       shopTrack: {
-        channelId: "C0AMENDBWQ0",
+        channelId: "C0B99K6H2SW",
         jobApiKey: null
       }
     } as z.infer<typeof jobConfigSchema>,
@@ -77,7 +77,7 @@ export default {
   stardance: {
     id: 3,
     humanName: "Stardance",
-    currencyName: "Stardust",
+    currencyName: "stardust",
     adapter: "",
     mediaUrl: "https://stardance.hackclub.com",
     url: "https://stardance.hackclub.com",
