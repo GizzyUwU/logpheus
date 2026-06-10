@@ -102,7 +102,7 @@ export default {
             },
             {
               label: "Base price was",
-              value: `${stored.baseCost} Gold (${stored.baseHours}hrs)`,
+              value: `*${stored.baseCost} ${yswsData.currencyName}* (${stored.baseHours}hrs)`,
             },
           ]
             .map((f) =>
@@ -172,14 +172,14 @@ export default {
             const priceText = [
               {
                 label: "Base Price",
-                value: `${shopItem.baseCost} Gold (${shopItem.baseHours}hrs)`,
+                value: `*${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
               },
               { label: "Regional Pricing:", value: "" },
               ...Object.entries(shopItem.regionalCosts).map(
                 ([region, cost]) => ({
                   label: region,
                   value: cost.available
-                    ? `${cost.currency} Gold (${cost.hours}hrs)`
+                    ? `${cost.currency} ${yswsData.currencyName} (${cost.hours}hrs)`
                     : "Not available in the region",
                 }),
               ),
@@ -239,7 +239,7 @@ export default {
                         type: "section",
                         text: {
                           type: "mrkdwn",
-                          text: `*Base Price*: ${shopItem.baseCost} (${shopItem.baseHours}hrs)`,
+                          text: `*Base Price*: *${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
                         },
                       },
                     ] as {
@@ -329,7 +329,7 @@ export default {
                 ? [
                     {
                       label: "Base Price",
-                      value: `${stored.baseCost} → *${shopItem.baseCost} Gold* (${shopItem.baseHours}hrs)`,
+                      value: `${stored.baseCost} → *${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
                     },
                   ]
                 : []),
@@ -339,7 +339,7 @@ export default {
               ...regionalChanges.map(([region, cost]) => ({
                 label: region,
                 value: cost.available
-                  ? `${storedRegional[region]?.currency ?? "?"} → *${cost.currency} Gold* (${cost.hours}hrs)`
+                  ? `${storedRegional[region]?.currency ?? "?"} → *${cost.currency} ${yswsData.currencyName}* (${cost.hours}hrs)`
                   : "Not available in the region",
               })),
             ]
