@@ -162,7 +162,7 @@ await configure({
     {
       category: ["logtape", "meta"],
       sinks: [...(sentryEnabled ? ["sentry"] : []), "console", ...(opClient ? ["openpanel"] : [])],
-      lowestLevel: "info",
+      lowestLevel: "error",
     },
     {
       category: ["drizzle-orm"],
