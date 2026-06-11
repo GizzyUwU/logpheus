@@ -110,11 +110,11 @@ if (
 
 const openPanelSink: AsyncSink = async (record) => {
   if (!opClient) return;
-  opClient.track("error", {
+  opClient.track(record.level, {
     timestamp: record.timestamp,
     level: record.level,
     message: record.message,
-    properties: record.properties
+    ...record.properties,
   })
   return;
 }
