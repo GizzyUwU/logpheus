@@ -1,9 +1,9 @@
 import { z } from "zod";
-export const jobOptions = z.enum(["newDevlog", "shopTrack"]);
+export const jobOptions = z.enum(["newDevlog", "shopTrack", "tempAddImageURLs"]);
 export const jobConfigSchema = z
   .object({
-    shopTrack: z
-      .object({ channelId: z.string(), jobApiKey: z.string().nullable() })
+    shopTrack:
+      z.object({ channelId: z.string(), jobApiKey: z.string().nullable() })
   }).partial();
 
 const regionsSchema = z.record(z.string(), z.string());
@@ -56,7 +56,7 @@ export default {
     url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: ["newDevlog", "shopTrack"] as z.infer<typeof jobOptions>[],
+    jobs: ["newDevlog", "shopTrack", "tempAddImageURLs"] as z.infer<typeof jobOptions>[],
     regions: {
       NA: "North America",
       SA: "South America",
