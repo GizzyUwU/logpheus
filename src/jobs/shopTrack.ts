@@ -7,6 +7,39 @@ import { getGenericErrorMessage } from "@/lib/genericError";
 import type { SectionBlockAccessory, TextObject } from "@slack/web-api";
 import type { RegionalCost } from "@/lib/adapters/types";
 
+export function diffRaw(
+  prev: Record<string, unknown>,
+  next: Record<string, unknown>,
+  canonical: Record<string, unknown>,
+): { field: string; from: unknown; to: unknown }[] {
+  const coveredValues = new Set(
+    Object.values(canonical).map((v) => JSON.stringify(v)),
+  );
+  return Object.keys(next)
+    .filter((k) => {
+      if (JSON.stringify(prev[k]) === JSON.stringify(next[k])) return false;
+      return !coveredValues.has(JSON.stringify(next[k]));
+    })
+    .map((k) => ({ field: k, from: prev[k], to: next[k] }));
+}
+
+export function formatRawDiff(
+  diffs: { field: string; from: unknown; to: unknown }[],
+): string {
+  const fmt = (v: unknown): string => {
+    if (v === null || v === undefined) return "_none_";
+    if (typeof v === "boolean") return v ? "yes" : "no";
+    if (typeof v === "object") return `\`${JSON.stringify(v)}\``;
+    return String(v);
+  };
+  return diffs
+    .map(({ field, from, to }) => {
+      const label = field.replace(/_/g, " ");
+      return `*${label}*: ${fmt(from)} → *${fmt(to)}*`;
+    })
+    .join("\n");
+}
+
 export default {
   name: "shopTrack",
   execute: async ({ clients, client, pg, logger, prefix }: RequestHandler) => {
@@ -48,7 +81,8 @@ export default {
         if (!shop.ok || !shop.data?.length) {
           if (shop.status === 408) continue;
           const msg = getGenericErrorMessage(shop.status, prefix!);
-          if (msg === "Server is down!" || msg === "Server timed out!") continue;
+          if (msg === "Server is down!" || msg === "Server timed out!")
+            continue;
           const ctx = logger.with({
             error: shop.data,
             msg,
@@ -64,7 +98,13 @@ export default {
           .from(shopTrack)
           .where(eq(shopTrack.yswsId, yswsData.id));
 
+        const rawItems = Array.isArray(shop.raw)
+          ? (shop.raw as Record<string, unknown>[])
+          : [];
+        const getRawItem = (id: number) =>
+          rawItems.find((r) => r["id"] === id) ?? null;
         if (storedItems.length === 0) {
+          
           await pg.insert(shopTrack).values(
             shop.data.map((item) => ({
               yswsId: yswsData.id,
@@ -74,6 +114,7 @@ export default {
               baseHours: item.baseHours,
               baseCost: item.baseCost,
               regionalCosts: JSON.stringify(item.regionalCosts),
+              previousRaw: getRawItem(item.id) ? JSON.stringify(getRawItem(item.id)) : null,
             })),
           );
           continue;
@@ -167,6 +208,7 @@ export default {
               baseCost: shopItem.baseCost,
               imageUrl: shopItem.image_url,
               regionalCosts: JSON.stringify(shopItem.regionalCosts),
+              previousRaw: getRawItem(shopItem.id) ? JSON.stringify(getRawItem(shopItem.id)) : null,
             });
 
             const priceText = [
@@ -275,6 +317,24 @@ export default {
               storedRegional[region]?.currency !== cost.currency,
           );
 
+          const rawItem = getRawItem(shopItem.id);
+          const rawDiffs = (() => {
+            if (!stored.previousRaw || !rawItem) return [];
+            try {
+              const prev = JSON.parse(stored.previousRaw) as Record<
+                string,
+                unknown
+              >;
+              return diffRaw(
+                prev,
+                rawItem,
+                shopItem as unknown as Record<string, unknown>,
+              );
+            } catch {
+              return [];
+            }
+          })();
+
           if (
             baseCostChange ||
             nameChange ||
@@ -290,6 +350,7 @@ export default {
                 baseHours: shopItem.baseHours,
                 imageUrl: shopItem.image_url,
                 regionalCosts: JSON.stringify(shopItem.regionalCosts),
+                previousRaw: JSON.stringify(rawItem),
               })
               .where(
                 and(
@@ -350,6 +411,11 @@ export default {
               )
               .join("\n");
 
+            const rawDiffText =
+              rawDiffs.length > 0
+                ? "\n*Other changes:*\n" + formatRawDiff(rawDiffs)
+                : "";
+
             await client.chat.postMessage({
               channel: yswsData.jobConfig.shopTrack.channelId,
               unfurl_links: false,
@@ -358,14 +424,14 @@ export default {
                   type: "header",
                   text: {
                     type: "plain_text",
-                    text: `${changes.length} change${changes.length > 1 ? "s" : ""} to the shop detected!`,
+                    text: `${changes.length + rawDiffs.length} change${changes.length + rawDiffs.length > 1 ? "s" : ""} to the shop detected!`,
                   },
                 },
                 {
                   type: "section",
                   text: {
                     type: "mrkdwn",
-                    text: changeText,
+                    text: changeText + rawDiffText,
                     verbatim: false,
                   },
                   accessory: {

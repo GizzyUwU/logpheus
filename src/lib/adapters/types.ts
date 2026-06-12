@@ -32,10 +32,11 @@ export interface CanonicalShopItem {
   regionalCosts: Record<string, RegionalCost>;
 }
 
-export interface ApiResult<T> {
+export interface ApiResult<T, R = unknown> {
   ok: boolean;
   status: number;
   data: T | null;
+  raw: R | null;
 }
 
 export interface PaginatedResult<T> {

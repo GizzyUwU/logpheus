@@ -7,18 +7,18 @@ import { getGenericErrorMessage } from "@/lib/genericError";
 import { z } from "zod";
 
 export default {
-  name: "tempAddImageURLs" as z.infer<typeof jobOptions>,
+  name: "tempShopMigration" as z.infer<typeof jobOptions>,
   execute: async ({ clients, pg, logger, prefix }: RequestHandler) => {
     try {
       for (const yswsData of Object.values(ysws)) {
-        if (!yswsData.jobs.includes("tempAddImageURLs")) continue;
+        if (!yswsData.jobs.includes("tempShopMigration")) continue;
         if (
           !yswsData.jobConfig.shopTrack ||
           !yswsData.jobConfig.shopTrack.channelId ||
           (yswsData.apiKeyRequired && !yswsData.jobConfig.shopTrack.jobApiKey)
         ) {
           logger.info(
-            "tempAddImageURLs job skipped becasue didn't meet requirements",
+            "tempShopMigration job skipped becasue didn't meet requirements",
           );
           continue;
         }
@@ -42,7 +42,7 @@ export default {
             status: shop.status,
             ok: shop.ok,
           });
-          ctx.error("tempAddImageURLs failed because shop api fail");
+          ctx.error("tempShopMigration failed because shop api fail");
           continue;
         }
 
@@ -57,7 +57,7 @@ export default {
             status: shop.status,
             ok: shop.ok,
           });
-          ctx.error("tempAddImageURLs failed because shop api fail");
+          ctx.error("tempShopMigration failed because shop api fail");
           continue;
         }
 
@@ -67,22 +67,20 @@ export default {
           .where(
             and(
               eq(shopTrack.yswsId, yswsData.id),
-              or(
-                eq(shopTrack.imageUrl, ""),
-                isNull(shopTrack.imageUrl)
-              )
-            )
-          )
+              or(eq(shopTrack.previousRaw, ""), isNull(shopTrack.previousRaw), eq(shopTrack.previousRaw, "null")),
+            ),
+          );
 
         if (storedItems.length === 0) continue;
-        const itemMap = new Map(shop.data.map((item) => [item.id, item]));
+        const rawItems = Array.isArray(shop.raw) ? (shop.raw as Record<string, unknown>[]) : [];
+        const itemMap = new Map(rawItems.map((item) => [item["id"] as number, item]));
         for (const shopItem of storedItems) {
           const item = itemMap.get(shopItem.id);
-
+          if (!item) continue;
           await pg
             .update(shopTrack)
             .set({
-              imageUrl: item?.image_url ?? "",
+              previousRaw: item ? JSON.stringify(item) : null,
             })
             .where(
               and(
@@ -96,7 +94,7 @@ export default {
       const ctx = logger.with({
         error: err,
       });
-      ctx.error("tempAddImageURLs failed from an error");
+      ctx.error("tempShopMigration failed from an error");
     }
   },
 };

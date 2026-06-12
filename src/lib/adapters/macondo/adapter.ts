@@ -9,6 +9,8 @@ import type {
   PaginatedResult,
 } from "@/lib/adapters/types";
 import type { logger as LogType } from "@/index.ts";
+import { ZTypes } from "@/lib/macondo/types";
+import { z } from "zod";
 
 export function macondoContentTypeFromUrl(url: string): string {
   const ext = (url.split("?").at(0) ?? url).split(".").at(-1)?.toLowerCase() ?? "";
@@ -55,9 +57,9 @@ export class MacondoAdapter implements ApiAdapter {
     return this.client.lastCode ?? 0;
   }
 
-  async project(params: { id: number }): Promise<ApiResult<CanonicalProject>> {
+  async project(params: { id: number }): Promise<ApiResult<CanonicalProject, z.infer<typeof ZTypes.ProjectResponse> | null>> {
     const res = await this.client.project({ id: params.id });
-    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null };
+    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null, raw: null };
 
     return {
       ok: true,
@@ -67,15 +69,16 @@ export class MacondoAdapter implements ApiAdapter {
         title: String(res.data.name),
         devlogIds: res.data.journals.map((j) => j.id),
       },
+      raw: res.data
     };
   }
 
   async devlogs(
     params: { project_id: number },
     opts: { page: number },
-  ): Promise<ApiResult<PaginatedResult<CanonicalDevlog>>> {
+  ): Promise<ApiResult<PaginatedResult<CanonicalDevlog>, z.infer<typeof ZTypes.ProjectJournalsResponse> | null>> {
     const res = await this.client.journals({ id: params.project_id });
-    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null };
+    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null, raw: null };
   
     const PAGE_SIZE = 20;
     const start = (opts.page - 1) * PAGE_SIZE;
@@ -106,10 +109,11 @@ export class MacondoAdapter implements ApiAdapter {
         }),
         next_page: hasMore ? opts.page + 1 : null,
       },
+      raw: res.data
     };
   }
 
-  async user(): Promise<ApiResult<CanonicalUser>> {
+  async user(): Promise<ApiResult<CanonicalUser, z.infer<typeof ZTypes.UserResponse> | null>> {
     // const res = await this.client.user({ userId: params.id });
     // if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null };
     // params: { id: string }
@@ -120,12 +124,13 @@ export class MacondoAdapter implements ApiAdapter {
       data: {
         currency: 0
       },
+      raw: null
     };
   }
 
-  async shop(): Promise<ApiResult<CanonicalShopItem[]>> {
+  async shop(): Promise<ApiResult<CanonicalShopItem[], z.infer<typeof ZTypes.ShopItemsResponse>["items"] | null>> {
     const res = await this.client.shop();
-    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null };
+    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null, raw: null };
     return {
       ok: true,
       status: res.status,
@@ -147,6 +152,7 @@ export class MacondoAdapter implements ApiAdapter {
           ])
         ),
       })),
+      raw: res.data.items
     };
   }
 }

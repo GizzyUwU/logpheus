@@ -1,0 +1,1 @@
+ALTER TABLE "shop" ADD COLUMN "previous_raw" text;
