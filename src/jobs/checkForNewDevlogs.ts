@@ -58,7 +58,7 @@ async function getNewDevlogs(params: {
   try {
     let client = params.clients[params.clientKey];
     if (!client) {
-      params.logger.error("No FT Client for the project", {
+      params.logger.error("No YSWS Client for the project", {
         project: {
           id: params.projectId,
         },

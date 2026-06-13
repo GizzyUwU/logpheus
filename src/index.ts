@@ -15,7 +15,12 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Sentry from "@sentry/bun";
 import type { WebClient } from "@slack/web-api";
-import { configure, getConsoleSink, getLogger, type AsyncSink } from "@logtape/logtape";
+import {
+  configure,
+  getConsoleSink,
+  getLogger,
+  type AsyncSink,
+} from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
@@ -80,7 +85,6 @@ const consoleAdapter = redactByField(getConsoleSink(), {
   action: () => "[REDACTED]",
 });
 
-
 function checkEnvs(name: string, optional: boolean): string {
   const value = process.env[name];
   if (!value && !optional) {
@@ -115,9 +119,9 @@ const openPanelSink: AsyncSink = async (record) => {
     level: record.level,
     message: record.message,
     ...record.properties,
-  })
+  });
   return;
-}
+};
 
 if (process.env["SENTRY_DSN"]) {
   Sentry.init({
@@ -158,24 +162,35 @@ await configure({
   sinks: {
     sentry: sentryAdapter,
     console: consoleAdapter,
-    openpanel: openPanelSink
+    openpanel: openPanelSink,
   },
   loggers: [
     {
       category: ["logtape", "meta"],
-      sinks: [...(sentryEnabled ? ["sentry"] : []), "console", ...(opClient ? ["openpanel"] : [])],
+      sinks: [
+        ...(sentryEnabled ? ["sentry"] : []),
+        "console",
+        ...(opClient ? ["openpanel"] : []),
+      ],
       lowestLevel: "error",
     },
     {
       category: ["drizzle-orm"],
-      sinks: [sentryEnabled ? "sentry" : "console", ...(opClient ? ["openpanel"] : [])],
+      sinks: [
+        sentryEnabled ? "sentry" : "console",
+        ...(opClient ? ["openpanel"] : []),
+      ],
       lowestLevel:
         logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
         "error",
     },
     {
       category: ["logpheus"],
-      sinks: [...(sentryEnabled ? ["sentry"] : []), "console", ...(opClient ? ["openpanel"] : [])],
+      sinks: [
+        ...(sentryEnabled ? ["sentry"] : []),
+        "console",
+        ...(opClient ? ["openpanel"] : []),
+      ],
       lowestLevel:
         logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
         "info",
@@ -313,107 +328,109 @@ const main = {
   commands,
 };
 
-function loadRequestHandlers(
+async function loadRequestHandlers(
   app: App,
   folder: string,
   type: "command" | "view",
   subFolder?: string,
 ) {
   const folderPath = path.join(__dirname, folder);
-
-  fs.readdirSync(folderPath).forEach(async (file) => {
-    const filePath = path.join(folderPath, file);
-    if (fs.statSync(filePath).isDirectory()) {
-      if (!["views", "commands"].includes(file)) {
-        loadRequestHandlers(app, path.join(folder, file), type, file);
-      }
-      return;
-    }
-
-    if (type === "command" && file !== "index.ts") return;
-
-    const importFile = await import(filePath);
-    const module = importFile.default ?? importFile;
-    if (typeof module?.execute !== "function") return;
-    if (module.requireVikunja === true && !vikClient) return;
-    if (module.requireBugsink === true && !bugClient) return;
-
-    const namespacedPrefix =
-      subFolder === "generic" ? prefix : `${prefix}-${subFolder}`;
-
-    const fileStem = file.replace(/\.(ts|js)$/, "");
-    const format =
-      type === "view"
-        ? `${namespacedPrefix}_${fileStem}`
-        : `/${namespacedPrefix}`;
-    const key = `${type}:${format}`;
-    if (registeredRequestModules.has(key)) {
-      throw new Error(
-        `[Logpheus] Duplicate ${type} handler "${format}" in ${subFolder}/${file}`,
-      );
-    }
-    registeredRequestModules.add(key);
-
-    const registerHandler = (mod: typeof module) => {
-      const handler = async (
-        args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs,
-      ) => {
-        await args.ack();
-        const ctx = logger.with({
-          handler: { type, subFolder, file },
-          slack: {
-            user:
-              "user_id" in args.body ? args.body.user_id : args.body.user?.id,
-            channel:
-              "channel_id" in args.body
-                ? args.body.channel_id
-                : (args.body.view.private_metadata.length > 0
-                    ? (JSON.parse(args.body.view.private_metadata) as {
-                        channel: string;
-                      })
-                    : { channel: "" }
-                  ).channel,
-            triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
-          },
-        });
-        try {
-          await mod.execute(args, {
-            pg,
-            client: app.client,
-            logger: ctx,
-            clients,
-            Sentry,
-            prefix,
-            commands,
-            folder: subFolder,
-            namespacedPrefix,
-            opClient: opClient ? opClient : undefined,
-          } satisfies RequestHandler);
-        } catch (err) {
-          logger.error({ err });
+  const files = fs.readdirSync(folderPath);
+  await Promise.all(
+    files.map(async (file) => {
+      const filePath = path.join(folderPath, file);
+      if (fs.statSync(filePath).isDirectory()) {
+        if (!["views", "commands"].includes(file)) {
+          loadRequestHandlers(app, path.join(folder, file), type, file);
         }
+        return;
+      }
+
+      if (type === "command" && file !== "index.ts") return;
+
+      const importFile = await import(filePath);
+      const module = importFile.default ?? importFile;
+      if (typeof module?.execute !== "function") return;
+      if (module.requireVikunja === true && !vikClient) return;
+      if (module.requireBugsink === true && !bugClient) return;
+
+      const namespacedPrefix =
+        subFolder === "generic" ? prefix : `${prefix}-${subFolder}`;
+
+      const fileStem = file.replace(/\.(ts|js)$/, "");
+      const format =
+        type === "view"
+          ? `${namespacedPrefix}_${fileStem}`
+          : `/${namespacedPrefix}`;
+      const key = `${type}:${format}`;
+      if (registeredRequestModules.has(key)) {
+        throw new Error(
+          `[Logpheus] Duplicate ${type} handler "${format}" in ${subFolder}/${file}`,
+        );
+      }
+      registeredRequestModules.add(key);
+
+      const registerHandler = (mod: typeof module) => {
+        const handler = async (
+          args: SlackViewMiddlewareArgs | SlackCommandMiddlewareArgs,
+        ) => {
+          await args.ack();
+          const ctx = logger.with({
+            handler: { type, subFolder, file },
+            slack: {
+              user:
+                "user_id" in args.body ? args.body.user_id : args.body.user?.id,
+              channel:
+                "channel_id" in args.body
+                  ? args.body.channel_id
+                  : (args.body.view.private_metadata.length > 0
+                      ? (JSON.parse(args.body.view.private_metadata) as {
+                          channel: string;
+                        })
+                      : { channel: "" }
+                    ).channel,
+              triggerId: "trigger_id" in args.body ? args.body.trigger_id : "",
+            },
+          });
+          try {
+            await mod.execute(args, {
+              pg,
+              client: app.client,
+              logger: ctx,
+              clients,
+              Sentry,
+              prefix,
+              commands,
+              folder: subFolder,
+              namespacedPrefix,
+              opClient: opClient ? opClient : undefined,
+            } satisfies RequestHandler);
+          } catch (err) {
+            logger.error({ err });
+          }
+        };
+        if (type === "command") app.command(format, handler);
       };
-      if (type === "command") app.command(format, handler);
-    };
-    registerHandler(module);
+      registerHandler(module);
 
-    if (typeof module.setup === "function") {
-      await module.setup(app, {
-        pg,
-        client: app.client,
-        logger,
-        clients,
-        Sentry,
-        prefix,
-        commands,
-        folder: subFolder,
-        namespacedPrefix,
-        opClient: opClient ? opClient : undefined,
-      } satisfies RequestHandler);
-    }
+      if (typeof module.setup === "function") {
+        await module.setup(app, {
+          pg,
+          client: app.client,
+          logger,
+          clients,
+          Sentry,
+          prefix,
+          commands,
+          folder: subFolder,
+          namespacedPrefix,
+          opClient: opClient ? opClient : undefined,
+        } satisfies RequestHandler);
+      }
 
-    logger.info(`Registered ${type} (${subFolder}): ${file} → ${format}`);
-  });
+      logger.info(`Registered ${type} (${subFolder}): ${file} → ${format}`);
+    }),
+  );
 }
 
 let handlersRunning = false;
@@ -436,6 +453,7 @@ async function loadJobs() {
           (f.endsWith(".ts") || f.endsWith(".js")) && !f.includes(".disabled."),
       );
 
+    const jobPromises: Promise<void>[] = [];
     for (const file of files) {
       try {
         const importFile = await import(path.join(jobDir, file));
@@ -447,33 +465,30 @@ async function loadJobs() {
           );
         }
         registeredInitModules.add(mod.name);
-        try {
-          const ctxLogger = logger.with({
-            data: {
-              module: mod.name,
-              file,
-            },
-          });
-          await mod.execute({
-            pg,
-            logger: ctxLogger,
-            client: app.client,
-            prefix: prefix,
-            clients,
-            Sentry,
-            opClient: opClient ? opClient : undefined,
-          } satisfies RequestHandler);
-        } catch (err) {
-          const ctx = logger.with({
-            data: {
-              module: mod.name,
-              file,
-            },
-          });
-          ctx.error("Failed to execute handler", {
-            error: err,
-          });
-        }
+        const ctxLogger = logger.with({
+          data: {
+            module: mod.name,
+            file,
+          },
+        });
+
+        jobPromises.push(
+          mod
+            .execute({
+              pg,
+              logger: ctxLogger,
+              client: app.client,
+              prefix: prefix,
+              clients,
+              Sentry,
+              opClient: opClient ? opClient : undefined,
+            } satisfies RequestHandler)
+            .catch((err: unknown) => {
+              logger
+                .with({ data: { module: mod.name, file } })
+                .error("Failed to execute handler", { error: err });
+            }),
+        );
       } catch (err) {
         logger.error("Failed to execute handler", {
           data: {
@@ -483,6 +498,8 @@ async function loadJobs() {
         });
       }
     }
+
+    await Promise.all(jobPromises);
   } finally {
     handlersRunning = false;
   }
@@ -508,7 +525,7 @@ async function loadJobs() {
         apiKey: process.env["HCAI_API_KEY"],
         serverURL: "https://ai.hackclub.com/proxy/v1",
       });
-      
+
       app.message(
         new RegExp(`${prefix}`, "i"),
         async ({ event, message, say }) => {
@@ -546,7 +563,7 @@ async function loadJobs() {
       );
     }
 
-    loadRequestHandlers(app, "commands", "command");
+    await loadRequestHandlers(app, "commands", "command");
 
     if (
       process.env["SOCKET_MODE"] === "true" &&

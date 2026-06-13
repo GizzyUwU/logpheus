@@ -70,7 +70,7 @@ export default {
     }
 
     if (yswsData?.goals && (!action || action.length <= 0)) {
-      const goalNames = yswsData.goals
+      const goalNames = (yswsData.goals ?? [])
         .map((goalId) => items.data.find((item) => item.id === goalId))
         .filter(Boolean)
         .map((item) => ({

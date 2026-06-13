@@ -195,7 +195,7 @@ export default {
             });
           }
 
-          const updatedGoals = yswsData?.goals.filter(
+          const updatedGoals = (yswsData?.goals ?? []).filter(
             (goalId) => !validGoalIds.includes(goalId),
           );
 

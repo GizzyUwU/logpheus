@@ -76,8 +76,7 @@ export default {
             (item) =>
               item.type !== "ShopItem::Accessory" &&
               !item.attached_shop_item_ids?.some((id) => id != null) &&
-              yswsData?.goals &&
-              !yswsData.goals.includes(Number(item.id)) &&
+              !(yswsData?.goals ?? []).includes(Number(item.id)) &&
               (yswsData?.region && yswsData.region.length > 0
                 ? item.enabled?.[
                     `enabled_${yswsData.region.toLowerCase()}` as keyof typeof item.enabled
@@ -100,7 +99,7 @@ export default {
           .join("\n");
 
       const goalsResolved = yswsData?.goals
-        ? yswsData.goals
+        ? (yswsData.goals ?? [])
             .map((goalId) => items.data.find((item) => item.id === goalId))
             .filter(Boolean)
             .map((item) => {

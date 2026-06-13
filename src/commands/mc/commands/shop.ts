@@ -52,13 +52,7 @@ export default {
   desc: "Look through the items on the shop and maybe add it to your goals!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    {
-      client,
-      yswsClient,
-      prefix,
-      folder,
-      yswsData,
-    }: RequestHandler,
+    { client, yswsClient, prefix, folder, yswsData }: RequestHandler,
   ) => {
     if (yswsData && Object.keys(yswsData).length === 0)
       return respond({
@@ -104,8 +98,7 @@ export default {
 
       const allItems = (items.data.items ?? []).filter(
         (item) =>
-          yswsData?.goals &&
-          !yswsData.goals.includes(Number(item.id)) &&
+          !(yswsData?.goals ?? []).includes(Number(item.id)) &&
           (yswsData?.region && yswsData.region.length > 0
             ? item.regional_pricing?.[yswsData.region.toUpperCase()]
                 ?.available !== false
