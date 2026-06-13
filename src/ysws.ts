@@ -56,7 +56,7 @@ export default {
     url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: ["newDevlog", "shopTrack", "tempShopMigration"] as z.infer<typeof jobOptions>[],
+    jobs: ["newDevlog", "shopTrack"] as z.infer<typeof jobOptions>[],
     regions: {
       NA: "North America",
       SA: "South America",

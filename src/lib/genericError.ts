@@ -8,14 +8,27 @@ export function getGenericErrorMessage(
     case 408:
       return "Server timed out!";
     case 429:
-      return "You hit the ratelimit! Wait a minute before running again.";
+      return "You hit the ratelimit! Wait a minute before running again!";
     case 500:
-      return "Server is down!";
+    case 501:
     case 502:
-      return "Server is down!";
     case 503:
-      return "Server is down!";
     case 504:
+    case 505:
+    case 506:
+    case 507:
+    case 508:
+    case 510:
+    case 511:
+    case 520:
+    case 521:
+    case 522:
+    case 523:
+    case 524:
+    case 525:
+    case 526:
+    case 527:
+    case 530:
       return "Server is down!";
     default:
       return "Unexpected error has occurred!";
