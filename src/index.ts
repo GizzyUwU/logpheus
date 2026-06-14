@@ -540,7 +540,7 @@ async function loadJobs() {
 
           const response = await aiClient.chat.send({
             chatRequest: {
-              model: "openrouter/free",
+              model: "liquid/lfm-2-24b-a2b",
               messages: [
                 {
                   role: "system",
