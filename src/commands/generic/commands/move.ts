@@ -31,7 +31,7 @@ export default {
           text: "You can only run this command in a channel that you are the creator of",
           response_type: "ephemeral",
         });
-      if (command.user_id !== newChannel.channel?.creator)
+      if ((channel.channel?.id ?? "meow") !== process.env["RAND_CHANNEL"] && command.user_id !== newChannel.channel?.creator)
         return await respond({
           text: "You can only run this command to move to channel you own",
           response_type: "ephemeral",

@@ -134,6 +134,13 @@
       "when": 1781289059995,
       "tag": "0018_pretty_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1781433080781,
+      "tag": "0019_special_cassandra_nova",
+      "breakpoints": true
     }
   ]
 }

@@ -94,7 +94,7 @@ async function setup(app: App, ctx: RequestHandler) {
           callbackId,
           yswsData: yswsData[0]!,
           userData: userData[0]!,
-          yswsId: Number(yswsData[0]?.yswsId)
+          yswsId: Number(ysws.flavortown.id)
         } satisfies RequestHandler);
       } catch (err) {
         ctx.logger.error({ err });
@@ -157,7 +157,7 @@ export default {
         profileId: args.command.user_id,
         firstName: args.command.user_name,
         properties: {
-          yswsId: yswsData[0]?.yswsId,
+          yswsId: ysws.flavortown.id,
           channelId: args.command.channel_id,
           channelName: args.command.channel_name,
           friendlyName: ysws.flavortown.humanName,
@@ -197,7 +197,7 @@ export default {
         yswsData: yswsData[0]!,
         userData: userData[0]!,
         yswsClient,
-        yswsId: Number(yswsData[0]?.yswsId)
+        yswsId: Number(ysws.flavortown.id)
       } satisfies RequestHandler,
     );
   },

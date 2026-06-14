@@ -78,7 +78,7 @@ async function setup(app: App, ctx: RequestHandler) {
           profileId: args.body.user.id,
           firstName: args.body.user.name,
           properties: {
-            yswsId: yswsData[0]?.yswsId,
+            yswsId: ysws.macondo.id,
             friendlyName: ysws.macondo.humanName,
           },
         });
@@ -157,7 +157,7 @@ export default {
         profileId: args.command.user_id,
         firstName: args.command.user_name,
         properties: {
-          yswsId: yswsData[0]?.yswsId,
+          yswsId: ysws.macondo.id,
           channelId: args.command.channel_id,
           channelName: args.command.channel_name,
           friendlyName: ysws.macondo.humanName,

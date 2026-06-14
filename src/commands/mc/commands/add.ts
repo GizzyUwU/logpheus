@@ -35,7 +35,7 @@ export default {
           text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
           response_type: "ephemeral",
         });
-      if (command.user_id !== channel.channel?.creator)
+      if ((channel.channel?.id ?? "meow") !== process.env["RAND_CHANNEL"] && command.user_id !== channel.channel?.creator)
         return await respond({
           text: "You can only run this command in a channel that you are the creator of",
           response_type: "ephemeral",
@@ -174,10 +174,8 @@ export default {
               devlogIds,
             })
             .onConflictDoUpdate({
-              target: projects.id,
-              set: {
-                devlogIds,
-              },
+              target: [projects.id, projects.ysws],
+              set: { devlogIds },
             });
         }
 
@@ -310,10 +308,8 @@ export default {
             devlogIds,
           })
           .onConflictDoUpdate({
-            target: projects.id,
-            set: {
-              devlogIds,
-            },
+            target: [projects.id, projects.ysws],
+            set: { devlogIds },
           });
 
         return respond({
