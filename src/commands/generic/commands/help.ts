@@ -53,8 +53,25 @@ async function getCommands(): Promise<CommandMeta[]> {
   return scannedCommands;
 }
 
+function paginateLines(lines: string[]): string[] {
+  const pages: string[] = [];
+  let current = "";
+  for (const line of lines) {
+    const next = current ? current + "\n" + line : line;
+    if (next.length > 2800) {
+      pages.push(current);
+      current = line;
+    } else {
+      current = next;
+    }
+  }
+  if (current) pages.push(current);
+  return pages;
+}
+
 export default {
   name: "help",
+  params: "[page]",
   hideFromHelp: true,
   execute: async (
     { respond, command }: SlackCommandMiddlewareArgs,
@@ -62,15 +79,32 @@ export default {
   ) => {
     const commands = await getCommands();
     const admins = process.env["ADMINS"]?.split(",") ?? [];
-    
-    const helpText = commands
-      .filter((cmd) => !cmd.hideFromHelp && (cmd.folder !== "admin" ||  admins.includes(command.user_id)))
+
+    const lines = commands
+      .filter(
+        (cmd) =>
+          !cmd.hideFromHelp &&
+          (cmd.folder !== "admin" || admins.includes(command.user_id)),
+      )
       .map((cmd) => {
         const cmdPrefix =
           cmd.folder === "generic" ? prefix : `${prefix}-${cmd.folder}`;
-        return `• */${cmdPrefix} ${cmd.name}* ${cmd.params} — ${cmd.desc}`;
-      })
-      .join("\n");
+        return `• */${cmdPrefix} ${cmd.name}* ${cmd.params ?? ""} — ${cmd.desc ?? "No description"}`;
+      });
+
+    const pages = paginateLines(lines);
+    const totalPages = Math.max(pages.length, 1);
+
+    const requestedPage = parseInt(command.text.trim(), 10);
+    const page = Number.isNaN(requestedPage)
+      ? 1
+      : Math.min(Math.max(requestedPage, 1), totalPages);
+
+    const pageText = pages[page - 1] ?? "No commands available.";
+
+    const titlePrefix = /^[a-z]/i.test(prefix!)
+      ? prefix![0]!.toUpperCase() + prefix!.slice(1)
+      : prefix!;
 
     return respond({
       blocks: [
@@ -78,29 +112,27 @@ export default {
           type: "header",
           text: {
             type: "plain_text",
-            text:
-              (/^[a-z]/i.test(prefix!)
-                ? prefix![0]!.toUpperCase() + prefix!.slice(1)
-                : prefix!) + "'s commands!",
+            text: `${titlePrefix}'s commands! (page ${page}/${totalPages})`,
             emoji: true,
           },
         },
         {
           type: "section",
-          text: {
-            type: "mrkdwn",
-            text: helpText || "No commands available.",
-          },
+          text: { type: "mrkdwn", text: pageText },
         },
-        {
-          type: "context",
-          elements: [
-            {
-              type: "mrkdwn",
-              text: "Logpheus offically condones the projects <https://flavortown.hackclub.com/projects/135|Flavortown Utils> and <https://flavortown.hackclub.com/projects/140|Spicetown> with both having Logpheus integration for goals!",
-            },
-          ],
-        },
+        ...(totalPages > 1
+          ? [
+              {
+                type: "context" as const,
+                elements: [
+                  {
+                    type: "mrkdwn" as const,
+                    text: `Use \`/${prefix} help <page>\` to see other pages.`,
+                  },
+                ],
+              },
+            ]
+          : []),
       ],
       response_type: "ephemeral",
     });
