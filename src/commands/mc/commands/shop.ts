@@ -46,9 +46,41 @@ function resolveItemGold(
   return Math.round(resolvedHours * goldMultiplier);
 }
 
+function normalizeSearchVal(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+function paginateLines(lines: string[]): string[] {
+  const pages: string[] = [];
+  let current = "";
+  for (const line of lines) {
+    const next = current ? current + "\n" + line : line;
+    if (next.length > 2800) {
+      pages.push(current);
+      current = line;
+    } else {
+      current = next;
+    }
+  }
+  if (current) pages.push(current);
+  return pages;
+}
+
+function getPageArg(input: string): number | null {
+  const match = input.match(/(?:^|\s)-p\s+(\d+)(?:\s|$)/i);
+  if (!match || !match[1]) return null;
+  const page = Number.parseInt(match[1], 10);
+  if (Number.isNaN(page)) return null;
+  return Math.max(1, page);
+}
+
 export default {
   name: "shop",
-  params: "[itemId]",
+  params: "[itemId|name]",
   desc: "Look through the items on the shop and maybe add it to your goals!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
@@ -59,13 +91,12 @@ export default {
         text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
         response_type: "ephemeral",
       });
+    const requestedPage = getPageArg(command.text);
 
-    const id = command.text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
-    if (!Number.isInteger(Number(id)))
-      return respond({
-        text: `The shop id provided has to be a valid integer`,
-        response_type: "ephemeral",
-      });
+    const query = command.text
+      .replace(/(?:^|\s)-p\s+\d+(?:\s|$)/i, "")
+      .replace(/[^a-zA-Z0-9\s]/g, "")
+      .trim();
 
     if (!yswsClient)
       return respond({
@@ -75,7 +106,7 @@ export default {
 
     const mcClient: Macondo = yswsClient.raw as Macondo;
 
-    if (!id) {
+    if (!query) {
       const items = await mcClient.shop();
 
       if (!items || !items.status) {
@@ -104,17 +135,19 @@ export default {
                 ?.available !== false
             : true),
       );
-
-      const itemLines: string[] = [];
-      for (const item of allItems) {
+      
+      const itemLines = allItems.map((item) => {
         const cost = resolveItemPrice(item, yswsData?.region ?? undefined);
-        const line = `• ${item.id || 0} - *${item.name ?? "Untitled"}* - ${cost} ${item.price_fruit_type} - ${item.extra_fruity}`;
-        const projected = "*Items*:\n" + [...itemLines, line].join("\n");
-        if (projected.length > 3000) break;
-        itemLines.push(line);
-      }
-
-      const text = "*Items*:\n" + itemLines.join("\n");
+        return `• ${item.id || 0} - *${item.name ?? "Untitled"}* - ${cost} ${item.price_fruit_type} - ${item.extra_fruity}`;
+      });
+      
+      const pages = paginateLines(itemLines);
+      const totalPages = Math.max(pages.length, 1);
+      const page = requestedPage
+        ? Math.min(Math.max(requestedPage, 1), totalPages)
+        : 1;
+      
+      const text = `*Items*:\n${pages[page - 1] ?? "No items available."}`;
 
       const goalsResolved = yswsData?.goals
         ? yswsData.goals
@@ -154,11 +187,11 @@ export default {
             text: {
               type: "mrkdwn",
               text:
-                yswsData?.region && yswsData.region.length > 0
+                (yswsData?.region && yswsData.region.length > 0
                   ? "*Macondo Store with " +
                     yswsData.region.toUpperCase() +
-                    "'s Prices*"
-                  : "*Macondo Store*",
+                    "'s Prices* "
+                  : "*Macondo Store* ") + `(${page}/${totalPages})`,
             },
           },
           ...(yswsData?.goals && yswsData.goals.length > 0
@@ -194,93 +227,254 @@ export default {
               },
             ],
           },
+          ...(totalPages > 1 ? [{
+            type: "context" as const,
+            elements: [{
+              type: "mrkdwn" as const,
+              text: `Use /${prefix}-${folder} shop -p <page> to see other pages`
+            }]
+          }] : [])
         ],
         response_type: "ephemeral",
       });
     } else {
-      const item = await mcClient.shopItem({ itemId: Number(id) });
+      if (/^\d+$/.test(query)) {
+        const item = await mcClient.shopItem({ itemId: Number(query) });
 
-      if (!item.ok || !item.data || !Object.keys(item.data)?.length) {
-        switch (item.status) {
-          default:
-            const msg = getGenericErrorMessage(item.status, prefix!);
+        if (!item.ok || !item.data || !Object.keys(item.data)?.length) {
+          switch (item.status) {
+            default:
+              const msg = getGenericErrorMessage(item.status, prefix!);
+              return respond({
+                text: msg ?? "Unexpected error has occured!",
+                response_type: "ephemeral",
+              });
+          }
+        }
+
+        const userText = [
+          { label: "Item ID", value: item.data.id },
+          {
+            label: "Item Name",
+            value: item.data.name ?? "I'm a pretty little femboy >w<",
+          },
+          { label: "Item Description", value: item.data.description ?? "" },
+          {
+            label: "Item Stock",
+            value:
+              item.data.stock_remaining &&
+              (item.data.stock_remaining != null ||
+                item.data.stock_remaining !== 0)
+                ? String(item.data.stock_remaining)
+                : "Infinite",
+          },
+          {
+            label: "Item Cost",
+            value: String(
+              resolveItemGold(
+                item.data,
+                yswsData?.region ? yswsData?.region : undefined,
+              ),
+            ),
+          },
+        ]
+          .map((f) => `*${f.label}*: ${f.value}`)
+          .join("\n");
+        return await client.chat.postEphemeral({
+          channel: command.channel_id,
+          user: command.user_id,
+          blocks: [
+            {
+              type: "header",
+              text: {
+                type: "plain_text",
+                text: item.data.name ?? "Unknown",
+                emoji: true,
+              },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: userText,
+              },
+              accessory: {
+                type: "image",
+                image_url:
+                  item.data.image_url ??
+                  "https://avatars.slack-edge.com/2026-02-14/10511329972962_1a9fddfb641a31b07789_512.png",
+                alt_text: (item.data.name ?? "Unknown") + "'s Image",
+              },
+            },
+            {
+              type: "divider",
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: "https://macondo.hackclub.com/shop",
+                },
+              ],
+            },
+          ],
+        });
+      } else {
+        const items = await mcClient.shop();
+
+        if (!items || !items.status) {
+          return respond({
+            text: "Unexpected error has occurred.",
+            response_type: "ephemeral",
+          });
+        }
+
+        if (!items.ok || !items.data || !Object.keys(items.data)?.length) {
+          switch (items.status) {
+            default:
+              const msg = getGenericErrorMessage(items.status, prefix!);
+              return respond({
+                text: msg ?? "Unexpected error has occured!",
+                response_type: "ephemeral",
+              });
+          }
+        }
+
+        const normalQuery = normalizeSearchVal(query);
+        const matches = items.data.items
+          .map((item) => ({
+            item,
+            normalizedName: normalizeSearchVal(item.name ?? ""),
+          }))
+          .filter(({ normalizedName }) => normalizedName.includes(normalQuery))
+          .map(({ item, normalizedName }) => ({
+            item,
+            score:
+              normalizedName === normalQuery
+                ? 0
+                : normalizedName.startsWith(normalQuery)
+                  ? 1
+                  : 2,
+          }))
+          .sort(
+            (a, b) =>
+              a.score - b.score ||
+              (a.item.name ?? "").localeCompare(b.item.name ?? ""),
+          );
+
+        if (matches.length === 0)
+          return respond({
+            text: `Couldn't find a match for "${normalQuery}". Try a different/shorter serach or /${prefix}-${folder} shop to browse all items.`,
+            response_type: "ephemeral",
+          });
+
+        if (matches.length === 1) {
+          const item = matches[0]?.item;
+          if (!item)
             return respond({
-              text: msg ?? "Unexpected error has occured!",
+              text: `Couldn't find a match for "${normalQuery}". Try a different/shorter serach or /${prefix}-${folder} shop to browse all items.`,
               response_type: "ephemeral",
             });
-        }
-      }
 
-      const userText = [
-        { label: "Item ID", value: item.data.id },
-        {
-          label: "Item Name",
-          value: item.data.name ?? "I'm a pretty little femboy >w<",
-        },
-        { label: "Item Description", value: item.data.description ?? "" },
-        {
-          label: "Item Stock",
-          value:
-            item.data.stock_remaining &&
-            (item.data.stock_remaining != null ||
-              item.data.stock_remaining !== 0)
-              ? String(item.data.stock_remaining)
-              : "Infinite",
-        },
-        {
-          label: "Item Cost",
-          value: String(
-            resolveItemGold(
-              item.data,
-              yswsData?.region ? yswsData?.region : undefined,
-            ),
-          ),
-        },
-      ]
-        .map((f) => `*${f.label}*: ${f.value}`)
-        .join("\n");
-      return await client.chat.postEphemeral({
-        channel: command.channel_id,
-        user: command.user_id,
-        blocks: [
-          {
-            type: "header",
-            text: {
-              type: "plain_text",
-              text: item.data.name ?? "Unknown",
-              emoji: true,
+          const userText = [
+            { label: "Item ID", value: item.id },
+            {
+              label: "Item Name",
+              value: item.name ?? "I'm a pretty little femboy >w<",
             },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: userText,
+            { label: "Item Description", value: item.description ?? "" },
+            {
+              label: "Item Stock",
+              value:
+                item.stock_remaining &&
+                (item.stock_remaining != null || item.stock_remaining !== 0)
+                  ? String(item.stock_remaining)
+                  : "Infinite",
             },
-            accessory: {
-              type: "image",
-              image_url:
-                item.data.image_url ??
-                "https://avatars.slack-edge.com/2026-02-14/10511329972962_1a9fddfb641a31b07789_512.png",
-              alt_text: (item.data.name ?? "Unknown") + "'s Image",
+            {
+              label: "Item Cost",
+              value: String(
+                resolveItemGold(
+                  item,
+                  yswsData?.region ? yswsData?.region : undefined,
+                ),
+              ),
             },
-          },
-          {
-            type: "divider",
-          },
-          {
-            type: "context",
-            elements: [
+          ]
+            .map((f) => `*${f.label}*: ${f.value}`)
+            .join("\n");
+          return await client.chat.postEphemeral({
+            channel: command.channel_id,
+            user: command.user_id,
+            blocks: [
               {
-                type: "mrkdwn",
-                text:
-                  "https://flavortown.hackclub.com/shop/order?shop_item_id=" +
-                  item.data.id,
+                type: "header",
+                text: {
+                  type: "plain_text",
+                  text: item.name ?? "Unknown",
+                  emoji: true,
+                },
+              },
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: userText,
+                },
+                accessory: {
+                  type: "image",
+                  image_url:
+                    item.image_url ??
+                    "https://avatars.slack-edge.com/2026-02-14/10511329972962_1a9fddfb641a31b07789_512.png",
+                  alt_text: (item.name ?? "Unknown") + "'s Image",
+                },
+              },
+              {
+                type: "divider",
+              },
+              {
+                type: "context",
+                elements: [
+                  {
+                    type: "mrkdwn",
+                    text: "https://macondo.hackclub.com/shop",
+                  },
+                ],
               },
             ],
-          },
-        ],
-      });
+          });
+        }
+
+        const pickLines = matches.map(({ item }) => {
+          return `• ${item.id} - *${item.name ?? "Untitled"}*`;
+        });
+
+        const pages = paginateLines(pickLines)
+        const totalPages = Math.max(pages.length, 1)
+        const page = requestedPage ? Math.min(Math.max(requestedPage, 1), totalPages) : 1;
+        const text = pages[page - 1] ?? "No matches found";
+        return respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `${matches.length} matche${matches.length > 1 ? "s" : ""} found containing *"${normalQuery}"* (${page}/${totalPages}):\n${text}`,
+              },
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "plain_text",
+                  text: `Run /${prefix}-${folder} shop [id] to see one in full detail or refine your search for more accurate result.`,
+                },
+              ],
+            },
+          ],
+        });
+      }
     }
   },
 };

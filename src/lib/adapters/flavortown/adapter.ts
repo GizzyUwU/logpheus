@@ -7,6 +7,7 @@ import type {
   CanonicalUser,
   CanonicalShopItem,
   PaginatedResult,
+  RegionalCost,
 } from "@/lib/adapters/types";
 import type { logger as LogType } from "@/index.ts";
 
@@ -28,7 +29,7 @@ export class FTAdapter implements ApiAdapter {
 
   async project(params: { id: number }): Promise<ApiResult<CanonicalProject>> {
     const res = await this.client.project({ id: params.id });
-    if (!res.ok || !res.data) return { ok: false, status: res.status ?? 500, data: null };
+    if (!res.ok || !res.data) return { ok: false, status: res.status ?? 500, data: null, raw: null };
     return {
       ok: true,
       status: res.status,
@@ -37,6 +38,7 @@ export class FTAdapter implements ApiAdapter {
         title: res.data.title ?? "Unknown",
         devlogIds: Array.isArray(res.data.devlog_ids) ? res.data.devlog_ids.map(Number) : [],
       },
+      raw: res.data
     };
   }
 
@@ -48,7 +50,7 @@ export class FTAdapter implements ApiAdapter {
       { project_id: params.project_id },
       { page: opts.page },
     );
-    if (!res.ok || !res.data) return { ok: false, status: res.status ?? 500, data: null };
+    if (!res.ok || !res.data) return { ok: false, status: res.status ?? 500, data: null, raw: null };
     return {
       ok: true,
       status: res.status,
@@ -65,37 +67,50 @@ export class FTAdapter implements ApiAdapter {
         })),
         next_page: res.data.pagination?.next_page ?? null,
       },
+      raw: res.data
     };
   }
 
   async user(params: { id: string }): Promise<ApiResult<CanonicalUser>> {
     const res = await this.client.user({ id: params.id });
-    if (!res.ok || !res.data) return { ok: false, status: res.status ?? 500, data: null };
+    if (!res.ok || !res.data) return { ok: false, status: res.status ?? 500, data: null, raw: null };
     return {
       ok: true,
       status: res.status,
       data: {
         currency: Number(res.data.cookies ?? 0),
       },
+      raw: res.data
     };
   }
 
   async shop(): Promise<ApiResult<CanonicalShopItem[]>> {
     const res = await this.client.shop();
-    if (!res.ok || !res.data) return { ok: false, status: res.status ?? 500, data: null };
+    if (!res.ok || !res.data) return { ok: false, status: res.status ?? 500, data: null, raw: null };
     return {
       ok: true,
       status: res.status,
       data: res.data.map((item) => ({
         id: Number(item.id),
         name: String(item.name),
+        description: item.description ?? "",
+        baseHours: 0,
         baseCost: item.ticket_cost?.base_cost ?? 0,
+        image_url: item.image_url ?? "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
         regionalCosts: Object.fromEntries(
           (["au", "ca", "eu", "in", "uk", "us", "xx"] as const)
             .filter((k) => item.ticket_cost?.[k] != null)
-            .map((k) => [k, item.ticket_cost![k]!]),
+            .map((k) => [
+              k,
+              {
+                available: true,
+                currency: item.ticket_cost![k]!,
+                hours: 0,
+              } satisfies RegionalCost,
+            ]),
         ),
       })),
+      raw: res.data
     };
   }
 }
