@@ -12,11 +12,20 @@ export function diffRaw(
   next: Record<string, unknown>,
   canonical: Record<string, unknown>,
 ): { field: string; from: unknown; to: unknown }[] {
+  const ignoredFields = new Set([
+    "regionalCosts",
+    "id",
+    "name",
+    "description",
+    "baseCost",
+    "baseHours",
+  ])
   const coveredValues = new Set(
     Object.values(canonical).map((v) => JSON.stringify(v)),
   );
   return Object.keys(next)
     .filter((k) => {
+      if (ignoredFields.has(k)) return false;
       if (JSON.stringify(prev[k]) === JSON.stringify(next[k])) return false;
       return !coveredValues.has(JSON.stringify(next[k]));
     })
@@ -420,10 +429,24 @@ export default {
               )
               .join("\n");
 
-            const rawDiffText =
-              rawDiffs.length > 0
-                ? "\n*Other changes:*\n" + formatRawDiff(rawDiffs)
-                : "";
+            const rawDiffText = (() => {
+              if (rawDiffs.length === 0) return "";
+              const reverse = 64;
+              let included = 0;
+              for (; included < rawDiffs.length; included++) {
+                const candidate =
+                  "\n*Other Changes:*\n" +
+                  formatRawDiff(rawDiffs.slice(0, included + 1));
+
+                if ((changeText + candidate).length > 3000 - reverse) break;
+              }
+              if (included === 0) return "";
+              let text = "\n*Other Changes:*\n" + formatRawDiff(rawDiffs.slice(0, included));
+              if (included < rawDiffs.length) {
+                text += `\n... and ${rawDiffs.length - included} more changes.`;
+              }
+              return text;
+            })();
 
             await client.chat.postMessage({
               channel: yswsData.jobConfig.shopTrack.channelId,
@@ -433,7 +456,7 @@ export default {
                   type: "header",
                   text: {
                     type: "plain_text",
-                    text: `${changes.length + rawDiffs.length} change${changes.length + rawDiffs.length > 1 ? "s" : ""} to the shop detected!`,
+                    text: `${changes.length + rawDiffs.length} change${changes.length + rawDiffs.length > 1 ? "s" : ""} to ${shopItem.name} detected!`,
                   },
                 },
                 {
