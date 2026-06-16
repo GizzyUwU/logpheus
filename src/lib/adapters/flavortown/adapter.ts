@@ -96,6 +96,7 @@ export class FTAdapter implements ApiAdapter {
         description: item.description ?? "",
         baseHours: 0,
         baseCost: item.ticket_cost?.base_cost ?? 0,
+        stock: item.stock ?? null,
         image_url: item.image_url ?? "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
         regionalCosts: Object.fromEntries(
           (["au", "ca", "eu", "in", "uk", "us", "xx"] as const)

@@ -11,6 +11,7 @@ export const shopTrack = pgTable(
     imageUrl: text(),
     regionalCosts: text(),
     previousRaw: text(),
+    stock: integer()
   },
   (table) => [primaryKey({ columns: [table.yswsId, table.id] })],
 );

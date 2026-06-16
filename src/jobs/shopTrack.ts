@@ -7,10 +7,51 @@ import { getGenericErrorMessage } from "@/lib/genericError";
 import type { SectionBlockAccessory, TextObject } from "@slack/web-api";
 import type { RegionalCost } from "@/lib/adapters/types";
 
+function diffArrayByKey(prev: any[], next: any[], key: string, path: string) {
+  const prevMap = new Map(prev.map((x) => [x?.[key], x]));
+  const nextMap = new Map(next.map((x) => [x?.[key], x]));
+  const diffs: { field: string; from: unknown; to: unknown }[] = [];
+
+  for (const [id, prevItem] of prevMap) {
+    const nextItem = nextMap.get(id);
+
+    if (!nextItem) {
+      diffs.push({
+        field: `${path}[${id}]`,
+        from: prevItem,
+        to: null,
+      });
+      continue;
+    }
+
+    for (const k of Object.keys({ ...prevItem, ...nextItem })) {
+      if (JSON.stringify(prevItem[k]) !== JSON.stringify(nextItem[k])) {
+        diffs.push({
+          field: `${path}[${id}].${k}`,
+          from: prevItem[k],
+          to: nextItem[k],
+        });
+      }
+    }
+  }
+
+  for (const [id, nextItem] of nextMap) {
+    if (!prevMap.has(id)) {
+      diffs.push({
+        field: `${path}[${id}]`,
+        from: null,
+        to: nextItem,
+      });
+    }
+  }
+
+  return diffs;
+}
+
 export function diffRaw(
   prev: Record<string, unknown>,
   next: Record<string, unknown>,
-  canonical: Record<string, unknown>,
+  _canonical: Record<string, unknown>,
 ): { field: string; from: unknown; to: unknown }[] {
   const ignoredFields = new Set([
     "regionalCosts",
@@ -19,17 +60,34 @@ export function diffRaw(
     "description",
     "baseCost",
     "baseHours",
-  ])
-  const coveredValues = new Set(
-    Object.values(canonical).map((v) => JSON.stringify(v)),
-  );
-  return Object.keys(next)
-    .filter((k) => {
-      if (ignoredFields.has(k)) return false;
-      if (JSON.stringify(prev[k]) === JSON.stringify(next[k])) return false;
-      return !coveredValues.has(JSON.stringify(next[k]));
-    })
-    .map((k) => ({ field: k, from: prev[k], to: next[k] }));
+    "updated_at"
+  ]);
+
+  const diffs: { field: string; from: unknown; to: unknown }[] = [];
+  for (const key of Object.keys(next)) {
+    if (ignoredFields.has(key)) continue;
+
+    const prevVal = prev[key];
+    const nextVal = next[key];
+
+    if (JSON.stringify(prevVal) === JSON.stringify(nextVal)) continue;
+
+    if (
+      Array.isArray(prevVal) &&
+      Array.isArray(nextVal) &&
+      typeof prevVal[0] === "object"
+    ) {
+      diffs.push(...diffArrayByKey(prevVal, nextVal, "id", key));
+      continue;
+    }
+
+    diffs.push({
+      field: key,
+      from: prevVal,
+      to: nextVal,
+    });
+  }
+  return diffs;
 }
 
 export function formatRawDiff(
@@ -218,6 +276,7 @@ export default {
               baseCost: shopItem.baseCost,
               imageUrl: shopItem.image_url,
               regionalCosts: JSON.stringify(shopItem.regionalCosts),
+              stock: shopItem.stock,
               previousRaw: getRawItem(shopItem.id)
                 ? JSON.stringify(getRawItem(shopItem.id))
                 : null,
@@ -227,6 +286,13 @@ export default {
               {
                 label: "Base Price",
                 value: `*${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
+              },
+              {
+                label: "Stock",
+                value:
+                  shopItem.stock !== null
+                    ? `${shopItem.stock} available`
+                    : "Infinite",
               },
               { label: "Regional Pricing:", value: "" },
               ...Object.entries(shopItem.regionalCosts).map(
@@ -330,6 +396,7 @@ export default {
           const baseCostChange = stored.baseCost !== shopItem.baseCost;
           const nameChange = stored.name !== shopItem.name;
           const descChange = stored.description !== shopItem.description;
+          const stockChange = stored.stock !== shopItem.stock;
           const regionalChanges = Object.entries(shopItem.regionalCosts).filter(
             ([region, cost]) =>
               storedRegional[region]?.currency !== cost.currency,
@@ -357,7 +424,9 @@ export default {
             baseCostChange ||
             nameChange ||
             descChange ||
-            regionalChanges.length > 0
+            regionalChanges.length > 0 ||
+            stockChange ||
+            rawDiffs.length > 0
           ) {
             await pg
               .update(shopTrack)
@@ -369,6 +438,7 @@ export default {
                 imageUrl: shopItem.image_url,
                 regionalCosts: JSON.stringify(shopItem.regionalCosts),
                 previousRaw: JSON.stringify(rawItem),
+                stock: shopItem.stock,
               })
               .where(
                 and(
@@ -383,6 +453,7 @@ export default {
             if (descChange) changes.push("Description");
             if (baseCostChange) changes.push("Base Price");
             if (regionalChanges.length > 0) changes.push("Regional Pricing");
+            if (stockChange) changes.push("Stock");
 
             const changeText = [
               {
@@ -409,6 +480,14 @@ export default {
                     {
                       label: "Base Price",
                       value: `${stored.baseCost} → *${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
+                    },
+                  ]
+                : []),
+              ...(stockChange
+                ? [
+                    {
+                      label: "Stock",
+                      value: `${stored.stock === null ? "Infinite" : stored.stock} → *${stored.stock === null ? "Infinite" : stored.stock}*`,
                     },
                   ]
                 : []),
@@ -441,7 +520,9 @@ export default {
                 if ((changeText + candidate).length > 3000 - reverse) break;
               }
               if (included === 0) return "";
-              let text = "\n*Other Changes:*\n" + formatRawDiff(rawDiffs.slice(0, included));
+              let text =
+                "\n*Other Changes:*\n" +
+                formatRawDiff(rawDiffs.slice(0, included));
               if (included < rawDiffs.length) {
                 text += `\n... and ${rawDiffs.length - included} more changes.`;
               }
@@ -477,7 +558,7 @@ export default {
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - @channel`,
+                      text: `<${yswsData.url + "/shop"}|View Shop> - No ping to protect`,
                       verbatim: false,
                     },
                   ],

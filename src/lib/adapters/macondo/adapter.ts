@@ -140,6 +140,7 @@ export class MacondoAdapter implements ApiAdapter {
         description: item.description ?? "",
         baseHours: ((item.price_hours * 10) / 50),
         baseCost: item.price_gold,
+        stock: item.stock_remaining ?? null,
         image_url: item.image_url ?? "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
         regionalCosts: Object.fromEntries(
           Object.entries(item.regional_pricing ?? {}).map(([region, data]) => [

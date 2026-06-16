@@ -30,6 +30,7 @@ export interface CanonicalShopItem {
   baseHours: number;
   image_url: string;
   regionalCosts: Record<string, RegionalCost>;
+  stock: number | null;
 }
 
 export interface ApiResult<T, R = unknown> {
