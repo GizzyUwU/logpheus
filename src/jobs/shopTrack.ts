@@ -558,7 +558,7 @@ export default {
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - No ping to protect`,
+                      text: `<${yswsData.url + "/shop"}|View Shop> - @channel`,
                       verbatim: false,
                     },
                   ],
