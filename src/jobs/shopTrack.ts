@@ -60,7 +60,8 @@ export function diffRaw(
     "description",
     "baseCost",
     "baseHours",
-    "updated_at"
+    "updated_at",
+    "image_url"
   ]);
 
   const diffs: { field: string; from: unknown; to: unknown }[] = [];
