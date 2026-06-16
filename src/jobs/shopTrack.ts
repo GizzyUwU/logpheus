@@ -104,7 +104,6 @@ export default {
         const getRawItem = (id: number) =>
           rawItems.find((r) => r["id"] === id) ?? null;
         if (storedItems.length === 0) {
-          
           await pg.insert(shopTrack).values(
             shop.data.map((item) => ({
               yswsId: yswsData.id,
@@ -114,7 +113,9 @@ export default {
               baseHours: item.baseHours,
               baseCost: item.baseCost,
               regionalCosts: JSON.stringify(item.regionalCosts),
-              previousRaw: getRawItem(item.id) ? JSON.stringify(getRawItem(item.id)) : null,
+              previousRaw: getRawItem(item.id)
+                ? JSON.stringify(getRawItem(item.id))
+                : null,
             })),
           );
           continue;
@@ -208,7 +209,9 @@ export default {
               baseCost: shopItem.baseCost,
               imageUrl: shopItem.image_url,
               regionalCosts: JSON.stringify(shopItem.regionalCosts),
-              previousRaw: getRawItem(shopItem.id) ? JSON.stringify(getRawItem(shopItem.id)) : null,
+              previousRaw: getRawItem(shopItem.id)
+                ? JSON.stringify(getRawItem(shopItem.id))
+                : null,
             });
 
             const priceText = [
@@ -283,10 +286,16 @@ export default {
                           type: "mrkdwn",
                           text: `*Base Price*: *${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
                         },
+                        accessory: {
+                          type: "image",
+                          image_url: shopItem.image_url,
+                          alt_text: shopItem.name,
+                        },
                       },
                     ] as {
                       type: string;
                       text: TextObject;
+                      accessory: SectionBlockAccessory;
                     }[])),
                 {
                   type: "context",
