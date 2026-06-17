@@ -123,10 +123,14 @@ async function getNewDevlogs(params: {
             ),
           );
 
+        console.log(project.data)
+        const yswsConfig = Object.values(ysws).find(
+          (y) => y.id === params.yswsRow.yswsId,
+        );
         if (!row?.channel) return;
         await params.app.chat.postMessage({
           channel: row?.channel,
-          text: `Hey! You got disabled because of ${params.projectId} no longer exist and is 404ing. To get re-enabled run /${params.prefix}-remove ${params.projectId} and then /${params.prefix}-reactivate.`,
+          text: `Hey! You got disabled because of ${params.projectId} no longer exist and is 404ing. To get re-enabled run /${params.prefix}-${yswsConfig?.short} remove ${params.projectId} and then /${params.prefix}-${yswsConfig?.short} reactivate.`,
         });
         return;
       } else if (

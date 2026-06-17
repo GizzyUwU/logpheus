@@ -7,6 +7,8 @@ export function getGenericErrorMessage(
       return "Bad API Key! Run /" + prefix + "-config to fix!";
     case 408:
       return "Server timed out!";
+    case 404:
+      return "Not found"
     case 429:
       return "You hit the ratelimit! Wait a minute before running again!";
     case 500:

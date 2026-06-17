@@ -11,6 +11,7 @@ const regionsSchema = z.record(z.string(), z.string());
 export const yswsItem = z.object({
   id: z.number(),
   humanName: z.string(),
+  short: z.string(),
   currencyName: z.string(),
   adapter: z.string(),
   apiKeyRequired: z.boolean(),
@@ -29,6 +30,7 @@ export default {
   flavortown: {
     id: 1,
     humanName: "Flavortown",
+    short: "ft",
     adapter: "flavortown/adapter.ts",
     currencyName: "cookies",
     mediaUrl: "https://flavortown.hackclub.com",
@@ -50,6 +52,7 @@ export default {
   macondo: {
     id: 2,
     humanName: "Macondo",
+    short: "mc",
     currencyName: "gold",
     adapter: "macondo/adapter.ts",
     mediaUrl: "https://cdn.hackclub.com",
@@ -77,6 +80,7 @@ export default {
   stardance: {
     id: 3,
     humanName: "Stardance",
+    short: "sd",
     currencyName: "stardust",
     adapter: "",
     mediaUrl: "https://stardance.hackclub.com",
