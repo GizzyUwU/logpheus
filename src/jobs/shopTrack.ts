@@ -61,7 +61,9 @@ export function diffRaw(
     "baseCost",
     "baseHours",
     "updated_at",
-    "image_url"
+    "image_url",
+    "stock",
+    "stock_remaining"
   ]);
 
   const diffs: { field: string; from: unknown; to: unknown }[] = [];
@@ -488,7 +490,7 @@ export default {
                 ? [
                     {
                       label: "Stock",
-                      value: `${stored.stock === null ? "Infinite" : stored.stock} → *${stored.stock === null ? "Infinite" : stored.stock}*`,
+                      value: `${stored.stock === null ? "Infinite" : stored.stock} → *${shopItem.stock === null ? "Infinite" : shopItem.stock}*`,
                     },
                   ]
                 : []),
