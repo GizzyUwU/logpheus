@@ -88,7 +88,7 @@ async function getNewDevlogs(params: {
 
     if (!Object.keys(project).length || !project.ok || !project.data) {
       const row = params.userByUserId.get(params.userRow.userId);
-
+      if (project.status === 200) return;
       if (project.status === 401) {
         delete params.clients[params.clientKey];
         await params.db

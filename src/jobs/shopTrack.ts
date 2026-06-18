@@ -147,7 +147,7 @@ export default {
         }
 
         if (!shop.ok || !shop.data?.length) {
-          if (shop.status === 408) continue;
+          if (shop.status === 200 || shop.status === 408) continue;
           const msg = getGenericErrorMessage(shop.status, prefix!);
           if (msg === "Server is down!" || msg === "Server timed out!")
             continue;
