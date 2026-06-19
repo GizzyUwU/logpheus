@@ -58,8 +58,8 @@ export function diffRaw(
     "id",
     "name",
     "description",
-    "baseCost",
-    "baseHours",
+    "base_cost",
+    "base_hours",
     "updated_at",
     "image_url",
     "stock",
@@ -179,7 +179,7 @@ export default {
           continue;
         }
 
-        let alrPinged = true;
+        let alrPinged = false;
         const storedItems = await pg
           .select()
           .from(shopTrack)
