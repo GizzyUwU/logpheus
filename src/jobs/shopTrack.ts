@@ -63,7 +63,8 @@ export function diffRaw(
     "updated_at",
     "image_url",
     "stock",
-    "stock_remaining"
+    "stock_remaining",
+    "resolved_region",
   ]);
 
   const diffs: { field: string; from: unknown; to: unknown }[] = [];
@@ -98,6 +99,21 @@ export function formatRawDiff(
 ): string {
   const fmt = (v: unknown): string => {
     if (v === null || v === undefined) return "_none_";
+    if (
+      typeof v === "string" &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(v)
+    ) {
+      const d = new Date(v);
+
+      const pad = (n: number) => String(n).padStart(2, "0");
+
+      return `${pad(d.getUTCDate())}/${pad(
+        d.getUTCMonth() + 1,
+      )}/${String(d.getUTCFullYear()).slice(-2)} ${pad(
+        d.getUTCHours(),
+      )}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+    }
+
     if (typeof v === "boolean") return v ? "yes" : "no";
     if (typeof v === "object") return `\`${JSON.stringify(v)}\``;
     return String(v);
@@ -163,6 +179,7 @@ export default {
           continue;
         }
 
+        let alrPinged = true;
         const storedItems = await pg
           .select()
           .from(shopTrack)
@@ -193,7 +210,6 @@ export default {
 
         const storedMap = new Map(storedItems.map((item) => [item.id, item]));
         const liveIds = new Set(shop.data.map((item) => item.id));
-
         for (const [id, stored] of storedMap) {
           if (liveIds.has(id)) continue;
 
@@ -255,7 +271,7 @@ export default {
                 elements: [
                   {
                     type: "mrkdwn",
-                    text: `<${yswsData.url + "/shop"}|View Shop> - @channel`,
+                    text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
                     verbatim: false,
                   },
                 ],
@@ -265,6 +281,7 @@ export default {
               },
             ],
           });
+          if (!alrPinged) alrPinged = true;
         }
 
         for (const shopItem of shop.data) {
@@ -380,7 +397,7 @@ export default {
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - @channel`,
+                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
                       verbatim: false,
                     },
                   ],
@@ -390,6 +407,7 @@ export default {
                 },
               ],
             });
+            if (!alrPinged) alrPinged = true;
             continue;
           }
 
@@ -462,8 +480,10 @@ export default {
               {
                 label:
                   changes.length > 0
-                    ? ` ${changes.join(", ")} has changed!`
-                    : "No changes detected",
+                    ? `${changes.join(", ")} has changed!`
+                    : rawDiffs.length > 0
+                      ? ""
+                      : "No changes detected",
                 value: "",
               },
               {
@@ -561,7 +581,7 @@ export default {
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - @channel`,
+                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
                       verbatim: false,
                     },
                   ],
@@ -571,6 +591,7 @@ export default {
                 },
               ],
             });
+            if (!alrPinged) alrPinged = true;
           }
         }
       }
