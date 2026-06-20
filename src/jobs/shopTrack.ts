@@ -6,6 +6,7 @@ import { loadAdapter } from "@/lib/adapters";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import type { SectionBlockAccessory, TextObject } from "@slack/web-api";
 import type { RegionalCost } from "@/lib/adapters/types";
+import Decimal from "decimal.js";
 
 function diffArrayByKey(prev: any[], next: any[], key: string, path: string) {
   const prevMap = new Map(prev.map((x) => [x?.[key], x]));
@@ -126,6 +127,19 @@ export function formatRawDiff(
     .join("\n");
 }
 
+const decEq = (a: unknown, b: unknown) => {
+  if (a == null || b == null) return a === b;
+  const da = new Decimal(String(a));
+  const db = new Decimal(String(b));
+  return da.equals(db);
+};
+
+const formatCost = (v: unknown) => {
+  return new Decimal(String(v))
+    .toSignificantDigits(10)
+    .toString();
+};
+
 export default {
   name: "shopTrack",
   execute: async ({ clients, client, pg, logger, prefix }: RequestHandler) => {
@@ -198,8 +212,8 @@ export default {
                 id: item.id,
                 name: item.name,
                 description: item.description,
-                baseHours: item.baseHours,
-                baseCost: item.baseCost,
+                baseHours: item.baseHours.toString(),
+                baseCost: item.baseCost.toString(),
                 regionalCosts: JSON.stringify(item.regionalCosts),
                 previousRaw: getRawItem(item.id)
                   ? JSON.stringify(getRawItem(item.id))
@@ -238,7 +252,7 @@ export default {
             },
             {
               label: "Base price was",
-              value: `*${stored.baseCost} ${yswsData.currencyName}* (${stored.baseHours}hrs)`,
+              value: `*${formatCost(stored.baseCost)} ${yswsData.currencyName}* (${stored.baseHours}hrs)`,
             },
           ]
             .map((f) =>
@@ -301,8 +315,8 @@ export default {
                 id: shopItem.id,
                 name: shopItem.name,
                 description: shopItem.description,
-                baseHours: shopItem.baseHours,
-                baseCost: shopItem.baseCost,
+                baseHours: shopItem.baseHours.toString(),
+                baseCost: shopItem.baseCost.toString(),
                 imageUrl: shopItem.image_url,
                 regionalCosts: JSON.stringify(shopItem.regionalCosts),
                 stock: shopItem.stock,
@@ -321,7 +335,7 @@ export default {
             const priceText = [
               {
                 label: "Base Price",
-                value: `*${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
+                value: `*${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
               },
               {
                 label: "Stock",
@@ -395,7 +409,7 @@ export default {
                         type: "section",
                         text: {
                           type: "mrkdwn",
-                          text: `*Base Price*: *${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
+                          text: `*Base Price*: *${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
                         },
                         accessory: {
                           type: "image",
@@ -430,13 +444,20 @@ export default {
           const storedRegional: Record<string, RegionalCost> = JSON.parse(
             stored.regionalCosts ?? "{}",
           );
-          const baseCostChange = stored.baseCost !== shopItem.baseCost;
+          const baseCostChange = !decEq(stored.baseCost, shopItem.baseCost);
           const nameChange = stored.name !== shopItem.name;
           const descChange = stored.description !== shopItem.description;
           const stockChange = stored.stock !== shopItem.stock;
           const regionalChanges = Object.entries(shopItem.regionalCosts).filter(
-            ([region, cost]) =>
-              storedRegional[region]?.currency !== cost.currency,
+            ([region, cost]) => {
+              const stored = storedRegional[region];
+              if (!stored) return true;
+          
+              return (
+                stored.currency !== cost.currency ||
+                !decEq(stored.hours, cost.hours)
+              );
+            }
           );
 
           const rawItem = getRawItem(shopItem.id);
@@ -470,8 +491,8 @@ export default {
               .set({
                 name: shopItem.name,
                 description: shopItem.description,
-                baseCost: shopItem.baseCost,
-                baseHours: shopItem.baseHours,
+                baseCost: shopItem.baseCost.toString(),
+                baseHours: shopItem.baseHours.toString(),
                 imageUrl: shopItem.image_url,
                 regionalCosts: JSON.stringify(shopItem.regionalCosts),
                 previousRaw: JSON.stringify(rawItem),
@@ -518,7 +539,7 @@ export default {
                 ? [
                     {
                       label: "Base Price",
-                      value: `${stored.baseCost} → *${shopItem.baseCost} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
+                      value: `${formatCost(stored.baseCost)} → *${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
                     },
                   ]
                 : []),
@@ -536,7 +557,7 @@ export default {
               ...regionalChanges.map(([region, cost]) => ({
                 label: region,
                 value: cost.available
-                  ? `${storedRegional[region]?.currency ?? "?"} → *${cost.currency} ${yswsData.currencyName}* (${cost.hours}hrs)`
+                  ? `${storedRegional[region]?.currency ?? "None"} → *${cost.currency} ${yswsData.currencyName}* (${cost.hours}hrs)`
                   : "Not available in the region",
               })),
             ]

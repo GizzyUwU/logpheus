@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, numeric, primaryKey } from "drizzle-orm/pg-core";
 export const shopTrack = pgTable(
   "shop",
   {
@@ -6,8 +6,8 @@ export const shopTrack = pgTable(
     id: integer().notNull(),
     name: text().notNull(),
     description: text(),
-    baseHours: real().notNull(),
-    baseCost: real().notNull(),
+    baseHours: numeric({ precision: 30, scale: 10 }).notNull(),
+    baseCost: numeric({ precision: 30, scale: 10 }).notNull(),
     imageUrl: text(),
     regionalCosts: text(),
     previousRaw: text(),
