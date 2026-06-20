@@ -56,6 +56,7 @@ export function diffRaw(
 ): { field: string; from: unknown; to: unknown }[] {
   const ignoredFields = new Set([
     "regionalCosts",
+    "regional_pricing",
     "id",
     "name",
     "description",

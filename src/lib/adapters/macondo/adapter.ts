@@ -146,7 +146,7 @@ export class MacondoAdapter implements ApiAdapter {
           Object.entries(item.regional_pricing ?? {}).map(([region, data]) => [
             region,
             {
-              available: data.available || true,
+              available: data.available ?? true,
               currency: (data.price_hours ?? 0) * 10,
               hours: Math.ceil(((data.price_hours ?? 0) * 10) / 50),
             },
