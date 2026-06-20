@@ -191,21 +191,29 @@ export default {
         const getRawItem = (id: number) =>
           rawItems.find((r) => r["id"] === id) ?? null;
         if (storedItems.length === 0) {
-          await pg.insert(shopTrack).values(
-            shop.data.map((item) => ({
-              yswsId: yswsData.id,
-              id: item.id,
-              name: item.name,
-              description: item.description,
-              baseHours: item.baseHours,
-              baseCost: item.baseCost,
-              regionalCosts: JSON.stringify(item.regionalCosts),
-              previousRaw: getRawItem(item.id)
-                ? JSON.stringify(getRawItem(item.id))
-                : null,
-            })),
-          );
-          continue;
+          try {
+            await pg.insert(shopTrack).values(
+              shop.data.map((item) => ({
+                yswsId: yswsData.id,
+                id: item.id,
+                name: item.name,
+                description: item.description,
+                baseHours: item.baseHours,
+                baseCost: item.baseCost,
+                regionalCosts: JSON.stringify(item.regionalCosts),
+                previousRaw: getRawItem(item.id)
+                  ? JSON.stringify(getRawItem(item.id))
+                  : null,
+              })),
+            );
+            continue;
+          } catch (err) {
+            logger.with({
+              error: err,
+              message: err instanceof Error ? err.message : String(err),
+              cause: (err as any)?.cause,
+            }).error(`Failed insertion of shop row for all items on YSWS ${yswsData.id}`);
+          }
         }
 
         const storedMap = new Map(storedItems.map((item) => [item.id, item]));
@@ -287,20 +295,28 @@ export default {
         for (const shopItem of shop.data) {
           const stored = storedMap.get(shopItem.id);
           if (!stored) {
-            await pg.insert(shopTrack).values({
-              yswsId: yswsData.id,
-              id: shopItem.id,
-              name: shopItem.name,
-              description: shopItem.description,
-              baseHours: shopItem.baseHours,
-              baseCost: shopItem.baseCost,
-              imageUrl: shopItem.image_url,
-              regionalCosts: JSON.stringify(shopItem.regionalCosts),
-              stock: shopItem.stock,
-              previousRaw: getRawItem(shopItem.id)
-                ? JSON.stringify(getRawItem(shopItem.id))
-                : null,
-            });
+            try {
+              await pg.insert(shopTrack).values({
+                yswsId: yswsData.id,
+                id: shopItem.id,
+                name: shopItem.name,
+                description: shopItem.description,
+                baseHours: shopItem.baseHours,
+                baseCost: shopItem.baseCost,
+                imageUrl: shopItem.image_url,
+                regionalCosts: JSON.stringify(shopItem.regionalCosts),
+                stock: shopItem.stock,
+                previousRaw: getRawItem(shopItem.id)
+                  ? JSON.stringify(getRawItem(shopItem.id))
+                  : null,
+              });
+            } catch (err) {
+              logger.with({
+                error: err,
+                message: err instanceof Error ? err.message : String(err),
+                cause: (err as any)?.cause,
+              }).error(`Failed insertion of shop row for item ${shopItem.id} on YSWS ${yswsData.id}`);
+            }
 
             const priceText = [
               {
