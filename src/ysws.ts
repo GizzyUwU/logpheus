@@ -72,7 +72,7 @@ export default {
     },
     jobConfig: {
       shopTrack: {
-        channelId: "C0B99K6H2SW",
+        channelId: !process.env["DEV_CHANNEL"] ? "C0B99K6H2SW" : process.env["DEV_CHANNEL"],
         jobApiKey: null
       }
     } as z.infer<typeof jobConfigSchema>,
