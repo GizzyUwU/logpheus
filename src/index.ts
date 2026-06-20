@@ -112,12 +112,15 @@ if (
   opClient.ready();
 }
 
+let errorInLastFiveMinutes = 0;
 const openPanelSink: AsyncSink = async (record) => {
   if (!opClient) return;
+  if (record.level === "error") errorInLastFiveMinutes += 1;
   opClient.track(record.level, {
     timestamp: record.timestamp,
     level: record.level,
     message: record.message,
+    lastFive: errorInLastFiveMinutes,
     ...record.properties,
   });
   return;
