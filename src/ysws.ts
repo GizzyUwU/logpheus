@@ -72,7 +72,7 @@ export default {
     },
     jobConfig: {
       shopTrack: {
-        channelId: "C0AMENDBWQ0",
+        channelId: "C0B99K6H2SW",
         jobApiKey: null
       }
     } as z.infer<typeof jobConfigSchema>,
