@@ -462,10 +462,7 @@ export default {
               const stored = storedRegional[region];
               if (!stored) return true;
 
-              return (
-                stored.currency !== cost.currency ||
-                !decEq(stored.hours, cost.hours)
-              );
+              return stored.currency !== cost.currency 
             },
           );
 
