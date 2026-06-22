@@ -62,6 +62,8 @@ export function diffRaw(
     "description",
     "base_cost",
     "base_hours",
+    "price_gold",
+    "price_hours",
     "updated_at",
     "image_url",
     "stock",
@@ -136,9 +138,7 @@ const decEq = (a: unknown, b: unknown) => {
 };
 
 const formatCost = (v: unknown) => {
-  return new Decimal(String(v))
-    .toSignificantDigits(10)
-    .toString();
+  return new Decimal(String(v)).toSignificantDigits(10).toString();
 };
 
 export default {
@@ -223,11 +223,15 @@ export default {
             );
             continue;
           } catch (err) {
-            logger.with({
-              error: err,
-              message: err instanceof Error ? err.message : String(err),
-              cause: (err as any)?.cause,
-            }).error(`Failed insertion of shop row for all items on YSWS ${yswsData.id}`);
+            logger
+              .with({
+                error: err,
+                message: err instanceof Error ? err.message : String(err),
+                cause: (err as any)?.cause,
+              })
+              .error(
+                `Failed insertion of shop row for all items on YSWS ${yswsData.id}`,
+              );
           }
         }
 
@@ -326,11 +330,15 @@ export default {
                   : null,
               });
             } catch (err) {
-              logger.with({
-                error: err,
-                message: err instanceof Error ? err.message : String(err),
-                cause: (err as any)?.cause,
-              }).error(`Failed insertion of shop row for item ${shopItem.id} on YSWS ${yswsData.id}`);
+              logger
+                .with({
+                  error: err,
+                  message: err instanceof Error ? err.message : String(err),
+                  cause: (err as any)?.cause,
+                })
+                .error(
+                  `Failed insertion of shop row for item ${shopItem.id} on YSWS ${yswsData.id}`,
+                );
             }
 
             const priceText = [
@@ -453,12 +461,12 @@ export default {
             ([region, cost]) => {
               const stored = storedRegional[region];
               if (!stored) return true;
-          
+
               return (
                 stored.currency !== cost.currency ||
                 !decEq(stored.hours, cost.hours)
               );
-            }
+            },
           );
 
           const rawItem = getRawItem(shopItem.id);
@@ -562,11 +570,13 @@ export default {
                   : "Not available in the region",
               })),
             ]
+              .filter((f) => f.label || f.value)
               .map((f) =>
                 f.label && (!f.value || f.value.length === 0)
                   ? `*${f.label}*`
                   : `*${f.label}*: ${f.value}`,
               )
+
               .join("\n");
 
             const rawDiffText = (() => {
