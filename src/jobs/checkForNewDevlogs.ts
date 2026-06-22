@@ -174,7 +174,7 @@ async function getNewDevlogs(params: {
           ysws: params.yswsRow.yswsId,
         })
         .onConflictDoUpdate({
-          target: projects.id,
+          target: [projects.ysws, projects.id],
           set: {
             devlogIds: initialDevlogIds,
             ysws: params.yswsRow.yswsId,
