@@ -2,12 +2,11 @@
 
 ![Logpheus Hackatime Tracked](https://hackatime.hackclub.com/api/v1/badge/U08D3AY7BG8/GizzyUwU/logpheus)
 
-
-Logpheus is a project built to take your FT devlogs and send them to your personal channel.
+Logpheus is a bot built before Flavorpheus (the offical Flavortown bot) that serves the purpose of being a generic YSWS bot to interact with YSWS's and other supported Hack Club services it supports from the slack providing QoL feature's such as checking the shop's YSWS's, looking at project's of YSWS's, getting notified of public transactions on HCB made from your HCB Id, getting notified of new mail or changes to existing mail on Theseus (HC Mail) and more.
 
 # Hosted Version
 
-It has an already hosted version which is usable at @logpheus.
+It has an already hosted version which is usable at @logpheus on the Hack Club slack.
 
 To make use of it, run the following command below to register
 
@@ -15,23 +14,38 @@ To make use of it, run the following command below to register
 /logpheus register
 ```
 
-and to then view all the commands provided run the following
+you can then run the help command below to find out some of the commands!
 
 ```
 /logpheus help
 ```
 
-It should open up a model asking for your FT Project Id and FT API Key unless you don't own the channel then it will error. Once you enter the data it will send a successfully added notification and the bot will start poll every minute using your api key to see if any new devlog has been posted and if one has it will send a message in your channel like this:
+Some of the features I personally use which you may want to check out is the HCB Transacation Job and the ADTC (Automated Devlog To Channel) Job, to use the HCB Job just run the command below and follow the instructions to add your HCB Id
 
-![Example of a Devlog notification in a channel](/screenshots/devlog.png)
+```
+/logpheus config
+```
+
+The ADTC job requires you to sign up to a supported YSWS so run to find all YSWS's supported by the bot
+
+```
+/logpheus ysws
+```
+
+then sign up for a YSWS with the following command
+```
+/logpheus-(ysws) register
+```
+
+so that you are now registered to that YSWS and can use all the commands the bot supports for the YSWS and run the following command to subscribe a project's devlogs to the ADTC job which will use the channel it is run in (if channel id does not yet exist for you for pre-existing channel id set it will use that changable via ``/logpheus move`` or ``/logpheus config``)
+
+```
+/logpheus-(ysws) add
+```
 
 ### Not a personal channel owner?
 
-You can still make use of the bot for general flavourtown commands like the user command by registering with
-
-```
-/logpheus register
-```
+Not all Logpheus's job's require a personal channel such as the theseus (HC Mail) job and HCB Transaction job can be subscribed to through the generic config command to work inside dms, dming you of any new or changes that happen in them. You can also use the YSWS specific commands without having to setup a channel to!
 
 ## Decided you don't want it posting anymore?
 

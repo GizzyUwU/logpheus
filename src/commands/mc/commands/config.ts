@@ -77,7 +77,7 @@ export default {
             },
             {
               type: "input",
-              block_id: "ftApiKey",
+              block_id: "mcAccId",
               label: {
                 type: "plain_text",
                 text: "What is your account id?",

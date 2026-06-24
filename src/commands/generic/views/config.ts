@@ -51,6 +51,12 @@ export default {
       if (flatValues["HCBId"]) {
         updatedMeta = [...updatedMeta.filter(e => !e.startsWith("HCBId::")), "HCBId::" + flatValues["HCBId"]];
       }
+      if (flatValues["channelId"]) {
+        updateFields.channel = flatValues["channelId"];
+      }
+      if (flatValues["theseusKey"]) {
+        updateFields.theseusKey = flatValues["theseusKey"];
+      }
     
       updateFields.meta = updatedMeta
 

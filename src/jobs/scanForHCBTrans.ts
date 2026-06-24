@@ -46,7 +46,6 @@ export default {
           and(
             eq(users.disabled, false),
             not(isNull(users.meta)),
-            not(isNull(users.channel)),
           ),
         );
 

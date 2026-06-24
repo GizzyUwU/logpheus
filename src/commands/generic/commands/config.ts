@@ -118,6 +118,43 @@ export default {
               },
               optional: true,
             },
+            {
+              type: "input",
+              block_id: "channelId",
+              label: {
+                type: "plain_text",
+                text: "What channel do you want it to post it to?",
+              },
+              element: {
+                type: "plain_text_input",
+                action_id: "channelId",
+                multiline: false,
+                initial_value: userData?.channel ?? ""
+              },
+              optional: true
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "Go to https://mail.hackclub.com/my/api_keys and generate a new key.",
+              },
+            },
+            {
+              type: "input",
+              block_id: "theseusKey",
+              label: {
+                type: "plain_text",
+                text: "What is your theseus (HC Mail) API Key?",
+              },
+              element: {
+                type: "plain_text_input",
+                action_id: "theseusKey",
+                multiline: false,
+                initial_value: userData?.theseusKey ?? ""
+              },
+              optional: true
+            },
           ],
           submit: {
             type: "plain_text",

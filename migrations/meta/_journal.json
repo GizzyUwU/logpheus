@@ -155,6 +155,13 @@
       "when": 1781944729028,
       "tag": "0021_friendly_lady_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782305511816,
+      "tag": "0022_jazzy_diamondback",
+      "breakpoints": true
     }
   ]
 }
