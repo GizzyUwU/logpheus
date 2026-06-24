@@ -110,7 +110,7 @@ export default {
               };
             }),
           );
-          if (mailRows.length === 0) {
+          if (mailRows.length > 0) {
             for (const item of newIds) {
               const pkg = packageDetails.get(item.id);
               const text = [
