@@ -3,7 +3,7 @@ export const jobOptions = z.enum(["newDevlog", "shopTrack", "tempShopMigration"]
 export const jobConfigSchema = z
   .object({
     shopTrack:
-      z.object({ channelId: z.string(), jobApiKey: z.string().nullable() })
+      z.object({ channelId: z.string(), jobApiKey: z.string().nullish() })
   }).partial();
 
 const regionsSchema = z.record(z.string(), z.string());
