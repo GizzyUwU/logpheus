@@ -3,7 +3,7 @@ import fs from "fs";
 import type { SlackCommandMiddlewareArgs, App } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { users } from "@/schema/users";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { yswsUsers } from "@/schema/ysws";
 import ysws from "@/ysws";
 import { loadAdapter } from "@/lib/adapters";
@@ -43,42 +43,43 @@ async function setup(app: App, ctx: RequestHandler) {
     const callbackId = `${ctx.namespacedPrefix}_${fileStem}`;
     app.view(callbackId, async (args) => {
       await args.ack();
-      const userData = await ctx.pg
-        .select()
-        .from(users)
-        .where(eq(users.userId, args.body.user.id))
-        .limit(1);
+      const userData = await ctx.pg.query.users.findFirst({
+        where: eq(users.userId, args.body.user.id),
+        with: {
+          ysws: {
+            where: eq(yswsUsers.yswsId, ysws.flavortown.id),
+            limit: 1
+          },
+          projects: true
+        }
+      });
+      
+      // const userData = await ctx.pg
+      //   .select()
+      //   .from(users)
+      //   .where(eq(users.userId, args.body.user.id))
+      //   .limit(1);
 
-      if (userData.length === 0)
+      if (!userData || Object.keys(userData).length === 0)
         return args.respond({
           text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
           response_type: "ephemeral",
         });
 
-      const yswsData = await ctx.pg
-        .select()
-        .from(yswsUsers)
-        .where(
-          and(
-            eq(yswsUsers.userId, args.body.user.id),
-            eq(yswsUsers.yswsId, ysws.flavortown.id),
-          ),
-        )
-        .limit(1);
-
-      if (yswsData.length === 0 && !callbackId.includes("register"))
+      const yswsData = userData.ysws[0];
+      if (!yswsData || Object.keys(yswsData).length === 0 && !callbackId.includes("register"))
         return args.client.chat.postEphemeral({
           channel: JSON.parse(args.view.private_metadata).channel,
           user: args.body.user.id,
           text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
         });
 
-      if (ctx.opClient && !userData[0]?.optOuts?.includes("analytics")) {
+      if (ctx.opClient && !userData?.optOuts?.includes("analytics")) {
         ctx.opClient.identify({
           profileId: args.body.user.id,
           firstName: args.body.user.name,
           properties: {
-            yswsId: yswsData[0]?.yswsId,
+            yswsId: ysws.flavortown.id,
             friendlyName: ysws.flavortown.humanName,
           },
         });
@@ -92,9 +93,10 @@ async function setup(app: App, ctx: RequestHandler) {
         await mod.execute(args, {
           ...ctx,
           callbackId,
-          yswsData: yswsData[0]!,
-          userData: userData[0]!,
-          yswsId: Number(ysws.flavortown.id)
+          yswsData,
+          userData,
+          projects: userData.projects ?? [],
+          yswsId: ysws.flavortown.id,
         } satisfies RequestHandler);
       } catch (err) {
         ctx.logger.error({ err });
@@ -108,30 +110,26 @@ export default {
   setup: async (app: App, ctx: RequestHandler) => setup(app, ctx),
   execute: async (args: SlackCommandMiddlewareArgs, ctx: RequestHandler) => {
     const [rawOption] = args.command.text.split(" ").filter(Boolean);
-    const userData = await ctx.pg
-      .select()
-      .from(users)
-      .where(eq(users.userId, args.command.user_id))
-      .limit(1);
+    const userData = await ctx.pg.query.users.findFirst({
+      where: eq(users.userId, args.body.user_id),
+      with: {
+        ysws: {
+          where: eq(yswsUsers.yswsId, ysws.flavortown.id),
+          limit: 1
+        },
+        projects: true
+      }
+    });
+    
 
-    if (userData.length === 0)
+    if (!userData || Object.keys(userData).length === 0)
       return args.respond({
         text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
         response_type: "ephemeral",
       });
 
-    const yswsData = await ctx.pg
-      .select()
-      .from(yswsUsers)
-      .where(
-        and(
-          eq(yswsUsers.userId, args.command.user_id),
-          eq(yswsUsers.yswsId, ysws.flavortown.id),
-        ),
-      )
-      .limit(1);
-
-    if (yswsData.length === 0 && rawOption !== "register")
+    const yswsData = userData.ysws[0];
+    if (!yswsData || Object.keys(yswsData).length === 0 && rawOption !== "register")
       return args.respond({
         text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
         response_type: "ephemeral",
@@ -143,7 +141,7 @@ export default {
         response_type: "ephemeral",
       });
 
-    const option = stripMrkdwn(rawOption);
+    const option = stripMrkdwn(rawOption.toLowerCase());
     const handler = commandHandlers.get(option);
 
     if (!handler)
@@ -152,7 +150,7 @@ export default {
         response_type: "ephemeral",
       });
 
-    if (ctx.opClient && !userData[0]?.optOuts?.includes("analytics")) {
+    if (ctx.opClient && !userData?.optOuts?.includes("analytics")) {
       ctx.opClient.identify({
         profileId: args.command.user_id,
         firstName: args.command.user_name,
@@ -174,12 +172,12 @@ export default {
     });
 
     let yswsClient =
-      ctx.clients[`${yswsData[0]?.yswsId}:${yswsData[0]?.userId}`];
+      ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`];
     if (rawOption !== "register" && !yswsClient) {
       const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-      const adapter = new AdapterClass(yswsData[0]?.apiKey, loggerCTX);
+      const adapter = new AdapterClass(undefined, loggerCTX);
       yswsClient = adapter;
-      ctx.clients[`${yswsData[0]?.yswsId}:${yswsData[0]?.userId}`] = adapter;
+      ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
     }
 
     await handler.execute(
@@ -187,17 +185,18 @@ export default {
         ...args,
         command: {
           ...args.command,
-          text: args.command.text.replace(rawOption, "").trim(),
+          text: stripMrkdwn(args.command.text.replace(rawOption, "").trim()),
         },
       },
       {
         ...ctx,
         logger: loggerCTX,
         callbackId: ctx.namespacedPrefix + "_" + option,
-        yswsData: yswsData[0]!,
-        userData: userData[0]!,
+        yswsData,
+        userData,
+        projects: userData.projects ?? [],
         yswsClient,
-        yswsId: Number(ysws.flavortown.id)
+        yswsId: ysws.flavortown.id,
       } satisfies RequestHandler,
     );
   },

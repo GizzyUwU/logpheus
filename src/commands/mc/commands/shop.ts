@@ -1,44 +1,21 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { getGenericErrorMessage } from "@/lib/genericError";
+import { z } from "zod";
+import { ZTypes } from "@/lib/macondo/types";
 import type Macondo from "@/lib/macondo";
 
 function resolveItemPrice(
-  item: {
-    price_hours: number;
-    price_gold: number;
-    regional_pricing: Record<
-      string,
-      {
-        available?: boolean | undefined;
-        store_url?: string | null | undefined;
-        price_hours?: number | undefined;
-      }
-    > | null;
-  },
+  item: z.infer<typeof ZTypes.ShopItem>,
   userRegion?: string,
 ): number {
-  if (!userRegion || userRegion.length === 0) {
-    return item.price_hours;
-  }
-
+  if (!userRegion || userRegion.length === 0) return item.price_hours;
   const regionalEntry = item.regional_pricing?.[userRegion.toUpperCase()];
   return regionalEntry?.price_hours ?? item.price_hours;
 }
 
 function resolveItemGold(
-  item: {
-    price_hours: number;
-    price_gold: number;
-    regional_pricing: Record<
-      string,
-      {
-        available?: boolean | undefined;
-        store_url?: string | null | undefined;
-        price_hours?: number | undefined;
-      }
-    > | null;
-  },
+  item: z.infer<typeof ZTypes.ShopItem>,
   userRegion?: string,
 ): number {
   const goldMultiplier = item.price_gold / item.price_hours;

@@ -1,8 +1,4 @@
 import type { RichTextBlock, WebClient } from "@slack/web-api";
-import type { PGlite } from "@electric-sql/pglite";
-import type { Pool } from "pg";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
 import { users } from "@/schema/users";
 import { projects } from "@/schema/projects";
 import { and, eq, isNull, not } from "drizzle-orm";
@@ -15,10 +11,7 @@ import { loadAdapter } from "@/lib/adapters";
 import type { GetDevlogResponse } from "@/lib/ft/types";
 import { yswsUsers } from "@/schema/ysws";
 import type { ApiAdapter, CanonicalShopItem } from "@/lib/adapters/types";
-type DB =
-  | (NodePgDatabase<Record<string, never>> & { $client: Pool })
-  | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
-
+import type { DatabaseType } from "@/index.ts";
 const utcFormatter = new Intl.DateTimeFormat("en-GB", {
   dateStyle: "short",
   timeStyle: "short",
@@ -41,13 +34,13 @@ async function getNewDevlogs(params: {
   app: WebClient;
   clients: Record<string, ApiAdapter>;
   clientKey: string;
-  db: DB;
+  db: DatabaseType;
   prefix: string;
   logger: typeof LogtapeLogger;
   userByUserId: Map<string, Partial<typeof users.$inferSelect>>;
-  userRow: typeof users.$inferSelect;
-  yswsRow: typeof yswsUsers.$inferSelect;
-  projectsMap: Map<string, Partial<typeof projects.$inferSelect>>;
+  userRow: Partial<typeof users.$inferSelect>;
+  yswsRow: Partial<typeof yswsUsers.$inferSelect>;
+  projectRow: typeof projects.$inferSelect;
 }): Promise<{
   name: string;
   devlogs: z.infer<typeof GetDevlogResponse>[];
@@ -66,10 +59,10 @@ async function getNewDevlogs(params: {
       return;
     }
 
-    let project = await client.project({ id: Number(params.projectId) });
+    let project = await client.project({ id: Number(params.projectRow.id) });
 
     if (!project || !project.status) {
-      const row = params.userByUserId.get(params.userRow.userId);
+      const row = params.userByUserId.get(params.userRow.userId!);
       params.logger.error("Unexpected project response", {
         project,
         user: row,
@@ -82,12 +75,12 @@ async function getNewDevlogs(params: {
       while (project.status === 429) {
         const waitMs = 2000 + Math.floor(Math.random() * 1000);
         await new Promise((res) => setTimeout(res, waitMs));
-        project = await client.project({ id: Number(params.projectId) });
+        project = await client.project({ id: Number(params.projectRow.id) });
       }
     }
 
     if (!Object.keys(project).length || !project.ok || !project.data) {
-      const row = params.userByUserId.get(params.userRow.userId);
+      const row = params.userByUserId.get(params.userRow.userId!);
       if (project.status === 200) return;
       if (project.status === 401) {
         delete params.clients[params.clientKey];
@@ -98,8 +91,8 @@ async function getNewDevlogs(params: {
           })
           .where(
             and(
-              eq(yswsUsers.userId, params.userRow.userId),
-              eq(yswsUsers.yswsId, params.yswsRow.yswsId),
+              eq(yswsUsers.userId, params.userRow.userId!),
+              eq(yswsUsers.yswsId, params.yswsRow.yswsId!),
             ),
           );
 
@@ -118,19 +111,18 @@ async function getNewDevlogs(params: {
           })
           .where(
             and(
-              eq(yswsUsers.userId, params.userRow.userId),
-              eq(yswsUsers.yswsId, params.yswsRow.yswsId),
+              eq(yswsUsers.userId, params.userRow.userId!),
+              eq(yswsUsers.yswsId, params.yswsRow.yswsId!),
             ),
           );
 
-        console.log(project.data)
         const yswsConfig = Object.values(ysws).find(
           (y) => y.id === params.yswsRow.yswsId,
         );
         if (!row?.channel) return;
         await params.app.chat.postMessage({
           channel: row?.channel,
-          text: `Hey! You got disabled because of ${params.projectId} no longer exist and is 404ing. To get re-enabled run /${params.prefix}-${yswsConfig?.short} remove ${params.projectId} and then /${params.prefix}-${yswsConfig?.short} reactivate.`,
+          text: `Hey! You got disabled because of ${params.projectRow.id} no longer exist and is 404ing. To get re-enabled run /${params.prefix}-${yswsConfig?.short} remove ${params.projectRow.id} and then /${params.prefix}-${yswsConfig?.short} reactivate.`,
         });
         return;
       } else if (
@@ -142,7 +134,7 @@ async function getNewDevlogs(params: {
       } else {
         params.logger.error(client.lastCode + " " + "Failed to get project", {
           project: {
-            id: params.projectId,
+            id: params.projectRow.id,
             yswsId: params.yswsRow.yswsId,
             user: params.userRow.userId,
             accId: params.yswsRow.accId ? params.yswsRow.accId : "Not set",
@@ -156,42 +148,11 @@ async function getNewDevlogs(params: {
       ? project.data.devlogIds
       : [];
 
-    const projectKey = `${params.yswsRow.yswsId}:${params.projectId}`;
-    const row = params.projectsMap.get(projectKey)
-      ? [params.projectsMap.get(projectKey)!]
-      : [];
-
-    if (row.length === 0) {
-      const initialDevlogIds = Array.isArray(project?.data.devlogIds)
-        ? project.data.devlogIds.map(Number)
-        : [];
-
-      await params.db
-        .insert(projects)
-        .values({
-          id: Number(params.projectId),
-          devlogIds: initialDevlogIds,
-          ysws: params.yswsRow.yswsId,
-        })
-        .onConflictDoUpdate({
-          target: [projects.ysws, projects.id],
-          set: {
-            devlogIds: initialDevlogIds,
-            ysws: params.yswsRow.yswsId,
-          },
-        });
-
-      return {
-        name: project.data.title ?? "Unknown",
-        devlogs: [],
-      };
-    }
-
     let cachedIds: number[] = [];
 
-    if (row.length > 0) {
+    if (Object.keys(params.projectRow).length > 0) {
       try {
-        cachedIds = row[0]?.devlogIds?.map(Number) ?? [];
+        cachedIds = params.projectRow.devlogIds?.map(Number) ?? [];
       } catch {
         cachedIds = [];
       }
@@ -226,9 +187,9 @@ async function getNewDevlogs(params: {
 
       const totalSeconds = (devlogS ?? []).reduce((sum, item) => sum + item, 0);
       const predictedCurrency = Math.round(
-        (row[0]?.multiplier ?? 10) * (totalSeconds / 3600),
+        (params.projectRow?.multiplier ?? 10) * (totalSeconds / 3600),
       );
-      const previousPredicted = row[0]?.predictedCurrency ?? 0;
+      const previousPredicted = params.projectRow?.predictedCurrency ?? 0;
 
       let nextGoalItem = "";
       let distanceFromGoal = 0;
@@ -282,7 +243,7 @@ async function getNewDevlogs(params: {
         .where(
           and(
             eq(projects.id, Number(params.projectId)),
-            eq(projects.ysws, params.yswsRow.yswsId),
+            eq(projects.ysws, params.yswsRow.yswsId!),
           ),
         );
 
@@ -311,12 +272,21 @@ export default {
   execute: async ({ client, clients, prefix, pg, logger }: RequestHandler) => {
     try {
       const userRows = await pg
-        .select()
+        .select({
+          userId: users.userId,
+          channel: users.channel,
+          pingGroup: users.pingGroup
+        })
         .from(users)
         .where(and(eq(users.disabled, false), not(isNull(users.channel))));
 
       const yswsRows = await pg
-        .select()
+        .select({
+          yswsId: yswsUsers.yswsId,
+          projects: yswsUsers.projects,
+          userId: yswsUsers.userId,
+          apiKey: yswsUsers.apiKey
+        })
         .from(yswsUsers)
         .where(
           and(eq(yswsUsers.disabled, false), not(isNull(yswsUsers.projects))),
@@ -332,12 +302,18 @@ export default {
         userRows.filter((u) => u.userId).map((u) => [String(u.userId), u]),
       );
 
-      const projectsMap = new Map(
-        (await pg.select().from(projects)).map((r) => [`${r.ysws}:${r.id}`, r]),
-      );
+      const projectRows = await pg.select().from(projects)
+      const projectsByKey = new Map<string, typeof projects.$inferSelect[]>();
+      for (const project of projectRows) {
+        if (!project.userId) return;
+        const key = `${project.userId}:${project.ysws}`;
+        if (!projectsByKey.has(key)) projectsByKey.set(key, []);
+        projectsByKey.get(key)!.push(project)
+      }
+
       for (const yswsRow of yswsRows) {
         const userRow = userRows.find((u) => u.userId === yswsRow?.userId);
-        if (!userRow?.channel || userRow.disabled) continue;
+        if (!userRow?.channel) continue;
         const yswsConfig = Object.values(ysws).find(
           (y) => y.id === yswsRow.yswsId,
         );
@@ -345,6 +321,8 @@ export default {
         if (!yswsConfig.jobs.includes("newDevlog")) continue;
         if (yswsConfig.apiKeyRequired && !yswsRow.apiKey) continue;
 
+        const userProjects = projectsByKey.get(`${yswsRow.userId}:${yswsRow.yswsId}`)
+        if (!userProjects || userProjects.length === 0) continue;
         const clientKey = `${yswsRow.yswsId}:${yswsRow.userId ?? "no-key"}`;
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsConfig.adapter);
@@ -354,14 +332,10 @@ export default {
           );
         }
 
-        const userProjectIds = Array.isArray(yswsRow.projects)
-          ? yswsRow.projects.map(Number)
-          : [];
-
-        for (const projectId of userProjectIds) {
+        for (const project of userProjects) {
           const projData = await getNewDevlogs({
             apiKey: String(yswsRow.apiKey),
-            projectId,
+            projectId: project.id,
             app: client,
             clients,
             clientKey,
@@ -371,7 +345,7 @@ export default {
             userByUserId,
             userRow,
             yswsRow,
-            projectsMap,
+            projectRow: project,
           });
           if (!clients[clientKey]) break;
           if (!projData) continue;
@@ -434,11 +408,7 @@ export default {
                       `<${m.url?.includes("https") ? m.url : yswsConfig.mediaUrl + m.url}|Video ${i + 1}>`,
                   );
 
-                const pingGroupId =
-                  userRow?.meta
-                    ?.find((s) => s.startsWith("PingGroup::"))
-                    ?.split("::")[1] ?? "";
-
+                const pingGroupId = userRow?.pingGroup;
                 try {
                   if (devlog.body && !containsMarkdown(devlog.body)) {
                     await client.chat.postMessage({
@@ -450,7 +420,7 @@ export default {
                           type: "section",
                           text: {
                             type: "mrkdwn",
-                            text: `:shipitparrot: <${yswsConfig.url}/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                            text: `:shipitparrot: <${yswsConfig.url}/projects/${project.id}|${projData.name}> got a new devlog posted! :shipitparrot:`,
                           },
                         },
                         {
@@ -523,7 +493,7 @@ export default {
                           type: "section",
                           text: {
                             type: "mrkdwn",
-                            text: `:shipitparrot: <${yswsConfig.url}/projects/${projectId}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                            text: `:shipitparrot: <${yswsConfig.url}/projects/${project.id}|${projData.name}> got a new devlog posted! :shipitparrot:`,
                           },
                         },
                         ...(devlog.body
@@ -628,7 +598,7 @@ export default {
                     "Unexpected error occured when trying to post the automated message.",
                     {
                       error: err,
-                      projectId,
+                      projectId: project.id,
                       devlogId: devlog.id,
                     },
                   );
@@ -639,7 +609,7 @@ export default {
                   });
                 }
               } catch (err) {
-                logger.error({ error: err, projectId });
+                logger.error({ error: err, projectId: project.id });
               }
             }
           }

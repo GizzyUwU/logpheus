@@ -7,7 +7,7 @@ export default {
   desc: "Look through what data from flavortown the bot has on you!",
   execute: async (
     { respond }: SlackCommandMiddlewareArgs,
-    { prefix, userData, yswsData }: RequestHandler,
+    { prefix, userData, yswsData, projects }: RequestHandler,
   ) => {
     const yswsConfig = Object.values(ysws).find(
       (record) => record.id === yswsData?.yswsId,
@@ -18,11 +18,11 @@ export default {
       {
         label: "Projects",
         value:
-          yswsData?.projects && yswsData?.projects.length > 0
-            ? yswsData.projects
+          projects && projects.length > 0
+            ? projects
                 .map(
-                  (id: string | number) =>
-                    `<${yswsConfig?.url + "/projects/" + id}|${id}>`,
+                  (p) =>
+                    `<${yswsConfig?.url + "/projects/" + p.id}|${p.id}>`,
                 )
                 .join(", ")
             : "No projects",

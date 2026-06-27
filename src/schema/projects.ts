@@ -1,6 +1,12 @@
-import { pgTable, integer, real, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, integer, real, primaryKey, text } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { users } from "./users";
 export const projects = pgTable("projects", {
   id: integer().notNull(),
+  userId: text().references(() => users.userId, {
+    onDelete: "cascade",
+    onUpdate: "cascade"
+  }),
   devlogIds: integer().array().notNull(),
   predictedCookies: integer().default(0),
   predictedCurrency: integer().default(0),
@@ -9,3 +15,10 @@ export const projects = pgTable("projects", {
 }, (table) => [
   primaryKey({ columns: [table.id, table.ysws] }),
 ]);
+
+export const projectsRelations = relations(projects, ({ one }) => ({
+  user: one(users, {
+    fields: [projects.userId],
+    references: [users.userId]
+  })
+}))

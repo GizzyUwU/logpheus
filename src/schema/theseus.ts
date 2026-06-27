@@ -1,8 +1,12 @@
 import { pgTable, text, primaryKey, timestamp } from "drizzle-orm/pg-core";
+import { users } from "./users";
 export const theseus = pgTable(
   "theseus",
   {
-    userId: text().notNull(),
+    userId: text().notNull().references(() => users.userId, {
+      onDelete: "cascade",
+      onUpdate: "cascade"
+    }),
     id: text().notNull(),
     title: text().notNull(),
     public_url: text().notNull(),

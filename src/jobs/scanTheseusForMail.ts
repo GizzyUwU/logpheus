@@ -25,7 +25,6 @@ export default {
         .select({
           userId: users.userId,
           channel: users.channel,
-          meta: users.meta,
           theseusKey: users.theseusKey,
         })
         .from(users)

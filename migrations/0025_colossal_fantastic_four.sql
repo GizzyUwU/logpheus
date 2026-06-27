@@ -1,0 +1,1 @@
+CREATE INDEX "users_active_hcb_idx" ON "users" USING btree ("hcb_id") WHERE "users"."disabled" = false;

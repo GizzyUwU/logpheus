@@ -44,12 +44,12 @@ export default {
       );
 
       const updateFields: Partial<UserRow> = {};
-      let updatedMeta = userData?.meta ?? [];
+      // let updatedMeta = userData?.meta ?? [];
       if (flatValues["pingGroupId"]) {
-        updatedMeta = [...updatedMeta.filter(e => !e.startsWith("PingGroup::")), "PingGroup::" + flatValues["pingGroupId"]];
+        updateFields.pingGroup = flatValues["pingGroupId"];
       }
       if (flatValues["HCBId"]) {
-        updatedMeta = [...updatedMeta.filter(e => !e.startsWith("HCBId::")), "HCBId::" + flatValues["HCBId"]];
+        updateFields.hcbId = flatValues["HCBId"];
       }
       if (flatValues["channelId"]) {
         updateFields.channel = flatValues["channelId"];
@@ -57,8 +57,6 @@ export default {
       if (flatValues["theseusKey"]) {
         updateFields.theseusKey = flatValues["theseusKey"];
       }
-    
-      updateFields.meta = updatedMeta
 
       const optoutsBlock = view.state.values?.["personal"]?.["optouts"] as any;
 

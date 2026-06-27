@@ -13,6 +13,7 @@ import { OpenRouter } from "@openrouter/sdk";
 import { Pool } from "pg";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import * as schemas from "@/schema/index.ts";
 import * as Sentry from "@sentry/bun";
 import type { WebClient } from "@slack/web-api";
 import {
@@ -25,8 +26,6 @@ import { getSentrySink } from "@logtape/sentry";
 import { getLogger as getDrizzleLogger } from "@logtape/drizzle-orm";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
 import { OpenPanel } from "@openpanel/sdk";
-import { yswsUsers } from "./schema/ysws";
-import { users } from "./schema/users";
 import loadAPI from "./api/index";
 import migrateUsers from "./migrate";
 import ansiRegex from "ansi-regex";
@@ -35,8 +34,8 @@ import type { ApiAdapter } from "./lib/adapters/types";
 let sentryEnabled = false;
 let prefix: string;
 export type DatabaseType =
-  | (NodePgDatabase<Record<string, never>> & { $client: Pool })
-  | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
+  | (NodePgDatabase<typeof schemas> & { $client: Pool })
+  | (PgliteDatabase<typeof schemas> & { $client: PGlite });
 const cacheDir = path.join(__dirname, "../cache");
 const registeredRequestModules = new Set<string>();
 const registeredInitModules = new Set<string>();
@@ -208,6 +207,9 @@ if (process.env["PGLITE"] === "false") {
     const { migrate } = await import("drizzle-orm/node-postgres/migrator");
     const pool = new Pool({
       connectionString: process.env["DB_URL"],
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
     });
 
     const client = await pool.connect();
@@ -217,12 +219,33 @@ if (process.env["PGLITE"] === "false") {
       client.release();
     }
 
+    if (opClient) {
+      const ogQuery = pool.query.bind(pool);
+      pool.query = (async (...args: Parameters<typeof pool.query>) => {
+        const start = performance.now();
+        try {
+          return ogQuery(...args);
+        } finally {
+          const durationMs = performance.now() - start;
+
+          void opClient?.track("dbQueryTime", {
+            timestamp: Date.now(),
+            properties: {
+              duration: durationMs,
+              query: args[0],
+            },
+          });
+        }
+      }) as typeof pool.query;
+    }
+
     const db = drizzle({
       client: pool,
       casing: "snake_case",
       logger: getDrizzleLogger({
         level: "warning",
       }),
+      schema: schemas
     });
     pg = db;
     await migrate(db, {
@@ -248,6 +271,7 @@ if (process.env["PGLITE"] === "false") {
     logger: getDrizzleLogger({
       level: "warning",
     }),
+    schema: schemas,
   });
   pg = db;
   await migrate(db, {
@@ -314,8 +338,9 @@ export interface RequestHandler {
   folder?: string | undefined;
   callbackId?: string;
   commands?: typeof commands;
-  yswsData?: typeof yswsUsers.$inferSelect;
-  userData?: typeof users.$inferSelect;
+  yswsData?: typeof schemas.yswsUsers.$inferSelect;
+  userData?: typeof schemas.users.$inferSelect;
+  projects?: typeof schemas.projects.$inferSelect[];
   yswsClient?: ApiAdapter | undefined;
   opClient?: OpenPanel | undefined;
   yswsId?: number;

@@ -1,16 +1,10 @@
-import type { PGlite } from "@electric-sql/pglite";
-import type { Pool } from "pg";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
 import { eq, type InferSelectModel } from "drizzle-orm";
-import type { logger as LogTape } from "@/index";
+import type { DatabaseType } from "@/index.ts";
+import type { logger as LogTape } from "@/index.ts";
 import { users } from "@/schema/users";
-type DB =
-  | (NodePgDatabase<Record<string, never>> & { $client: Pool })
-  | (PgliteDatabase<Record<string, never>> & { $client: PGlite });
 
 export default async function checkAPIKey(data: {
-  db?: DB;
+  db?: DatabaseType;
   userData?: InferSelectModel<typeof users>;
   apiKey: string | undefined;
   logger: typeof LogTape;
