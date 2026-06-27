@@ -227,11 +227,11 @@ if (process.env["PGLITE"] === "false") {
           return ogQuery(...args);
         } finally {
           const durationMs = performance.now() - start;
-
           void opClient?.track("dbQueryTime", {
             timestamp: Date.now(),
             properties: {
-              duration: durationMs,
+              durationMs: durationMs,
+              durationS: durationMs / 1000,
               query: args[0],
             },
           });
