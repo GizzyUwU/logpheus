@@ -1,16 +1,14 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { eq, inArray } from "drizzle-orm";
-import { users } from "@/schema/users";
 import type { RequestHandler } from "@/index.ts";
-import { projects } from "@/schema/projects";
-import { yswsUsers } from "@/schema/ysws";
+import * as schemas from "@/schema"
 
 export default {
   name: "revoke",
   desc: "Withdraw your data from the bot :(",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { pg, logger, prefix, client, clients }: RequestHandler,
+    { pg, logger, prefix, client, clients, userData, projects, yswsAll }: RequestHandler & { yswsAll: typeof schemas.yswsUsers.$inferSelect[] },
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -22,27 +20,29 @@ export default {
           response_type: "ephemeral",
         });
 
-      const res = await pg
-        .select()
-        .from(users)
-        .where(eq(users.userId, command.user_id));
-      if (res.length === 0)
+      if (!userData)
         return await respond({
           text: `You don't exist in the db so I can't revoke you.`,
           response_type: "ephemeral",
         });
-      const projectIds = res[0]?.projects;
+      
+      const projectIds = projects?.map((p) => p.id);
 
       if (Array.isArray(projectIds) && projectIds.length > 0) {
-        await pg.delete(projects).where(inArray(projects.id, projectIds));
+        await pg.delete(schemas.projects).where(inArray(schemas.projects.id, projectIds));
       }
 
-      if (res[0]?.apiKey && clients[res[0]?.apiKey]) {
-        delete clients[res[0]?.apiKey];
+      for (const yswsData of yswsAll) {
+        if (yswsData?.apiKey && clients[`${yswsData.yswsId}:${yswsData?.apiKey}`]) {
+          delete clients[`${yswsData.yswsId}:${yswsData?.apiKey}`];
+        }
       }
 
-      await pg.delete(yswsUsers).where(eq(yswsUsers.userId, command.user_id))
-      await pg.delete(users).where(eq(users.userId, command.user_id));
+      if (userData.hcbId) {
+        await pg.delete(schemas.hcb).where(eq(schemas.users.userId, command.user_id));
+      }
+      
+      await pg.delete(schemas.users).where(eq(schemas.users.userId, command.user_id));
 
       return await respond({
         text: `You're data has completely been wiped from ${prefix}! Sad to see you go :(`,

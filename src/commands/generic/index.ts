@@ -65,7 +65,7 @@ async function setup(app: App, ctx: RequestHandler) {
         });
         ctx.opClient.clear();
       }
-      
+
       try {
         await mod.execute(args, {
           ...ctx,
@@ -83,13 +83,15 @@ export default {
   setup: async (app: App, ctx: RequestHandler) => setup(app, ctx),
   execute: async (args: SlackCommandMiddlewareArgs, ctx: RequestHandler) => {
     const [rawOption] = args.command.text.split(" ").filter(Boolean);
-    const userData = await ctx.pg
-      .select()
-      .from(users)
-      .where(eq(users.userId, args.command.user_id))
-      .limit(1);
+    const userData = await ctx.pg.query.users.findFirst({
+      where: eq(users.userId, args.body.user_id),
+      with: {
+        ysws: true,
+        projects: true,
+      },
+    });
 
-    if (userData.length === 0 && !rawOption?.includes("register"))
+    if (!userData || Object.keys(userData).length === 0)
       return args.respond({
         text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
         response_type: "ephemeral",
@@ -114,7 +116,7 @@ export default {
       command: ctx.prefix + " " + option,
     });
 
-    if (ctx.opClient && !userData[0]?.optOuts?.includes("analytics")) {
+    if (ctx.opClient && !userData?.optOuts?.includes("analytics")) {
       ctx.opClient.identify({
         profileId: args.command.user_id,
         firstName: args.command.user_name,
@@ -142,7 +144,9 @@ export default {
         ...ctx,
         callbackId: ctx.namespacedPrefix + "_" + option,
         logger: loggerCTX,
-        userData: userData[0]!
+        userData: userData,
+        yswsAll: userData.ysws,
+        projects: userData.projects,
       },
     );
   },
