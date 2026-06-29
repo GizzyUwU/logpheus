@@ -1,7 +1,7 @@
 import type { RichTextBlock, WebClient } from "@slack/web-api";
 import { users } from "@/schema/users";
 import { projects } from "@/schema/projects";
-import { and, eq, isNull, not } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { containsMarkdown } from "@/lib/parseMarkdown";
 import { parseMarkdownToSlackBlocks } from "@/lib/parseMarkdown";
 import type { logger as LogtapeLogger, RequestHandler } from "@/index.ts";
@@ -37,7 +37,6 @@ async function getNewDevlogs(params: {
   db: DatabaseType;
   prefix: string;
   logger: typeof LogtapeLogger;
-  userByUserId: Map<string, Partial<typeof users.$inferSelect>>;
   userRow: Partial<typeof users.$inferSelect>;
   yswsRow: Partial<typeof yswsUsers.$inferSelect>;
   projectRow: typeof projects.$inferSelect;
@@ -62,7 +61,7 @@ async function getNewDevlogs(params: {
     let project = await client.project({ id: Number(params.projectRow.id) });
 
     if (!project || !project.status) {
-      const row = params.userByUserId.get(params.userRow.userId!);
+      const row = params.userRow;
       params.logger.error("Unexpected project response", {
         project,
         user: row,
@@ -80,7 +79,7 @@ async function getNewDevlogs(params: {
     }
 
     if (!Object.keys(project).length || !project.ok || !project.data) {
-      const row = params.userByUserId.get(params.userRow.userId!);
+      const row = params.userRow;
       if (project.status === 200) return;
       if (project.status === 401) {
         delete params.clients[params.clientKey];
@@ -271,26 +270,12 @@ export default {
   name: "checkForNewDevlogs",
   execute: async ({ client, clients, prefix, pg, logger }: RequestHandler) => {
     try {
-      const userRows = await pg
-        .select({
-          userId: users.userId,
-          channel: users.channel,
-          pingGroup: users.pingGroup
-        })
-        .from(users)
-        .where(and(eq(users.disabled, false), not(isNull(users.channel))));
-
-      const yswsRows = await pg
-        .select({
-          yswsId: yswsUsers.yswsId,
-          projects: yswsUsers.projects,
-          userId: yswsUsers.userId,
-          apiKey: yswsUsers.apiKey
-        })
-        .from(yswsUsers)
-        .where(
-          and(eq(yswsUsers.disabled, false), not(isNull(yswsUsers.projects))),
-        );
+      const userRows = await pg.query.users.findMany({
+        with: {
+          ysws: true,
+          projects: true,
+        },
+      });
 
       if (!userRows?.length) {
         for (const key of Object.keys(clients)) {
@@ -298,323 +283,315 @@ export default {
         }
         return;
       }
-      const userByUserId = new Map(
-        userRows.filter((u) => u.userId).map((u) => [String(u.userId), u]),
-      );
 
-      const projectRows = await pg.select().from(projects)
-      const projectsByKey = new Map<string, typeof projects.$inferSelect[]>();
-      for (const project of projectRows) {
-        if (!project.userId) return;
-        const key = `${project.userId}:${project.ysws}`;
-        if (!projectsByKey.has(key)) projectsByKey.set(key, []);
-        projectsByKey.get(key)!.push(project)
-      }
-
-      for (const yswsRow of yswsRows) {
-        const userRow = userRows.find((u) => u.userId === yswsRow?.userId);
+      for (const userRow of userRows) {
         if (!userRow?.channel) continue;
-        const yswsConfig = Object.values(ysws).find(
-          (y) => y.id === yswsRow.yswsId,
-        );
-        if (!yswsConfig) continue;
-        if (!yswsConfig.jobs.includes("newDevlog")) continue;
-        if (yswsConfig.apiKeyRequired && !yswsRow.apiKey) continue;
-
-        const userProjects = projectsByKey.get(`${yswsRow.userId}:${yswsRow.yswsId}`)
-        if (!userProjects || userProjects.length === 0) continue;
-        const clientKey = `${yswsRow.yswsId}:${yswsRow.userId ?? "no-key"}`;
-        if (!clients[clientKey]) {
-          const AdapterClass = await loadAdapter(yswsConfig.adapter);
-          clients[clientKey] = new AdapterClass(
-            yswsConfig.apiKeyRequired ? yswsRow.apiKey : undefined,
-            logger,
+        for (const yswsRow of userRow.ysws) {
+          const yswsConfig = Object.values(ysws).find(
+            (y) => y.id === yswsRow.yswsId,
           );
-        }
+          if (!yswsConfig) continue;
+          if (!yswsConfig.jobs.includes("newDevlog")) continue;
+          if (yswsConfig.apiKeyRequired && !yswsRow.apiKey) continue;
 
-        for (const project of userProjects) {
-          const projData = await getNewDevlogs({
-            apiKey: String(yswsRow.apiKey),
-            projectId: project.id,
-            app: client,
-            clients,
-            clientKey,
-            db: pg,
-            prefix: String(prefix),
-            logger,
-            userByUserId,
-            userRow,
-            yswsRow,
-            projectRow: project,
-          });
-          if (!clients[clientKey]) break;
-          if (!projData) continue;
-          if (projData.devlogs.length > 0) {
-            for (const devlog of projData.devlogs) {
-              try {
-                const createdAt = devlog.created_at
-                  ? new Date(devlog.created_at)
-                  : new Date();
-                const seconds = devlog.duration_seconds;
-                const pad = (n: number) => n.toString().padStart(2, "0");
-                const year = createdAt.getUTCFullYear();
-                const month = pad(createdAt.getUTCMonth() + 1);
-                const day = pad(createdAt.getUTCDate());
-                const hours = pad(createdAt.getUTCHours());
-                const minutes = pad(createdAt.getUTCMinutes());
-                const cs50Timestamp = `${year}${month}${day}T${hours}${minutes}+0000`;
-                const timestamp = utcFormatter.format(createdAt);
+          const userProjects = userRow.projects.filter((p) => p.ysws === yswsRow.yswsId)
+          if (!userProjects || userProjects.length === 0) continue;
+          const clientKey = `${yswsRow.yswsId}:${yswsRow.userId ?? "no-key"}`;
+          if (!clients[clientKey]) {
+            const AdapterClass = await loadAdapter(yswsConfig.adapter);
+            clients[clientKey] = new AdapterClass(
+              yswsConfig.apiKeyRequired ? yswsRow.apiKey : undefined,
+              logger,
+            );
+          }
 
-                const durationString = ([86400, 3600, 60] as const)
-                  .map((sec, i) => {
-                    const val =
-                      Math.floor((seconds || 0) / sec) %
-                      (i === 0 ? Infinity : i === 1 ? 24 : 60);
-                    const labels = ["day", "hour", "minute"];
-                    return val > 0
-                      ? `${val} ${labels[i]}${val > 1 ? "s" : ""}`
-                      : null;
-                  })
-                  .filter(Boolean)
-                  .join(" ");
+          for (const project of userProjects) {
+            const projData = await getNewDevlogs({
+              apiKey: String(yswsRow.apiKey),
+              projectId: project.id,
+              app: client,
+              clients,
+              clientKey,
+              db: pg,
+              prefix: String(prefix),
+              logger,
+              userRow,
+              yswsRow,
+              projectRow: project,
+            });
+            if (!clients[clientKey]) break;
+            if (!projData) continue;
+            if (projData.devlogs.length > 0) {
+              for (const devlog of projData.devlogs) {
+                try {
+                  const createdAt = devlog.created_at
+                    ? new Date(devlog.created_at)
+                    : new Date();
+                  const seconds = devlog.duration_seconds;
+                  const pad = (n: number) => n.toString().padStart(2, "0");
+                  const year = createdAt.getUTCFullYear();
+                  const month = pad(createdAt.getUTCMonth() + 1);
+                  const day = pad(createdAt.getUTCDate());
+                  const hours = pad(createdAt.getUTCHours());
+                  const minutes = pad(createdAt.getUTCMinutes());
+                  const cs50Timestamp = `${year}${month}${day}T${hours}${minutes}+0000`;
+                  const timestamp = utcFormatter.format(createdAt);
 
-                type Block = {
-                  type: "image";
-                  image_url: string;
-                  alt_text: string;
-                };
+                  const durationString = ([86400, 3600, 60] as const)
+                    .map((sec, i) => {
+                      const val =
+                        Math.floor((seconds || 0) / sec) %
+                        (i === 0 ? Infinity : i === 1 ? 24 : 60);
+                      const labels = ["day", "hour", "minute"];
+                      return val > 0
+                        ? `${val} ${labels[i]}${val > 1 ? "s" : ""}`
+                        : null;
+                    })
+                    .filter(Boolean)
+                    .join(" ");
 
-                const mediaBlocks: Block[] = (devlog.media || [])
-                  .map((m, i): Block | null => {
-                    const url = m.url?.includes("https")
-                      ? m.url
-                      : yswsConfig.mediaUrl + m.url;
-                    const alt = String(i + 1);
+                  type Block = {
+                    type: "image";
+                    image_url: string;
+                    alt_text: string;
+                  };
 
-                    if (m.content_type && m.content_type.startsWith("image")) {
-                      return { type: "image", image_url: url, alt_text: alt };
+                  const mediaBlocks: Block[] = (devlog.media || [])
+                    .map((m, i): Block | null => {
+                      const url = m.url?.includes("https")
+                        ? m.url
+                        : yswsConfig.mediaUrl + m.url;
+                      const alt = String(i + 1);
+
+                      if (
+                        m.content_type &&
+                        m.content_type.startsWith("image")
+                      ) {
+                        return { type: "image", image_url: url, alt_text: alt };
+                      }
+
+                      return null;
+                    })
+                    .filter((b): b is Block => b !== null);
+
+                  const videoLinks = (devlog.media || [])
+                    .filter(
+                      (m) =>
+                        m.content_type && m.content_type.startsWith("video"),
+                    )
+                    .map(
+                      (m, i) =>
+                        `<${m.url?.includes("https") ? m.url : yswsConfig.mediaUrl + m.url}|Video ${i + 1}>`,
+                    );
+
+                  const pingGroupId = userRow?.pingGroup;
+                  try {
+                    if (devlog.body && !containsMarkdown(devlog.body)) {
+                      await client.chat.postMessage({
+                        channel: userRow.channel,
+                        unfurl_links: false,
+                        unfurl_media: true,
+                        blocks: [
+                          {
+                            type: "section",
+                            text: {
+                              type: "mrkdwn",
+                              text: `:shipitparrot: <${yswsConfig.url}/projects/${project.id}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                            },
+                          },
+                          {
+                            type: "section",
+                            text: {
+                              type: "mrkdwn",
+                              text: String(devlog.body)
+                                .split("\n")
+                                .map((line: string) => `> ${line}`)
+                                .join("\n"),
+                            },
+                          },
+                          ...(pingGroupId
+                            ? [
+                                {
+                                  type: "rich_text",
+                                  elements: [
+                                    {
+                                      type: "rich_text_section",
+                                      elements: [
+                                        {
+                                          type: "usergroup",
+                                          usergroup_id: pingGroupId,
+                                        },
+                                      ],
+                                    },
+                                  ],
+                                } as RichTextBlock,
+                              ]
+                            : []),
+                          ...(videoLinks.length > 0
+                            ? [
+                                {
+                                  type: "section",
+                                  text: {
+                                    type: "mrkdwn",
+                                    text: `> Video Devlog Links: ${videoLinks.join(", ")}`,
+                                  },
+                                } as {
+                                  type: "section";
+                                  text: {
+                                    type: "mrkdwn";
+                                    text: string;
+                                  };
+                                },
+                              ]
+                            : []),
+                          {
+                            type: "divider",
+                          },
+                          {
+                            type: "context",
+                            elements: [
+                              {
+                                type: "mrkdwn",
+                                text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> ${seconds !== 0 ? `and took ${durationString}.` : ""} ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
+                              },
+                            ],
+                          },
+                          ...mediaBlocks,
+                        ],
+                      });
+                    } else {
+                      await client.chat.postMessage({
+                        channel: userRow.channel,
+                        unfurl_links: false,
+                        unfurl_media: true,
+                        blocks: [
+                          {
+                            type: "section",
+                            text: {
+                              type: "mrkdwn",
+                              text: `:shipitparrot: <${yswsConfig.url}/projects/${project.id}|${projData.name}> got a new devlog posted! :shipitparrot:`,
+                            },
+                          },
+                          ...(devlog.body
+                            ? parseMarkdownToSlackBlocks(devlog.body)
+                            : []),
+                          ...(pingGroupId
+                            ? [
+                                {
+                                  type: "rich_text",
+                                  elements: [
+                                    {
+                                      type: "rich_text_section",
+                                      elements: [
+                                        {
+                                          type: "usergroup",
+                                          usergroup_id: pingGroupId,
+                                        },
+                                      ],
+                                    },
+                                  ],
+                                } as RichTextBlock,
+                              ]
+                            : []),
+                          ...(videoLinks.length > 0
+                            ? [
+                                {
+                                  type: "section",
+                                  text: {
+                                    type: "mrkdwn",
+                                    text: `> Video Devlog Links: ${videoLinks.join(", ")}`,
+                                  },
+                                } as {
+                                  type: "section";
+                                  text: {
+                                    type: "mrkdwn";
+                                    text: string;
+                                  };
+                                },
+                              ]
+                            : []),
+                          {
+                            type: "divider",
+                          },
+                          {
+                            type: "context",
+                            elements: [
+                              {
+                                type: "mrkdwn",
+                                text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> ${seconds !== 0 ? `and took ${durationString}.` : ""} ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
+                              },
+                            ],
+                          },
+                          ...mediaBlocks,
+                        ],
+                      });
+                    }
+                  } catch (err) {
+                    if (typeof err === "object" && err !== null) {
+                      const error = err as {
+                        code?: string;
+                        message?: string;
+                        data?: {
+                          error: string;
+                        };
+                      };
+                      if (
+                        error?.code === "slack_webapi_platform_error" &&
+                        error.data?.error === "channel_not_found"
+                      ) {
+                        if (!userRow.userId) continue;
+                        delete clients[clientKey];
+                        await pg
+                          .update(yswsUsers)
+                          .set({
+                            disabled: true,
+                          })
+                          .where(
+                            and(
+                              eq(yswsUsers.userId, userRow.userId),
+                              eq(yswsUsers.yswsId, yswsRow.yswsId),
+                            ),
+                          );
+                        await client.chat.postMessage({
+                          channel: userRow.userId,
+                          text: `Hey! The automated devlog poster has been disabled for you because I am not in the channel where it's meant to be sent in. Add me to the channel and run /${prefix}-reactivate to get it enabled.`,
+                        });
+                        continue;
+                      }
+                      if (
+                        typeof error.message === "string" &&
+                        error.message.includes("downloading image failed")
+                      ) {
+                        await client.chat.postMessage({
+                          channel: userRow.channel,
+                          text: `Hey! Your devlog post failed because the image URL isn't usable by slack. Looking at github issues of boltjs this is usually because it isn't accessible to slack but it may be other issues like slack not supporting it.`,
+                        });
+                        continue;
+                      }
                     }
 
-                    return null;
-                  })
-                  .filter((b): b is Block => b !== null);
+                    logger.error(
+                      "Unexpected error occured when trying to post the automated message.",
+                      {
+                        error: err,
+                        projectId: project.id,
+                        devlogId: devlog.id,
+                      },
+                    );
 
-                const videoLinks = (devlog.media || [])
-                  .filter(
-                    (m) => m.content_type && m.content_type.startsWith("video"),
-                  )
-                  .map(
-                    (m, i) =>
-                      `<${m.url?.includes("https") ? m.url : yswsConfig.mediaUrl + m.url}|Video ${i + 1}>`,
-                  );
-
-                const pingGroupId = userRow?.pingGroup;
-                try {
-                  if (devlog.body && !containsMarkdown(devlog.body)) {
                     await client.chat.postMessage({
                       channel: userRow.channel,
-                      unfurl_links: false,
-                      unfurl_media: true,
-                      blocks: [
-                        {
-                          type: "section",
-                          text: {
-                            type: "mrkdwn",
-                            text: `:shipitparrot: <${yswsConfig.url}/projects/${project.id}|${projData.name}> got a new devlog posted! :shipitparrot:`,
-                          },
-                        },
-                        {
-                          type: "section",
-                          text: {
-                            type: "mrkdwn",
-                            text: String(devlog.body)
-                              .split("\n")
-                              .map((line: string) => `> ${line}`)
-                              .join("\n"),
-                          },
-                        },
-                        ...(pingGroupId
-                          ? [
-                              {
-                                type: "rich_text",
-                                elements: [
-                                  {
-                                    type: "rich_text_section",
-                                    elements: [
-                                      {
-                                        type: "usergroup",
-                                        usergroup_id: pingGroupId,
-                                      },
-                                    ],
-                                  },
-                                ],
-                              } as RichTextBlock,
-                            ]
-                          : []),
-                        ...(videoLinks.length > 0
-                          ? [
-                              {
-                                type: "section",
-                                text: {
-                                  type: "mrkdwn",
-                                  text: `> Video Devlog Links: ${videoLinks.join(", ")}`,
-                                },
-                              } as {
-                                type: "section";
-                                text: {
-                                  type: "mrkdwn";
-                                  text: string;
-                                };
-                              },
-                            ]
-                          : []),
-                        {
-                          type: "divider",
-                        },
-                        {
-                          type: "context",
-                          elements: [
-                            {
-                              type: "mrkdwn",
-                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> ${seconds !== 0 ? `and took ${durationString}.` : ""} ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
-                            },
-                          ],
-                        },
-                        ...mediaBlocks,
-                      ],
-                    });
-                  } else {
-                    await client.chat.postMessage({
-                      channel: userRow.channel,
-                      unfurl_links: false,
-                      unfurl_media: true,
-                      blocks: [
-                        {
-                          type: "section",
-                          text: {
-                            type: "mrkdwn",
-                            text: `:shipitparrot: <${yswsConfig.url}/projects/${project.id}|${projData.name}> got a new devlog posted! :shipitparrot:`,
-                          },
-                        },
-                        ...(devlog.body
-                          ? parseMarkdownToSlackBlocks(devlog.body)
-                          : []),
-                        ...(pingGroupId
-                          ? [
-                              {
-                                type: "rich_text",
-                                elements: [
-                                  {
-                                    type: "rich_text_section",
-                                    elements: [
-                                      {
-                                        type: "usergroup",
-                                        usergroup_id: pingGroupId,
-                                      },
-                                    ],
-                                  },
-                                ],
-                              } as RichTextBlock,
-                            ]
-                          : []),
-                        ...(videoLinks.length > 0
-                          ? [
-                              {
-                                type: "section",
-                                text: {
-                                  type: "mrkdwn",
-                                  text: `> Video Devlog Links: ${videoLinks.join(", ")}`,
-                                },
-                              } as {
-                                type: "section";
-                                text: {
-                                  type: "mrkdwn";
-                                  text: string;
-                                };
-                              },
-                            ]
-                          : []),
-                        {
-                          type: "divider",
-                        },
-                        {
-                          type: "context",
-                          elements: [
-                            {
-                              type: "mrkdwn",
-                              text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> ${seconds !== 0 ? `and took ${durationString}.` : ""} ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
-                            },
-                          ],
-                        },
-                        ...mediaBlocks,
-                      ],
+                      text: `Hey! The latest devlog post didn't take place because an error occurred! Just wanted to keep you in the loop.`,
                     });
                   }
                 } catch (err) {
-                  if (typeof err === "object" && err !== null) {
-                    const error = err as {
-                      code?: string;
-                      message?: string;
-                      data?: {
-                        error: string;
-                      };
-                    };
-                    if (
-                      error?.code === "slack_webapi_platform_error" &&
-                      error.data?.error === "channel_not_found"
-                    ) {
-                      if (!userRow.userId) continue;
-                      delete clients[clientKey];
-                      await pg
-                        .update(yswsUsers)
-                        .set({
-                          disabled: true,
-                        })
-                        .where(
-                          and(
-                            eq(yswsUsers.userId, userRow.userId),
-                            eq(yswsUsers.yswsId, yswsRow.yswsId),
-                          ),
-                        );
-                      await client.chat.postMessage({
-                        channel: userRow.userId,
-                        text: `Hey! The automated devlog poster has been disabled for you because I am not in the channel where it's meant to be sent in. Add me to the channel and run /${prefix}-reactivate to get it enabled.`,
-                      });
-                      continue;
-                    }
-                    if (
-                      typeof error.message === "string" &&
-                      error.message.includes("downloading image failed")
-                    ) {
-                      await client.chat.postMessage({
-                        channel: userRow.channel,
-                        text: `Hey! Your devlog post failed because the image URL isn't usable by slack. Looking at github issues of boltjs this is usually because it isn't accessible to slack but it may be other issues like slack not supporting it.`,
-                      });
-                      continue;
-                    }
-                  }
-
-                  logger.error(
-                    "Unexpected error occured when trying to post the automated message.",
-                    {
-                      error: err,
-                      projectId: project.id,
-                      devlogId: devlog.id,
-                    },
-                  );
-
-                  await client.chat.postMessage({
-                    channel: userRow.channel,
-                    text: `Hey! The latest devlog post didn't take place because an error occurred! Just wanted to keep you in the loop.`,
-                  });
+                  logger.error({ error: err, projectId: project.id });
                 }
-              } catch (err) {
-                logger.error({ error: err, projectId: project.id });
               }
             }
-          }
 
-          continue;
+            continue;
+          }
         }
       }
     } catch (err) {

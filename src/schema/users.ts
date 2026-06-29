@@ -9,7 +9,6 @@ export const users = pgTable("users", {
   hcbId: text(),
   pingGroup: text(),
   channel: text(),
-  projects: integer().array(),
   disabled: boolean().default(false),
   optOuts: text().array(),
   meta: text().array(),
