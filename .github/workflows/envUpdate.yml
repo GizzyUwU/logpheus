@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run ftToMDX script
+      - name: Run scanner of environment variables
         run: bun run scanEnv
         
       - uses: stefanzweifel/git-auto-commit-action@v7
