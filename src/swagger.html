@@ -2,27 +2,37 @@
 <html>
   <head>
     <title>Logpheus API Docs</title>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css">
-    <style>.swagger-ui .topbar { display: none }</style>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1" />
   </head>
   <body>
-    <div id="swagger-ui"></div>
-    <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+    <div id="app"></div>
+    <!-- Load the Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <!-- Initialize the API Reference -->
     <script>
-      SwaggerUIBundle({
-        url: "/api/docs/openapi.json",
-        dom_id: "#swagger-ui",
-        presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
-        layout: "BaseLayout"
+      Scalar.createApiReference('#app', {
+        // The URL of the OpenAPI/Swagger document
+        url: '/api/docs/openapi.json',
+        // Avoid CORS issues
+        proxyUrl: 'https://proxy.scalar.com',
       })
     </script>
-    <!-- Privacy-friendly analytics by Plausible -->
-    <script async src="https://pawsible.gizzy.gay/js/pa-Z2YY1ybzfx0kUj-5jDQD2.js"></script>
     <script>
-      window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
-      plausible.init()
+      window.op=window.op||function(){var n=[];return new Proxy(function(){arguments.length&&n.push([].slice.call(arguments))},{get:function(t,r){return"q"===r?n:function(){n.push([r].concat([].slice.call(arguments)))}} ,has:function(t,r){return"q"===r}}) }();
+      window.op('init', {
+        apiUrl: 'https://opapi.gizzy.gay',
+        clientId: '3f922cf6-5ab8-438b-b023-6b356f1ef851',
+        trackScreenViews: true,
+        trackOutgoingLinks: true,
+        trackAttributes: true,
+        // sessionReplay: {
+        //   enabled: true,
+        // },
+      });
     </script>
+    <script src="https://analytics.gizzy.gay/op1.js" defer async></script>
   </body>
 </html>
