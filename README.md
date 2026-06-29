@@ -64,22 +64,34 @@ If you don't want to give your api key to me then self host it yourself! This pr
 The environment variables needed for it to run are:
 
 ```env
+ADMINS= # String
 APP_TOKEN= # Optional String
 BOT_TOKEN= # String
-SIGNING_SECRET= # String
-SOCKET_MODE= # Boolean
+BUGSINK_PROJECT_ID= # Optional Integer
+BUGSINK_TOKEN= # Optional String
+BUGSINK_URL= # Optional String
+DB_URL= # String
+DEV_CHANNEL= # String
+HCAI_API_KEY= # String
+KEEP_PORT_USAGE= # String
+LOG_LEVEL= # Integer
+OPENPANEL_API_URL= # String
+OPENPANEL_CLIENT_ID= # Optional String
+OPENPANEL_CLIENT_SECRET= # Optional String
 PGLITE= # Optional Boolean
-DB_URL= # Optional String (Missing = Use PGLite)
-KEEP_PORT_USAGE= # Optional Boolean
+PORT= # Integer
+RAND_CHANNEL= # String
+SENTRY_DSN= # String
+SENTRY_NAME= # String
+SIGNING_SECRET= # String
+SLACK_ID_OWNER= # String
+SOCKET_MODE= # Boolean
 VIKUNJA_BUG_LABEL_ID= # Optional Integer
-VIKUNJA_FEATURE_LABEL_ID= # Optional Integer
 VIKUNJA_BUG_PROJECT_ID= # Optional Integer
+VIKUNJA_FEATURE_LABEL_ID= # Optional Integer
 VIKUNJA_FEATURE_PROJECT_ID= # Optional Integer
 VIKUNJA_TOKEN= # Optional String
 VIKUNJA_URL= # Optional String
-BUGSINK_URL= # Optional String
-BUGSINK_TOKEN= # Optional String
-BUGSINK_PROJECT_ID= # Optional Integer
 ```
 
 If you don't make use of Socket Mode the endpoints needed to set on the dashboard are

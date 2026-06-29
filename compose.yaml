@@ -11,8 +11,12 @@ services:
     volumes:
       - cache:/usr/src/app/cache
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/healthcheck"]
-      interval: 2s
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:3000/healthcheck | jq -e '.okay == true' >/dev/null",
+        ]
+      interval: 10s
       timeout: 2s
       retries: 5
       start_period: 4s

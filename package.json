@@ -12,13 +12,13 @@
     "i-migrate": "infisical run --env=dev -- bunx drizzle-kit migrate",
     "generate": "bunx drizzle-kit generate",
     "dev:manual": "bun run src/index.ts",
-    "dev": "infisical run --env=dev -- bun run src/index.ts"
+    "dev": "infisical run --env=dev -- bun run src/index.ts",
+    "scanEnv": "bun run src/envScan.ts"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.3.14",
     "@logtape/drizzle-orm": "^2.0.2",
     "@logtape/logtape": "^2.0.2",
     "@logtape/redaction": "^2.0.2",

@@ -1,7 +1,7 @@
 FROM oven/bun:alpine
 WORKDIR /usr/src/app
 RUN --mount=type=cache,target=/var/cache/apk \
-    apk add curl su-exec
+    apk add curl su-exec jq
 COPY package.json bun.lock ./
 RUN --mount=type=cache,target=$HOME/.bun/install/cache \
     bun install --frozen-lockfile --production

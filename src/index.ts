@@ -6,12 +6,10 @@ import {
 } from "@slack/bolt";
 import fs from "fs";
 import path from "path";
-import { PGlite } from "@electric-sql/pglite";
 import { VikunjaClient } from "node-vikunja";
 import { BugsinkClient } from "./lib/bugsink";
 import { OpenRouter } from "@openrouter/sdk";
 import { Pool } from "pg";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schemas from "@/schema/index.ts";
 import * as Sentry from "@sentry/bun";
@@ -33,10 +31,7 @@ import type { MessageElement } from "@slack/web-api/dist/types/response/Conversa
 import type { ApiAdapter } from "./lib/adapters/types";
 let sentryEnabled = false;
 let prefix: string;
-export type DatabaseType =
-  | (NodePgDatabase<typeof schemas> & { $client: Pool })
-  | (PgliteDatabase<typeof schemas> & { $client: PGlite });
-const cacheDir = path.join(__dirname, "../cache");
+export type DatabaseType = NodePgDatabase<typeof schemas> & { $client: Pool };
 const registeredRequestModules = new Set<string>();
 const registeredInitModules = new Set<string>();
 let pg: DatabaseType;
@@ -111,7 +106,7 @@ if (
   opClient.ready();
 }
 
-let errorInLastFiveMinutes = 0;
+export let errorInLastFiveMinutes = 0;
 const openPanelSink: AsyncSink = async (record) => {
   if (!opClient) return;
   if (record.level === "error") errorInLastFiveMinutes += 1;
@@ -160,6 +155,15 @@ const logLevel = {
   6: "debug",
 } as const;
 
+/** @env
+ * 1 = Warning
+ * 2 = Trace
+ * 3 = Info
+ * 4 = Fatal
+ * 5 = Error
+ * 6 = Debug
+ */
+const configuredLogLevel = Number(process.env["LOG_LEVEL"]);
 await configure({
   sinks: {
     sentry: sentryAdapter,
@@ -194,79 +198,52 @@ await configure({
         ...(opClient ? ["openpanel"] : []),
       ],
       lowestLevel:
-        logLevel[Number(process.env["LOG_LEVEL"]) as keyof typeof logLevel] ??
+        logLevel[configuredLogLevel as keyof typeof logLevel] ??
         "info",
     },
   ],
 });
 
 export const logger = getLogger(["logpheus"]);
-if (process.env["PGLITE"] === "false") {
+try {
+  const { drizzle } = await import("drizzle-orm/node-postgres");
+  const { migrate } = await import("drizzle-orm/node-postgres/migrator");
+  const pool = new Pool({
+    connectionString: process.env["DB_URL"],
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+
+  const client = await pool.connect();
   try {
-    const { drizzle } = await import("drizzle-orm/node-postgres");
-    const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-    const pool = new Pool({
-      connectionString: process.env["DB_URL"],
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
-
-    const client = await pool.connect();
-    try {
-      await pool.query("SELECT 1");
-    } finally {
-      client.release();
-    }
-
-    if (opClient) {
-      const ogQuery = pool.query.bind(pool);
-      pool.query = (async (...args: Parameters<typeof pool.query>) => {
-        const start = performance.now();
-        try {
-          return ogQuery(...args);
-        } finally {
-          const durationMs = performance.now() - start;
-          void opClient?.track("dbQueryTime", {
-            timestamp: Date.now(),
-            properties: {
-              durationMs: durationMs,
-              durationS: durationMs / 1000,
-              query: args[0],
-            },
-          });
-        }
-      }) as typeof pool.query;
-    }
-
-    const db = drizzle({
-      client: pool,
-      casing: "snake_case",
-      logger: getDrizzleLogger({
-        level: "warning",
-      }),
-      schema: schemas
-    });
-    pg = db;
-    await migrate(db, {
-      migrationsFolder: "./migrations",
-    });
-
-    await migrateUsers(db, logger);
-  } catch (err) {
-    logger.error("Failed Database Connection", {
-      error: err instanceof Error ? err.message : err,
-      stack: err instanceof Error ? err.stack : undefined,
-      dbUrl: process.env["DB_URL"]?.replace(/:[^:@]+@/, ":****@"),
-    });
-    throw err;
+    await pool.query("SELECT 1");
+  } finally {
+    client.release();
   }
-} else {
-  const { drizzle } = await import("drizzle-orm/pglite");
-  const { migrate } = await import("drizzle-orm/pglite/migrator");
-  const pgClient = new PGlite(path.join(cacheDir, "pg"));
+
+  if (opClient) {
+    const ogQuery = pool.query.bind(pool);
+    pool.query = (async (...args: Parameters<typeof pool.query>) => {
+      const start = performance.now();
+      try {
+        return ogQuery(...args);
+      } finally {
+        const durationMs = performance.now() - start;
+        void opClient?.track("dbQueryTime", {
+          timestamp: Date.now(),
+          properties: {
+            durationMs: durationMs,
+            durationS: durationMs / 1000,
+            query: args[0],
+          },
+        });
+      }
+    }) as typeof pool.query;
+  }
+
   const db = drizzle({
-    client: pgClient,
+    client: pool,
     casing: "snake_case",
     logger: getDrizzleLogger({
       level: "warning",
@@ -277,7 +254,15 @@ if (process.env["PGLITE"] === "false") {
   await migrate(db, {
     migrationsFolder: "./migrations",
   });
+
   await migrateUsers(db, logger);
+} catch (err) {
+  logger.error("Failed Database Connection", {
+    error: err instanceof Error ? err.message : err,
+    stack: err instanceof Error ? err.stack : undefined,
+    dbUrl: process.env["DB_URL"]?.replace(/:[^:@]+@/, ":****@"),
+  });
+  throw err;
 }
 
 export let vikClient: VikunjaClient | undefined = undefined;
@@ -340,7 +325,7 @@ export interface RequestHandler {
   commands?: typeof commands;
   yswsData?: typeof schemas.yswsUsers.$inferSelect;
   userData?: typeof schemas.users.$inferSelect;
-  projects?: typeof schemas.projects.$inferSelect[];
+  projects?: (typeof schemas.projects.$inferSelect)[];
   yswsClient?: ApiAdapter | undefined;
   opClient?: OpenPanel | undefined;
   yswsId?: number;
