@@ -1,5 +1,4 @@
 import type { RichTextBlock, WebClient } from "@slack/web-api";
-import { users } from "@/schema/users";
 import { projects } from "@/schema/projects";
 import { and, eq } from "drizzle-orm";
 import { containsMarkdown } from "@/lib/parseMarkdown";
@@ -37,7 +36,24 @@ async function getNewDevlogs(params: {
   db: DatabaseType;
   prefix: string;
   logger: typeof LogtapeLogger;
-  userRow: Partial<typeof users.$inferSelect>;
+  userRow: {
+    userId: string;
+    pingGroup: string | null;
+    channel: string | null;
+    ysws: {
+      yswsId: number;
+      apiKey: string | null;
+    }[];
+    projects: {
+      ysws: number | null;
+      userId: string | null;
+      id: number;
+      devlogIds: number[];
+      predictedCookies: number | null;
+      predictedCurrency: number | null;
+      multiplier: number | null;
+    }[];
+  };
   yswsRow: Partial<typeof yswsUsers.$inferSelect>;
   projectRow: typeof projects.$inferSelect;
 }): Promise<{
@@ -271,8 +287,18 @@ export default {
   execute: async ({ client, clients, prefix, pg, logger }: RequestHandler) => {
     try {
       const userRows = await pg.query.users.findMany({
+        columns: {
+          userId: true,
+          channel: true,
+          pingGroup: true,
+        },
         with: {
-          ysws: true,
+          ysws: {
+            columns: {
+              yswsId: true,
+              apiKey: true,
+            },
+          },
           projects: true,
         },
       });
@@ -294,9 +320,11 @@ export default {
           if (!yswsConfig.jobs.includes("newDevlog")) continue;
           if (yswsConfig.apiKeyRequired && !yswsRow.apiKey) continue;
 
-          const userProjects = userRow.projects.filter((p) => p.ysws === yswsRow.yswsId)
+          const userProjects = userRow.projects.filter(
+            (p) => p.ysws === yswsRow.yswsId,
+          );
           if (!userProjects || userProjects.length === 0) continue;
-          const clientKey = `${yswsRow.yswsId}:${yswsRow.userId ?? "no-key"}`;
+          const clientKey = `${yswsRow.yswsId}:${userRow.userId ?? "no-key"}`;
           if (!clients[clientKey]) {
             const AdapterClass = await loadAdapter(yswsConfig.adapter);
             clients[clientKey] = new AdapterClass(
