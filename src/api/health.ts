@@ -9,7 +9,7 @@ export default [
     handler: (_: ParamsIncomingMessage, res: ServerResponse<IncomingMessage>) => {
       res.writeHead(200);
       res.end(JSON.stringify({
-        okay: errorInLastFiveMinutes > 5 ? false : true,
+        okay: errorInLastFiveMinutes >= 5 ? false : true,
         errorCount: errorInLastFiveMinutes
       }));
     },
