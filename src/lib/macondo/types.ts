@@ -28,7 +28,7 @@ export namespace ZTypes {
   export const LeaderboardQueryParams = zod.object({
     type: LeaderboardType.default("upvotes"),
     limit: zod.coerce.number().int().positive().optional(),
-    cursor: zod.coerce.number().int().positive().optional()
+    cursor: zod.coerce.number().int().positive().optional(),
   });
 
   export const ShopModifierOption = zod.object({
@@ -56,7 +56,7 @@ export namespace ZTypes {
 
   export const ShopItemParams = zod.object({
     itemId: zod.coerce.number().int().nonnegative().min(1),
-  })
+  });
 
   export const ShopItem = zod.object({
     id: zod.number().int(),
@@ -238,23 +238,27 @@ export namespace ZTypes {
   });
 
   export const ExploreProjectsQueryParams = zod.object({
-    sort: zod.enum(["recently_active", "newest", "popularity", "streak"]).optional(),
+    sort: zod
+      .enum(["recently_active", "newest", "popularity", "streak"])
+      .optional(),
     level: zod.coerce.number().int().min(1).max(4).optional(),
-    fruit: zod.enum([
-      "Mango",
-      "Guava",
-      "Pineapple",
-      "Coconut",
-      "Papaya",
-      "Watermelon",
-      "Cocoa",
-      "Avocado",
-    ]).optional(),
+    fruit: zod
+      .enum([
+        "Mango",
+        "Guava",
+        "Pineapple",
+        "Coconut",
+        "Papaya",
+        "Watermelon",
+        "Cocoa",
+        "Avocado",
+      ])
+      .optional(),
     type: zod.enum(["software", "hardware"]).optional(),
     status: zod.enum(["shipped", "in_progress"]).optional(),
     limit: zod.coerce.number().int().min(1).positive().optional(),
     cursor: zod.coerce.number().int().positive().optional(),
-    search: zod.string().optional()
+    search: zod.string().optional(),
   });
 
   export const ExplorePeopleItem = zod.object({
@@ -274,10 +278,12 @@ export namespace ZTypes {
   });
 
   export const ExplorePeopleQueryParams = zod.object({
-    sort: zod.enum(["recently_active", "newest", "popularity", "streak"]).optional(),
+    sort: zod
+      .enum(["recently_active", "newest", "popularity", "streak"])
+      .optional(),
     limit: zod.coerce.number().int().min(1).positive().optional(),
     cursor: zod.coerce.number().int().positive().optional(),
-    search: zod.string().optional()
+    search: zod.string().optional(),
   });
 
   export const UserParams = zod.object({
@@ -307,12 +313,12 @@ export namespace ZTypes {
     projects: zod.array(HackatimeProject),
   });
 
-  export const HackatimeProjectsQuerys = zod.object({
+  export const HackatimeProjectsQueries = zod.object({
     since: zod.iso.date().optional(),
   });
 
   export const HackatimeProjectsParams = zod.object({
-    name: zod.string()
+    name: zod.string(),
   });
 
   export const HackatimeBreakdownItem = zod.object({
@@ -338,4 +344,38 @@ export namespace ZTypes {
   export const HackatimeBreakdownParams = zod.object({
     projectId: zod.coerce.number().int().min(1),
   });
+
+  export const ShopSuggestionQueries = zod.object({
+    sort: zod.enum(["new", "top"]),
+    page: zod.coerce.number().int().min(1).default(1),
+    limit: zod.coerce.number().int().min(1).max(50).default(1),
+  });
+
+  export const ShopSuggestionItem = zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    description: zod.string().nullish(),
+    store_url: zod.string().nullish(),
+    image_url: zod.string().nullish(),
+    cluster_id: zod.string().nullish(),
+    group_tag: zod.string().nullish(),
+    upvote_count: zod.number(),
+    show_username: zod.boolean(),
+    created_at: zod.iso.datetime(),
+    submitter: zod.object({
+      username: zod.string(),
+      image: zod.string(),
+    }).nullish(),
+    voted: zod.boolean(),
+    can_delete: zod.boolean()
+  })
+  
+  export const ShopSuggestionResponse = zod.object({
+    items: zod.array(ShopSuggestionItem),
+    total: zod.number(),
+    page: zod.number(),
+    limit: zod.number(),
+    viewer_signed_in: zod.boolean(),
+    viewer_verified: zod.boolean()
+  })
 }

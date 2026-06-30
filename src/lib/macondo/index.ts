@@ -119,9 +119,9 @@ export default class Macondo {
     );
   }
 
-  hackatimeProjects(query: z.infer<typeof ZTypes.HackatimeProjectsQuerys>) {
+  hackatimeProjects(query: z.infer<typeof ZTypes.HackatimeProjectsQueries>) {
     const parsedQuery = query
-      ? ZTypes.HackatimeProjectsQuerys.parse(query)
+      ? ZTypes.HackatimeProjectsQueries.parse(query)
       : undefined;
 
     const queries = new URLSearchParams(
@@ -140,7 +140,7 @@ export default class Macondo {
     );
   }
 
-  async hackatimeProject(params: z.infer<typeof ZTypes.HackatimeProjectsParams>, query: z.infer<typeof ZTypes.HackatimeProjectsQuerys>) {
+  async hackatimeProject(params: z.infer<typeof ZTypes.HackatimeProjectsParams>, query: z.infer<typeof ZTypes.HackatimeProjectsQueries>) {
     const parsedParam = params ? ZTypes.HackatimeProjectsParams.parse(params) : undefined;
     if (!parsedParam) throw new Error("Missing Params");
     const hackatimeProjects = await this.hackatimeProjects(query);
@@ -326,5 +326,27 @@ export default class Macondo {
       status: shop.status,
       data: itemData,
     };
+  }
+
+  
+  shopSuggestions(query?: z.infer<typeof ZTypes.ShopSuggestionQueries>) {
+    const parsedQuery = query
+      ? ZTypes.ShopSuggestionQueries.parse(query)
+      : undefined;
+
+    const queries = new URLSearchParams(
+      Object.entries(parsedQuery ?? {}).reduce((acc, [key, value]) => {
+        if (value !== undefined) acc[key] = String(value);
+        return acc;
+      }, {} as Record<string, string>)
+    );
+
+    return this.request(
+      {
+        method: "GET",
+        url: "/shop/requests" + (queries.toString() ? `?${queries.toString()}` : ""),
+      },
+      ZTypes.ShopSuggestionResponse,
+    );
   }
 }

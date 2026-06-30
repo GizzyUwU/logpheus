@@ -1,10 +1,21 @@
 import { z } from "zod";
-export const jobOptions = z.enum(["newDevlog", "shopTrack", "tempShopMigration"]);
+export const jobOptions = z.enum([
+  "newDevlog",
+  "shopTrack",
+  "tempShopMigration",
+  "scanForMCShopSuggestions",
+]);
 export const jobConfigSchema = z
   .object({
-    shopTrack:
-      z.object({ channelId: z.string(), jobApiKey: z.string().nullish() })
-  }).partial();
+    shopTrack: z.object({
+      channelId: z.string(),
+      jobApiKey: z.string().nullish(),
+    }),
+    scanForMCShopSuggestions: z.object({
+      channelId: z.string(),
+    }),
+  })
+  .partial();
 
 const regionsSchema = z.record(z.string(), z.string());
 
@@ -59,7 +70,9 @@ export default {
     url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: ["newDevlog", "shopTrack"] as z.infer<typeof jobOptions>[],
+    jobs: ["newDevlog", "shopTrack", "scanForMCShopSuggestions"] as z.infer<
+      typeof jobOptions
+    >[],
     regions: {
       NA: "North America",
       SA: "South America",
@@ -72,8 +85,15 @@ export default {
     },
     jobConfig: {
       shopTrack: {
-        channelId: !process.env["DEV_CHANNEL"] ? "C0B99K6H2SW" : process.env["DEV_CHANNEL"],
-        jobApiKey: null
+        channelId: !process.env["DEV_CHANNEL"]
+          ? "C0B99K6H2SW"
+          : process.env["DEV_CHANNEL"],
+        jobApiKey: null,
+      },
+      scanForMCShopSuggestions: {
+        channelId: !process.env["DEV_CHANNEL"]
+          ? "C0BE47SPGJ0"
+          : process.env["DEV_CHANNEL"],
       }
     } as z.infer<typeof jobConfigSchema>,
   },
