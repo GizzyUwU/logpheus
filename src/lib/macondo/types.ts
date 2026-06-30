@@ -363,8 +363,8 @@ export namespace ZTypes {
     show_username: zod.boolean(),
     created_at: zod.iso.datetime(),
     submitter: zod.object({
-      username: zod.string(),
-      image: zod.string(),
+      username: zod.string().nullish(),
+      image: zod.string().nullish(),
     }).nullish(),
     voted: zod.boolean(),
     can_delete: zod.boolean()
