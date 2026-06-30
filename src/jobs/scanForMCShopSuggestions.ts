@@ -191,7 +191,7 @@ export default {
               elements: [
                 {
                   type: "mrkdwn",
-                  text: `${stored.storeUrl !== null ? `<${stored.storeUrl}|View Store URL>` : ""}`,
+                  text: `${stored.storeUrl !== null ? `<${stored.storeUrl}|View Store URL>` : "No store url provided"}`,
                   verbatim: false,
                 },
               ],
@@ -280,7 +280,7 @@ export default {
                 elements: [
                   {
                     type: "mrkdwn",
-                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : ""}`,
+                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : "No store url provided"}`,
                     verbatim: false,
                   },
                 ],
@@ -354,7 +354,7 @@ export default {
                 elements: [
                   {
                     type: "mrkdwn",
-                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : ""}`,
+                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : "No store url provided"}`,
                     verbatim: false,
                   },
                 ],
