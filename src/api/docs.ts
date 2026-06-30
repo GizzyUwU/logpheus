@@ -14,6 +14,12 @@ export default [
       req: ParamsIncomingMessage,
       res: ServerResponse<IncomingMessage>,
     ) => {
+      const headers = new Headers({
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      });
+      res.setHeaders(headers);
       const ip = req.socket.remoteAddress || "unknown";
       if (opClient) {
         opClient.identify({
