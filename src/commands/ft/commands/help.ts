@@ -7,6 +7,7 @@ interface CommandMeta {
   params?: string;
   desc?: string;
   hideFromHelp: boolean;
+  hideFromSelf: boolean;
 }
 
 let scannedCommands: CommandMeta[] | null = null;
@@ -32,6 +33,7 @@ async function getCommands(): Promise<CommandMeta[]> {
       params: mod.params ?? "",
       desc: mod.desc ?? "No description",
       hideFromHelp: mod.hideFromHelp ?? false,
+      hideFromSelf: mod.hideFromSelf ?? false,
     });
   }
 
@@ -57,17 +59,15 @@ function paginateLines(lines: string[]): string[] {
 export default {
   name: "help",
   params: "[page]",
-  hideFromHelp: true,
+  desc: "Find all commands that Flavortown supports!",
+  hideFromSelf: true,
   execute: async (
     { respond, command }: SlackCommandMiddlewareArgs,
     { prefix, folder }: RequestHandler,
   ) => {
     const commands = await getCommands();
     const lines = commands
-      .filter(
-        (cmd) =>
-          !cmd.hideFromHelp
-      )
+      .filter((cmd) => !cmd.hideFromHelp && !cmd.hideFromSelf)
       .map((cmd) => {
         const cmdPrefix = `${prefix}-${folder}`;
         return `• */${cmdPrefix} ${cmd.name}* ${cmd.params ?? ""} — ${cmd.desc ?? "No description"}`;

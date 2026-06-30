@@ -46,7 +46,7 @@ async function getCommands(): Promise<CommandMeta[]> {
         desc: mod.desc ?? "No description",
         hideFromHelp: mod.hideFromHelp ?? false,
         admin: folder === "admin" ? true : false
-      });
+      } satisfies CommandMeta);
     }
   }
 
@@ -81,11 +81,15 @@ export default {
     const admins = process.env["ADMINS"]?.split(",") ?? [];
 
     const lines = commands
-      .filter(
-        (cmd) =>
-          !cmd.hideFromHelp &&
-          (cmd.folder !== "admin" || admins.includes(command.user_id)),
-      )
+      .filter((cmd) => {
+        if (cmd.hideFromHelp) return false;
+        if (cmd.folder === "admin" && !admins.includes(command.user_id))
+          return false;
+        if (cmd.folder !== "generic" && cmd.name !== "help")
+          return false;
+    
+        return true;
+      })
       .map((cmd) => {
         const cmdPrefix =
           cmd.folder === "generic" ? prefix : `${prefix}-${cmd.folder}`;
