@@ -261,7 +261,7 @@ export default {
                           .split("\n")
                           .map((line: string) => line)
                           .join("\n")
-                      }_`;
+                      }`;
                       return desc.length > 500
                         ? desc.slice(0, desc.lastIndexOf(" ", 497)) + "..."
                         : desc;
