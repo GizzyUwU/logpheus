@@ -255,7 +255,7 @@ export default {
                   text:
                     `*${shopSuggestionItem.name}*\n` +
                     (() => {
-                      const desc = `_${
+                      const desc = `${
                         shopSuggestionItem.description ??
                         "No description provided"
                           .split("\n")
@@ -329,13 +329,13 @@ export default {
                 text: {
                   type: "mrkdwn",
                   text: (() => {
-                    const desc = `_${
+                    const desc = `${
                       shopSuggestionItem.description ??
                       "No description provided"
                         .split("\n")
                         .map((line: string) => line)
                         .join("\n")
-                    }_`;
+                    }`;
                     return desc.length > 500
                       ? desc.slice(0, desc.lastIndexOf(" ", 497)) + "..."
                       : desc;
