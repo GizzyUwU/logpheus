@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { pgTable, varchar, text, integer, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, boolean, index } from "drizzle-orm/pg-core";
 import { yswsUsers } from "./ysws";
 import { projects } from "./projects";
 export const users = pgTable("users", {
@@ -13,7 +13,6 @@ export const users = pgTable("users", {
   optOuts: text().array(),
   meta: text().array(),
   region: text(),
-  ysws: integer().array()
 }, (table) => [
   index("users_active_idx")
     .on(table.userId)

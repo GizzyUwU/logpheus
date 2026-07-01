@@ -67,7 +67,7 @@ async function setup(app: App, ctx: RequestHandler) {
         });
 
       const yswsData = userData.ysws[0];
-      if (!yswsData || Object.keys(yswsData).length === 0 && !callbackId.includes("register"))
+      if ((!yswsData || Object.keys(yswsData).length === 0) && !callbackId.includes("register"))
         return args.client.chat.postEphemeral({
           channel: JSON.parse(args.view.private_metadata).channel,
           user: args.body.user.id,
@@ -129,7 +129,7 @@ export default {
       });
 
     const yswsData = userData.ysws[0];
-    if (!yswsData || Object.keys(yswsData).length === 0 && rawOption !== "register")
+    if ((!yswsData || Object.keys(yswsData).length === 0) && rawOption !== "register")
       return args.respond({
         text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
         response_type: "ephemeral",
@@ -146,7 +146,7 @@ export default {
 
     if (!handler)
       return args.respond({
-        text: `Unknown option \`${option}\`. Check /${ctx.prefix} help to know the commands!`,
+        text: `Unknown option \`${option}\`. Check /${ctx.prefix}-${ctx.folder} help to know the commands!`,
         response_type: "ephemeral",
       });
 
@@ -175,7 +175,7 @@ export default {
       ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`];
     if (rawOption !== "register" && !yswsClient) {
       const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-      const adapter = new AdapterClass(undefined, loggerCTX);
+      const adapter = new AdapterClass(yswsData?.apiKey, loggerCTX);
       yswsClient = adapter;
       ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
     }

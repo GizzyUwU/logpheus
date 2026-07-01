@@ -323,7 +323,7 @@ export interface RequestHandler {
   folder?: string | undefined;
   callbackId?: string;
   commands?: typeof commands;
-  yswsData?: typeof schemas.yswsUsers.$inferSelect;
+  yswsData?: typeof schemas.yswsUsers.$inferSelect | undefined;
   userData?: typeof schemas.users.$inferSelect;
   projects?: (typeof schemas.projects.$inferSelect)[];
   yswsClient?: ApiAdapter | undefined;

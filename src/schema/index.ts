@@ -4,3 +4,4 @@ export * from "./shop.ts";
 export * from "./theseus.ts";
 export * from "./users.ts";
 export * from "./ysws.ts";
+export * from "./mcShopSuggestions.ts"

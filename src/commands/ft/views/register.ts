@@ -4,7 +4,6 @@ import { eq, and } from "drizzle-orm";
 import type { RequestHandler } from "@/index.ts";
 import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import checkAPIKey from "@/lib/ft/apiKeyCheck";
-import { users } from "@/schema/users";
 import ysws from "@/ysws";
 type UserInsert = typeof yswsUsers.$inferInsert;
 
@@ -89,13 +88,6 @@ export default {
       };
 
       await pg.insert(yswsUsers).values(insertFields);
-      await pg
-        .update(users)
-        .set({
-          ysws: [...(userData?.ysws ?? []), yswsId],
-        })
-        .where(eq(users.userId, userId));
-      
       await client.chat.postEphemeral({
         channel: channelId,
         user: userId,
