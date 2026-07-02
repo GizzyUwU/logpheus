@@ -1,35 +1,7 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { getGenericErrorMessage } from "@/lib/genericError";
-import { z } from "zod";
-import { ZTypes } from "@/lib/macondo/types";
 import Theseus from "@/lib/theseus";
-
-function resolveItemPrice(
-  item: z.infer<typeof ZTypes.ShopItem>,
-  userRegion?: string,
-): number {
-  if (!userRegion || userRegion.length === 0) return item.price_hours;
-  const regionalEntry = item.regional_pricing?.[userRegion.toUpperCase()];
-  return regionalEntry?.price_hours ?? item.price_hours;
-}
-
-function resolveItemGold(
-  item: z.infer<typeof ZTypes.ShopItem>,
-  userRegion?: string,
-): number {
-  const goldMultiplier = item.price_gold / item.price_hours;
-  const resolvedHours = resolveItemPrice(item, userRegion);
-  return Math.round(resolvedHours * goldMultiplier);
-}
-
-function normalizeSearchVal(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, "")
-    .trim();
-}
 
 function paginateLines(lines: string[]): string[] {
   const pages: string[] = [];
@@ -73,7 +45,7 @@ export default {
   desc: "See all your Hack Club mail!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { client, userData, prefix, folder, yswsData, logger }: RequestHandler,
+    { client, userData, prefix, folder, logger }: RequestHandler,
   ) => {
     if (!userData?.theseusKey)
       return respond({
