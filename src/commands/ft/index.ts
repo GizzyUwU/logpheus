@@ -109,6 +109,20 @@ async function setup(app: App, ctx: RequestHandler) {
 export default {
   setup: async (app: App, ctx: RequestHandler) => setup(app, ctx),
   execute: async (args: SlackCommandMiddlewareArgs, ctx: RequestHandler) => {
+    try {
+      const channel = await ctx.client.conversations.info({
+        channel: args.command.channel_id,
+      });
+      if (
+        !channel ||
+        !channel.channel ||
+        Object.keys(channel).length === 0 ||
+        !channel.ok
+      )
+        return await args.respond({
+          text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+          response_type: "ephemeral",
+        });
     const [rawOption] = args.command.text.split(" ").filter(Boolean);
     const userData = await ctx.pg.query.users.findFirst({
       where: eq(users.userId, args.body.user_id),
@@ -199,5 +213,24 @@ export default {
         yswsId: ysws.flavortown.id,
       } satisfies RequestHandler,
     );
+    } catch (error: any) {
+      if (
+        error.code === "slack_webapi_platform_error" &&
+        error.data?.error === "channel_not_found"
+      ) {
+        await args.respond({
+          text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+          response_type: "ephemeral",
+        });
+        return;
+      } else {
+        ctx.logger.error({ error });
+
+        await args.respond({
+          text: "An unexpected error occurred!",
+          response_type: "ephemeral",
+        });
+      }
+    }
   },
 };

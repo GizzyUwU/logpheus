@@ -82,72 +82,105 @@ async function setup(app: App, ctx: RequestHandler) {
 export default {
   setup: async (app: App, ctx: RequestHandler) => setup(app, ctx),
   execute: async (args: SlackCommandMiddlewareArgs, ctx: RequestHandler) => {
-    const [rawOption] = args.command.text.split(" ").filter(Boolean);
-    const userData = await ctx.pg.query.users.findFirst({
-      where: eq(users.userId, args.body.user_id),
-      with: {
-        ysws: true,
-        projects: true,
-      },
-    });
-
-    if (!userData || Object.keys(userData).length === 0)
-      return args.respond({
-        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
-        response_type: "ephemeral",
+    try {
+      const channel = await ctx.client.conversations.info({
+        channel: args.command.channel_id,
       });
-
-    if (!rawOption)
-      return args.respond({
-        text: "You must provide an option.",
-        response_type: "ephemeral",
-      });
-
-    const option = stripMrkdwn(rawOption.toLowerCase());
-    const handler = commandHandlers.get(option);
-
-    if (!handler)
-      return args.respond({
-        text: `Unknown option \`${option}\`. Check /${ctx.prefix} help to know the commands!`,
-        response_type: "ephemeral",
-      });
-
-    const loggerCTX = ctx.logger.with({
-      command: ctx.prefix + " " + option,
-    });
-
-    if (ctx.opClient && !userData?.optOuts?.includes("analytics")) {
-      ctx.opClient.identify({
-        profileId: args.command.user_id,
-        firstName: args.command.user_name,
-        properties: {
-          friendlyName: "generic",
-          channelId: args.command.channel_id,
-          channelName: args.command.channel_name,
+      if (
+        !channel ||
+        !channel.channel ||
+        Object.keys(channel).length === 0 ||
+        !channel.ok
+      )
+        return await args.respond({
+          text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+          response_type: "ephemeral",
+        });
+      const [rawOption] = args.command.text.split(" ").filter(Boolean);
+      const userData = await ctx.pg.query.users.findFirst({
+        where: eq(users.userId, args.body.user_id),
+        with: {
+          ysws: true,
+          projects: true,
         },
       });
-      ctx.opClient.track("commands", {
-        command: option,
+
+      if (!userData || Object.keys(userData).length === 0)
+        return args.respond({
+          text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
+          response_type: "ephemeral",
+        });
+
+      if (!rawOption)
+        return args.respond({
+          text: "You must provide an option.",
+          response_type: "ephemeral",
+        });
+
+      const option = stripMrkdwn(rawOption.toLowerCase());
+      const handler = commandHandlers.get(option);
+
+      if (!handler)
+        return args.respond({
+          text: `Unknown option \`${option}\`. Check /${ctx.prefix} help to know the commands!`,
+          response_type: "ephemeral",
+        });
+
+      const loggerCTX = ctx.logger.with({
+        command: ctx.prefix + " " + option,
       });
-      ctx.opClient.clear();
+
+      if (ctx.opClient && !userData?.optOuts?.includes("analytics")) {
+        ctx.opClient.identify({
+          profileId: args.command.user_id,
+          firstName: args.command.user_name,
+          properties: {
+            friendlyName: "generic",
+            channelId: args.command.channel_id,
+            channelName: args.command.channel_name,
+          },
+        });
+        ctx.opClient.track("commands", {
+          command: option,
+        });
+        ctx.opClient.clear();
+      }
+
+      await handler.execute(
+        {
+          ...args,
+          command: {
+            ...args.command,
+            text: stripMrkdwn(args.command.text.replace(rawOption, "").trim()),
+          },
+        },
+        {
+          ...ctx,
+          callbackId: ctx.namespacedPrefix + "_" + option,
+          logger: loggerCTX,
+          userData: userData,
+          yswsAll: userData.ysws,
+          projects: userData.projects,
+        },
+      );
+    } catch (error: any) {
+      if (
+        error.code === "slack_webapi_platform_error" &&
+        error.data?.error === "channel_not_found"
+      ) {
+        await args.respond({
+          text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+          response_type: "ephemeral",
+        });
+        return;
+      } else {
+        ctx.logger.error({ error });
+
+        await args.respond({
+          text: "An unexpected error occurred!",
+          response_type: "ephemeral",
+        });
+      }
     }
-
-    await handler.execute(
-      {
-        ...args,
-        command: {
-          ...args.command,
-          text: stripMrkdwn(args.command.text.replace(rawOption, "").trim()),
-        },
-      },
-      {
-        ...ctx,
-        callbackId: ctx.namespacedPrefix + "_" + option,
-        logger: loggerCTX,
-        userData: userData,
-        yswsAll: userData.ysws,
-        projects: userData.projects,
-      },
-    );
   },
 };

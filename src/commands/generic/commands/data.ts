@@ -2,6 +2,7 @@ import type {
   SlackCommandMiddlewareArgs,
 } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
+import * as schemas from "@/schema"
 import ysws from "@/ysws";
 
 export default {
@@ -9,17 +10,17 @@ export default {
   desc: "Look through what data the bot has on you!",
   execute: async (
     { respond }: SlackCommandMiddlewareArgs,
-    { prefix, userData }: RequestHandler,
+    { prefix, userData, yswsAll }: RequestHandler  & { yswsAll: typeof schemas.yswsUsers.$inferSelect[] }
   ) => {
     const userText = [
       { label: "Channel Id", value: userData?.channel},
       { label: "Disabled", value: userData?.disabled},
       {
         label: "YSWSs",
-        value:  (userData?.ysws && userData?.ysws.length > 0 ? userData.ysws
+        value:  (yswsAll && yswsAll.length > 0 ? yswsAll
           .map(
-            (id: string | number) => {
-              const yswsConfig = Object.values(ysws).find((record) => record.id === id);
+            (yswsData) => {
+              const yswsConfig = Object.values(ysws).find((record) => record.id === yswsData.yswsId);
               return `<${yswsConfig?.url}|${yswsConfig?.humanName}>`
             }
           )

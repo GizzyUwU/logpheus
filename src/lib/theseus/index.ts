@@ -140,4 +140,29 @@ export default class Theseus {
       ZTypes.ListPackagesResponse,
     );
   }
+
+  async package(params: z.infer<typeof ZTypes.GetPackageParams>) {
+    const parsedParam = params ? ZTypes.GetPackageParams.parse(params) : undefined;
+    if (!parsedParam) throw new Error("Missing Params");
+    const packagesApi = await this.packages();
+    if (!packagesApi.ok) return packagesApi;
+
+    const packageItem = packagesApi.data.packages.find(
+      (entry) => entry.id === parsedParam.id,
+    );
+
+    if (!packageItem) {
+      return {
+        ok: false as const,
+        status: 404,
+        msg: "Journal not found",
+      };
+    }
+
+    return {
+      ok: packagesApi.ok,
+      status: packagesApi.status,
+      data: packageItem,
+    };
+  }
 }

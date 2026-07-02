@@ -109,95 +109,128 @@ async function setup(app: App, ctx: RequestHandler) {
 export default {
   setup: async (app: App, ctx: RequestHandler) => setup(app, ctx),
   execute: async (args: SlackCommandMiddlewareArgs, ctx: RequestHandler) => {
-    const [rawOption] = args.command.text.split(" ").filter(Boolean);
-    const userData = await ctx.pg.query.users.findFirst({
-      where: eq(users.userId, args.body.user_id),
-      with: {
-        ysws: {
-          where: eq(yswsUsers.yswsId, ysws.macondo.id),
-          limit: 1
-        },
-        projects: true
-      }
-    });
+    try {
+      const channel = await ctx.client.conversations.info({
+        channel: args.command.channel_id,
+      });
+      if (
+        !channel ||
+        !channel.channel ||
+        Object.keys(channel).length === 0 ||
+        !channel.ok
+      )
+        return await args.respond({
+          text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+          response_type: "ephemeral",
+        });
+      const [rawOption] = args.command.text.split(" ").filter(Boolean);
+      const userData = await ctx.pg.query.users.findFirst({
+        where: eq(users.userId, args.body.user_id),
+        with: {
+          ysws: {
+            where: eq(yswsUsers.yswsId, ysws.macondo.id),
+            limit: 1
+          },
+          projects: true
+        }
+      });
     
 
-    if (!userData || Object.keys(userData).length === 0)
-      return args.respond({
-        text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
-        response_type: "ephemeral",
+      if (!userData || Object.keys(userData).length === 0)
+        return args.respond({
+          text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
+          response_type: "ephemeral",
+        });
+
+      const yswsData = userData.ysws[0];
+      if ((!yswsData || Object.keys(yswsData).length === 0) && rawOption !== "register")
+        return args.respond({
+          text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
+          response_type: "ephemeral",
+        });
+
+      if (!rawOption)
+        return args.respond({
+          text: "You must provide an option.",
+          response_type: "ephemeral",
+        });
+
+      const option = stripMrkdwn(rawOption.toLowerCase());
+      const handler = commandHandlers.get(option);
+
+      if (!handler)
+        return args.respond({
+          text: `Unknown option \`${option}\`. Check /${ctx.prefix}-${ctx.folder} help to know the commands!`,
+          response_type: "ephemeral",
+        });
+
+      if (ctx.opClient && !userData?.optOuts?.includes("analytics")) {
+        ctx.opClient.identify({
+          profileId: args.command.user_id,
+          firstName: args.command.user_name,
+          properties: {
+            yswsId: ysws.macondo.id,
+            channelId: args.command.channel_id,
+            channelName: args.command.channel_name,
+            friendlyName: ysws.macondo.humanName,
+          },
+        });
+        ctx.opClient.track("commands", {
+          command: option,
+        });
+        ctx.opClient.clear();
+      }
+
+      const loggerCTX = ctx.logger.with({
+        command: ctx.prefix + "-" + ctx.folder + " " + option,
       });
 
-    const yswsData = userData.ysws[0];
-    if ((!yswsData || Object.keys(yswsData).length === 0) && rawOption !== "register")
-      return args.respond({
-        text: `Hey! You aren't registered to this YSWS! Run /${ctx.prefix}-${ctx.folder} register`,
-        response_type: "ephemeral",
-      });
+      let yswsClient =
+        ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`];
+      if (rawOption !== "register" && !yswsClient) {
+        const AdapterClass = await loadAdapter(ysws.macondo.adapter);
+        const adapter = new AdapterClass(undefined, loggerCTX);
+        yswsClient = adapter;
+        ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
+      }
 
-    if (!rawOption)
-      return args.respond({
-        text: "You must provide an option.",
-        response_type: "ephemeral",
-      });
-
-    const option = stripMrkdwn(rawOption.toLowerCase());
-    const handler = commandHandlers.get(option);
-
-    if (!handler)
-      return args.respond({
-        text: `Unknown option \`${option}\`. Check /${ctx.prefix}-${ctx.folder} help to know the commands!`,
-        response_type: "ephemeral",
-      });
-
-    if (ctx.opClient && !userData?.optOuts?.includes("analytics")) {
-      ctx.opClient.identify({
-        profileId: args.command.user_id,
-        firstName: args.command.user_name,
-        properties: {
+      await handler.execute(
+        {
+          ...args,
+          command: {
+            ...args.command,
+            text: stripMrkdwn(args.command.text.replace(rawOption, "").trim()),
+          },
+        },
+        {
+          ...ctx,
+          logger: loggerCTX,
+          callbackId: ctx.namespacedPrefix + "_" + option,
+          yswsData,
+          userData,
+          projects: userData.projects ?? [],
+          yswsClient,
           yswsId: ysws.macondo.id,
-          channelId: args.command.channel_id,
-          channelName: args.command.channel_name,
-          friendlyName: ysws.macondo.humanName,
-        },
-      });
-      ctx.opClient.track("commands", {
-        command: option,
-      });
-      ctx.opClient.clear();
+        } satisfies RequestHandler,
+      );
+    } catch (error: any) {
+      if (
+        error.code === "slack_webapi_platform_error" &&
+        error.data?.error === "channel_not_found"
+      ) {
+        await args.respond({
+          text: "If you are running this in a private channel then you have to add bot manually first to the channel. CHANNEL_NOT_FOUND",
+          response_type: "ephemeral",
+        });
+        return;
+      } else {
+        ctx.logger.error({ error });
+
+        await args.respond({
+          text: "An unexpected error occurred!",
+          response_type: "ephemeral",
+        });
+      }
     }
-
-    const loggerCTX = ctx.logger.with({
-      command: ctx.prefix + "-" + ctx.folder + " " + option,
-    });
-
-    let yswsClient =
-      ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`];
-    if (rawOption !== "register" && !yswsClient) {
-      const AdapterClass = await loadAdapter(ysws.macondo.adapter);
-      const adapter = new AdapterClass(undefined, loggerCTX);
-      yswsClient = adapter;
-      ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
-    }
-
-    await handler.execute(
-      {
-        ...args,
-        command: {
-          ...args.command,
-          text: stripMrkdwn(args.command.text.replace(rawOption, "").trim()),
-        },
-      },
-      {
-        ...ctx,
-        logger: loggerCTX,
-        callbackId: ctx.namespacedPrefix + "_" + option,
-        yswsData,
-        userData,
-        projects: userData.projects ?? [],
-        yswsClient,
-        yswsId: ysws.macondo.id,
-      } satisfies RequestHandler,
-    );
   },
 };
