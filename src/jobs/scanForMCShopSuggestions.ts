@@ -102,7 +102,6 @@ export default {
         if (items.length < 50) break;
       }
 
-      console.log(allShopSuggestions.length, allShopSuggestions.map(i => i.id).join(","))
       if (allShopSuggestions.length === 0) {
         const ctx = logger.with({
           lastCode: yswsClient.lastCode,
