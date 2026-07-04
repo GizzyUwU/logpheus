@@ -64,7 +64,7 @@ export default {
             .with({ page })
             .warn("rate limited on shopSuggestions (429), retrying page");
 
-          await new Promise((r) => setTimeout(r, 1000));
+          await new Promise((r) => setTimeout(r, 2000));
           continue;
         }
 
@@ -72,16 +72,10 @@ export default {
           if (
             shopSuggestions.status === 200 ||
             shopSuggestions.status === 408
-          ) {
-            page++;
-            continue;
-          }
+          ) break;
 
           const msg = getGenericErrorMessage(shopSuggestions.status, prefix!);
-          if (msg === "Server is down!" || msg === "Server timed out!") {
-            page++;
-            continue;
-          }
+          if (msg === "Server is down!" || msg === "Server timed out!") break;
 
           const ctx = logger.with({
             msg,
@@ -92,7 +86,7 @@ export default {
             "scanForMCShopSuggestions failed because shopSuggestion api fail",
           );
           page++;
-          continue;
+          break;
         }
 
         const { items, total: newTotal } = shopSuggestions.data;
@@ -101,6 +95,15 @@ export default {
         page++;
         if (total !== null && (page - 1) * 50 >= total) break;
         if (items.length < 50) break;
+      }
+
+      if (allShopSuggestions.length === 0) {
+        const ctx = logger.with({
+          lastCode: yswsClient.lastCode,
+          file: "scanForMcShopSuggestions"
+        })
+        ctx.error("All Shop Suggestions is empty implying an issue occurred")
+        return;
       }
 
       const storedItems = await pg.select().from(mcShopSuggestions);
