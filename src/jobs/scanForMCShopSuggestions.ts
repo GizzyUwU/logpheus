@@ -121,29 +121,28 @@ export default {
               allShopSuggestions.map((item) => ({
                 id: item.id,
                 name: item.name,
-                description: item.description,
-                storeUrl: item.store_url,
-                imageUrl: item.image_url,
-                groupTag: item.group_tag,
-                upvoteCount: item.upvote_count,
-                showUsername: item.show_username,
-                createdAt: item.created_at,
+                description: item.description ? item.description : null,
+                storeUrl: item.store_url ? item.store_url : null,
+                imageUrl: item.image_url ? item.image_url : null,
+                groupTag: item.group_tag ? item.group_tag : null,
+                upvoteCount: item.upvote_count ?? 0,
+                showUsername: item.show_username ?? false,
+                createdAt: item.created_at ?? new Date().toISOString(),
                 submitter:
                   item.submitter !== null
                     ? JSON.stringify(item.submitter)
                     : null,
               })),
             )
-            .onConflictDoNothing();
           return;
         } catch (err) {
-          logger
+          const ctx = logger
             .with({
               error: err,
               message: err instanceof Error ? err.message : String(err),
               cause: (err as any)?.cause,
             })
-            .error(
+          ctx.error(
               `Failed insertion of shop suggestion row for all items on YSWS ${yswsData.id}`,
             );
         }
@@ -233,7 +232,6 @@ export default {
                     ? JSON.stringify(shopSuggestionItem.submitter)
                     : null,
               })
-              .onConflictDoNothing();
           } catch (err) {
             logger
               .with({
