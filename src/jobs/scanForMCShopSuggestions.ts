@@ -55,8 +55,7 @@ export default {
           ctx.error(
             "scanForMCShopSuggestions failed because shopSuggestion api fail",
           );
-          page++;
-          continue;
+          break;
         }
 
         if (shopSuggestions.status === 429) {
@@ -69,10 +68,16 @@ export default {
         }
 
         if (!shopSuggestions.ok || !shopSuggestions.data.items?.length) {
+          if (shopSuggestions.status === 408) {
+            logger.error("API timed out");
+            break;
+          }
           if (
-            shopSuggestions.status === 200 ||
-            shopSuggestions.status === 408
-          ) break;
+            shopSuggestions.status === 200
+          ) {
+            logger.error("API returned data with no items");
+            break;
+          }
 
           const msg = getGenericErrorMessage(shopSuggestions.status, prefix!);
           if (msg === "Server is down!" || msg === "Server timed out!") break;
