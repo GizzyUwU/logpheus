@@ -7,53 +7,107 @@ import { getGenericErrorMessage } from "@/lib/genericError";
 import type { SectionBlockAccessory, TextObject } from "@slack/web-api";
 import type { RegionalCost } from "@/lib/adapters/types";
 import Decimal from "decimal.js";
+type Diff = { field: string; from: unknown; to: unknown };
 
-function diffArrayByKey(prev: any[], next: any[], key: string, path: string) {
-  const prevMap = new Map(prev.map((x) => [x?.[key], x]));
-  const nextMap = new Map(next.map((x) => [x?.[key], x]));
-  const diffs: { field: string; from: unknown; to: unknown }[] = [];
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
 
-  for (const [id, prevItem] of prevMap) {
-    const nextItem = nextMap.get(id);
+function pickArrayItemKey(
+  prevArr: Record<string, unknown>[],
+  nextArr: Record<string, unknown>[],
+): string | null {
+  if (prevArr.length === 0 && nextArr.length === 0) return null;
 
-    if (!nextItem) {
-      diffs.push({
-        field: `${path}[${id}]`,
-        from: prevItem,
-        to: null,
-      });
-      continue;
+  const sample = prevArr.length > 0 ? prevArr[0] : nextArr[0];
+  if (!sample) return null;
+  const candidateKeys = Object.keys(sample);
+
+  const isUsableIdentifier = (arr: Record<string, unknown>[], k: string) => {
+    if (arr.length === 0) return true;
+    const values = new Set<unknown>();
+    for (const item of arr) {
+      const v = item[k];
+      if (v === undefined || v === null) return false;
+      if (typeof v !== "string" && typeof v !== "number") return false;
+      if (values.has(v)) return false;
+      values.add(v);
     }
+    return true;
+  };
 
-    for (const k of Object.keys({ ...prevItem, ...nextItem })) {
-      if (JSON.stringify(prevItem[k]) !== JSON.stringify(nextItem[k])) {
-        diffs.push({
-          field: `${path}[${id}].${k}`,
-          from: prevItem[k],
-          to: nextItem[k],
-        });
+  for (const k of candidateKeys) {
+    if (isUsableIdentifier(prevArr, k) && isUsableIdentifier(nextArr, k)) {
+      return k;
+    }
+  }
+  return null;
+}
+
+function diffValues(
+  prevVal: unknown,
+  nextVal: unknown,
+  path: string,
+  ignoredFields: Set<string>,
+): Diff[] {
+  if (JSON.stringify(prevVal) === JSON.stringify(nextVal)) return [];
+
+  if (Array.isArray(prevVal) && Array.isArray(nextVal)) {
+    const prevObjs = prevVal.every(isPlainObject)
+      ? (prevVal as Record<string, unknown>[])
+      : null;
+    const nextObjs = nextVal.every(isPlainObject)
+      ? (nextVal as Record<string, unknown>[])
+      : null;
+    const key =
+      prevObjs && nextObjs ? pickArrayItemKey(prevObjs, nextObjs) : null;
+
+    if (!key) return [{ field: path, from: prevVal, to: nextVal }];
+
+    const prevMap = new Map(prevObjs!.map((x) => [x[key], x]));
+    const nextMap = new Map(nextObjs!.map((x) => [x[key], x]));
+    const diffs: Diff[] = [];
+
+    for (const [id, prevItem] of prevMap) {
+      const nextItem = nextMap.get(id);
+      if (nextItem === undefined) {
+        diffs.push({ field: `${path}[${id}]`, from: prevItem, to: null });
+      } else {
+        diffs.push(
+          ...diffValues(prevItem, nextItem, `${path}[${id}]`, ignoredFields),
+        );
       }
     }
-  }
-
-  for (const [id, nextItem] of nextMap) {
-    if (!prevMap.has(id)) {
-      diffs.push({
-        field: `${path}[${id}]`,
-        from: null,
-        to: nextItem,
-      });
+    for (const [id, nextItem] of nextMap) {
+      if (!prevMap.has(id)) {
+        diffs.push({ field: `${path}[${id}]`, from: null, to: nextItem });
+      }
     }
+    return diffs;
   }
 
-  return diffs;
+  if (isPlainObject(prevVal) && isPlainObject(nextVal)) {
+    const diffs: Diff[] = [];
+    for (const k of new Set([
+      ...Object.keys(prevVal),
+      ...Object.keys(nextVal),
+    ])) {
+      if (ignoredFields.has(k)) continue;
+      diffs.push(
+        ...diffValues(prevVal[k], nextVal[k], `${path}.${k}`, ignoredFields),
+      );
+    }
+    return diffs;
+  }
+
+  return [{ field: path, from: prevVal, to: nextVal }];
 }
 
 export function diffRaw(
   prev: Record<string, unknown>,
   next: Record<string, unknown>,
   _canonical: Record<string, unknown>,
-): { field: string; from: unknown; to: unknown }[] {
+): Diff[] {
   const ignoredFields = new Set([
     "regionalCosts",
     "regional_pricing",
@@ -71,29 +125,10 @@ export function diffRaw(
     "resolved_region",
   ]);
 
-  const diffs: { field: string; from: unknown; to: unknown }[] = [];
+  const diffs: Diff[] = [];
   for (const key of Object.keys(next)) {
     if (ignoredFields.has(key)) continue;
-
-    const prevVal = prev[key];
-    const nextVal = next[key];
-
-    if (JSON.stringify(prevVal) === JSON.stringify(nextVal)) continue;
-
-    if (
-      Array.isArray(prevVal) &&
-      Array.isArray(nextVal) &&
-      typeof prevVal[0] === "object"
-    ) {
-      diffs.push(...diffArrayByKey(prevVal, nextVal, "id", key));
-      continue;
-    }
-
-    diffs.push({
-      field: key,
-      from: prevVal,
-      to: nextVal,
-    });
+    diffs.push(...diffValues(prev[key], next[key], key, ignoredFields));
   }
   return diffs;
 }
