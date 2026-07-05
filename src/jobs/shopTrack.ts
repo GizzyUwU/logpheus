@@ -143,6 +143,7 @@ const formatCost = (v: unknown) => {
 
 export default {
   name: "shopTrack",
+  interval: 30,
   execute: async ({ clients, client, pg, logger, prefix }: RequestHandler) => {
     try {
       for (const yswsData of Object.values(ysws)) {

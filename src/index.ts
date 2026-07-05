@@ -446,6 +446,7 @@ async function loadRequestHandlers(
   );
 }
 
+const jobLastRun = new Map<string, number>();
 let handlersRunning = false;
 
 async function loadJobs() {
@@ -467,6 +468,7 @@ async function loadJobs() {
       );
 
     const jobPromises: Promise<void>[] = [];
+    const now = Date.now();
     for (const file of files) {
       try {
         const importFile = await import(path.join(jobDir, file));
@@ -478,6 +480,9 @@ async function loadJobs() {
           );
         }
         registeredInitModules.add(mod.name);
+        const interval = Math.max(30, mod.interval ?? 60) * 1000;
+        if (now - (jobLastRun.get(mod.name) ?? 0) < interval) continue;
+        jobLastRun.set(mod.name, now);
         const ctxLogger = logger.with({
           data: {
             module: mod.name,
@@ -601,7 +606,7 @@ async function loadJobs() {
 
     async function jobLoop() {
       await loadJobs();
-      setTimeout(jobLoop, 60 * 1000);
+      setTimeout(jobLoop, 30 * 1000);
     }
 
     jobLoop();

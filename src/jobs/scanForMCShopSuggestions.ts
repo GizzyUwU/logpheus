@@ -10,6 +10,7 @@ import { mcShopSuggestions } from "@/schema/mcShopSuggestions";
 
 export default {
   name: "scanForMCShopSuggestions",
+  interval: 30,
   execute: async ({ clients, client, pg, logger, prefix }: RequestHandler) => {
     try {
       const yswsData = Object.values(ysws).find((x) =>
