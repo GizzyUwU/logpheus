@@ -69,14 +69,11 @@ export default {
         }
 
         if (!shopSuggestions.ok || !shopSuggestions.data.items?.length) {
-          if (shopSuggestions.status === 408) {
-            logger.error("API timed out");
-            break;
-          }
+          if (shopSuggestions.status === 408) break;
           if (
             shopSuggestions.status === 200
           ) {
-            logger.error("API returned data with no items");
+            logger.warn("API returned data with no items");
             break;
           }
 

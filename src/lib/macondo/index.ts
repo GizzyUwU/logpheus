@@ -36,6 +36,7 @@ export default class Macondo {
       const res = await this.fetch.request(config);
       this.lastCode = res.status;
       try {
+        if(res.status === 408) this.logger.warn(`${config.url} timed out`)
         return {
           ok: true,
           status: res.status,
