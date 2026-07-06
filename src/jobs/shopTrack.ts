@@ -565,10 +565,10 @@ export default {
                       : "No changes detected",
                 value: "",
               },
-              {
+              ...(nameChange ? [{
                 label: `${stored.name !== shopItem.name ? `${stored.name} → ${shopItem.name}` : `${stored.name}`}`,
                 value: "",
-              },
+              } ] : []),
               ...(descChange
                 ? [
                     {

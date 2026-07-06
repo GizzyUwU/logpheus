@@ -148,7 +148,7 @@ export class MacondoAdapter implements ApiAdapter {
             {
               available: data.available ?? true,
               currency: (data.price_hours ?? 0) * 10,
-              hours: Math.ceil(((data.price_hours ?? 0) * 10) / 50),
+              hours: data.price_hours ?? 0,
             },
           ])
         ),
