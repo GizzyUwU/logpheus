@@ -593,9 +593,6 @@ export default {
                     },
                   ]
                 : []),
-              ...(regionalChanges.length > 0
-                ? [{ label: "Regional Pricing", value: "" }]
-                : []),
               ...regionalChanges.map(([region, cost]) => ({
                 label: region,
                 value: cost.available
