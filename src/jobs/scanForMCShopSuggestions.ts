@@ -196,7 +196,7 @@ export default {
               elements: [
                 {
                   type: "mrkdwn",
-                  text: `${stored.storeUrl !== null ? `<${stored.storeUrl}|View Store URL>` : "No store url provided"}`,
+                  text: `${stored.storeUrl !== null ? `<${stored.storeUrl}|View Store URL>` : "No store url provided"} ${stored.showUsername ? `- Submitted by ${JSON.parse(stored.submitter!)?.username}` : ""}`,
                   verbatim: false,
                 },
               ],
@@ -284,7 +284,7 @@ export default {
                 elements: [
                   {
                     type: "mrkdwn",
-                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : "No store url provided"}`,
+                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : "No store url provided"} ${shopSuggestionItem.show_username ? `- Submitted by ${shopSuggestionItem.submitter?.username}` : ""}`,
                     verbatim: false,
                   },
                 ],
@@ -358,7 +358,7 @@ export default {
                 elements: [
                   {
                     type: "mrkdwn",
-                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : "No store url provided"}`,
+                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : "No store url provided"} ${shopSuggestionItem.show_username ? `- Submitted by ${shopSuggestionItem.submitter?.username}` : ""}`,
                     verbatim: false,
                   },
                 ],
