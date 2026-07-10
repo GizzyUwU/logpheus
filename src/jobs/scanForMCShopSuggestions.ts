@@ -43,7 +43,7 @@ export default {
       >[] = [];
       while (true) {
         const shopSuggestions = await yswsClient.shopSuggestions({
-          sort: "top",
+          sort: "new",
           limit: 50,
           page,
         });
@@ -142,9 +142,8 @@ export default {
       const liveIds = new Set(allShopSuggestions.map((item) => item.id));
       for (const [id, stored] of storedMap) {
         if (liveIds.has(id)) continue;
-
         await pg.delete(mcShopSuggestions).where(eq(mcShopSuggestions.id, id));
-
+        console.log("deleted", id)
         const changeText = [
           {
             label: `${stored.name} was removed.`,
@@ -199,6 +198,8 @@ export default {
             },
           ],
         });
+
+        continue;
       }
 
       for (const shopSuggestionItem of allShopSuggestions) {
