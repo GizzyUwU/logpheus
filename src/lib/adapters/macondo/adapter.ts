@@ -138,7 +138,7 @@ export class MacondoAdapter implements ApiAdapter {
         id: item.id,
         name: item.name,
         description: item.description ?? "",
-        baseHours: item.price_hours,
+        baseHours: Math.round((item.price_gold ?? 0) / 54.5),
         baseCost: item.price_gold,
         stock: item.stock_remaining ?? null,
         image_url: item.image_url ?? "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
@@ -148,7 +148,7 @@ export class MacondoAdapter implements ApiAdapter {
             {
               available: data.available ?? true,
               currency: (data.price_hours ?? 0) * 10,
-              hours: data.price_hours ?? 0,
+              hours: Math.round(((data.price_hours ?? 0) * 10) / 54.5),
             },
           ])
         ),

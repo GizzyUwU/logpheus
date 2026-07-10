@@ -303,47 +303,47 @@ export default {
             )
             .join("\n");
 
-          await client.chat.postMessage({
-            channel: yswsData.jobConfig.shopTrack.channelId,
-            unfurl_links: false,
-            blocks: [
-              {
-                type: "header",
-                text: {
-                  type: "plain_text",
-                  text: `Shop has updated!`,
-                },
-              },
-              {
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: changeText,
-                  verbatim: false,
-                },
-                accessory: {
-                  type: "image",
-                  image_url:
-                    stored.imageUrl ??
-                    "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
-                  alt_text: stored.name,
-                },
-              },
-              {
-                type: "context",
-                elements: [
-                  {
-                    type: "mrkdwn",
-                    text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
-                    verbatim: false,
-                  },
-                ],
-              },
-              {
-                type: "divider",
-              },
-            ],
-          });
+          // await client.chat.postMessage({
+          //   channel: yswsData.jobConfig.shopTrack.channelId,
+          //   unfurl_links: false,
+          //   blocks: [
+          //     {
+          //       type: "header",
+          //       text: {
+          //         type: "plain_text",
+          //         text: `Shop has updated!`,
+          //       },
+          //     },
+          //     {
+          //       type: "section",
+          //       text: {
+          //         type: "mrkdwn",
+          //         text: changeText,
+          //         verbatim: false,
+          //       },
+          //       accessory: {
+          //         type: "image",
+          //         image_url:
+          //           stored.imageUrl ??
+          //           "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
+          //         alt_text: stored.name,
+          //       },
+          //     },
+          //     {
+          //       type: "context",
+          //       elements: [
+          //         {
+          //           type: "mrkdwn",
+          //           text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
+          //           verbatim: false,
+          //         },
+          //       ],
+          //     },
+          //     {
+          //       type: "divider",
+          //     },
+          //   ],
+          // });
           if (!alrPinged) alrPinged = true;
         }
 
@@ -402,86 +402,86 @@ export default {
               .map((f) => `*${f.label}*: ${f.value}`)
               .join("\n");
 
-            await client.chat.postMessage({
-              channel: yswsData.jobConfig.shopTrack.channelId,
-              unfurl_links: false,
-              blocks: [
-                {
-                  type: "header",
-                  text: {
-                    type: "plain_text",
-                    text: `New item added to the shop!`,
-                  },
-                },
-                {
-                  type: "section",
-                  text: {
-                    type: "mrkdwn",
-                    text:
-                      `*${shopItem.name}*\n` +
-                      (() => {
-                        const desc = `_${shopItem.description
-                          .split("\n")
-                          .map((line: string) => line)
-                          .join("\n")}_`;
-                        return desc.length > 500
-                          ? desc.slice(0, desc.lastIndexOf(" ", 497)) + "..._"
-                          : desc;
-                      })(),
-                  },
-                },
-                ...(Object.keys(shopItem.regionalCosts).length > 0
-                  ? ([
-                      {
-                        type: "section",
-                        text: {
-                          type: "mrkdwn",
-                          text: priceText,
-                        },
-                        accessory: {
-                          type: "image",
-                          image_url: shopItem.image_url,
-                          alt_text: shopItem.name,
-                        },
-                      },
-                    ] as {
-                      type: string;
-                      text: TextObject;
-                      accessory: SectionBlockAccessory;
-                    }[])
-                  : ([
-                      {
-                        type: "section",
-                        text: {
-                          type: "mrkdwn",
-                          text: `*Base Price*: *${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
-                        },
-                        accessory: {
-                          type: "image",
-                          image_url: shopItem.image_url,
-                          alt_text: shopItem.name,
-                        },
-                      },
-                    ] as {
-                      type: string;
-                      text: TextObject;
-                      accessory: SectionBlockAccessory;
-                    }[])),
-                {
-                  type: "context",
-                  elements: [
-                    {
-                      type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
-                      verbatim: false,
-                    },
-                  ],
-                },
-                {
-                  type: "divider",
-                },
-              ],
-            });
+            // await client.chat.postMessage({
+            //   channel: yswsData.jobConfig.shopTrack.channelId,
+            //   unfurl_links: false,
+            //   blocks: [
+            //     {
+            //       type: "header",
+            //       text: {
+            //         type: "plain_text",
+            //         text: `New item added to the shop!`,
+            //       },
+            //     },
+            //     {
+            //       type: "section",
+            //       text: {
+            //         type: "mrkdwn",
+            //         text:
+            //           `*${shopItem.name}*\n` +
+            //           (() => {
+            //             const desc = `_${shopItem.description
+            //               .split("\n")
+            //               .map((line: string) => line)
+            //               .join("\n")}_`;
+            //             return desc.length > 500
+            //               ? desc.slice(0, desc.lastIndexOf(" ", 497)) + "..._"
+            //               : desc;
+            //           })(),
+            //       },
+            //     },
+            //     ...(Object.keys(shopItem.regionalCosts).length > 0
+            //       ? ([
+            //           {
+            //             type: "section",
+            //             text: {
+            //               type: "mrkdwn",
+            //               text: priceText,
+            //             },
+            //             accessory: {
+            //               type: "image",
+            //               image_url: shopItem.image_url,
+            //               alt_text: shopItem.name,
+            //             },
+            //           },
+            //         ] as {
+            //           type: string;
+            //           text: TextObject;
+            //           accessory: SectionBlockAccessory;
+            //         }[])
+            //       : ([
+            //           {
+            //             type: "section",
+            //             text: {
+            //               type: "mrkdwn",
+            //               text: `*Base Price*: *${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
+            //             },
+            //             accessory: {
+            //               type: "image",
+            //               image_url: shopItem.image_url,
+            //               alt_text: shopItem.name,
+            //             },
+            //           },
+            //         ] as {
+            //           type: string;
+            //           text: TextObject;
+            //           accessory: SectionBlockAccessory;
+            //         }[])),
+            //     {
+            //       type: "context",
+            //       elements: [
+            //         {
+            //           type: "mrkdwn",
+            //           text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
+            //           verbatim: false,
+            //         },
+            //       ],
+            //     },
+            //     {
+            //       type: "divider",
+            //     },
+            //   ],
+            // });
             if (!alrPinged) alrPinged = true;
             continue;
           }
@@ -630,45 +630,45 @@ export default {
               return text;
             })();
 
-            await client.chat.postMessage({
-              channel: yswsData.jobConfig.shopTrack.channelId,
-              unfurl_links: false,
-              blocks: [
-                {
-                  type: "header",
-                  text: {
-                    type: "plain_text",
-                    text: `${changes.length + rawDiffs.length} change${changes.length + rawDiffs.length > 1 ? "s" : ""} to ${shopItem.name} detected!`,
-                  },
-                },
-                {
-                  type: "section",
-                  text: {
-                    type: "mrkdwn",
-                    text: changeText + rawDiffText,
-                    verbatim: false,
-                  },
-                  accessory: {
-                    type: "image",
-                    image_url: shopItem.image_url,
-                    alt_text: shopItem.name,
-                  },
-                },
-                {
-                  type: "context",
-                  elements: [
-                    {
-                      type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
-                      verbatim: false,
-                    },
-                  ],
-                },
-                {
-                  type: "divider",
-                },
-              ],
-            });
+            // await client.chat.postMessage({
+            //   channel: yswsData.jobConfig.shopTrack.channelId,
+            //   unfurl_links: false,
+            //   blocks: [
+            //     {
+            //       type: "header",
+            //       text: {
+            //         type: "plain_text",
+            //         text: `${changes.length + rawDiffs.length} change${changes.length + rawDiffs.length > 1 ? "s" : ""} to ${shopItem.name} detected!`,
+            //       },
+            //     },
+            //     {
+            //       type: "section",
+            //       text: {
+            //         type: "mrkdwn",
+            //         text: changeText + rawDiffText,
+            //         verbatim: false,
+            //       },
+            //       accessory: {
+            //         type: "image",
+            //         image_url: shopItem.image_url,
+            //         alt_text: shopItem.name,
+            //       },
+            //     },
+            //     {
+            //       type: "context",
+            //       elements: [
+            //         {
+            //           type: "mrkdwn",
+            //           text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
+            //           verbatim: false,
+            //         },
+            //       ],
+            //     },
+            //     {
+            //       type: "divider",
+            //     },
+            //   ],
+            // });
             if (!alrPinged) alrPinged = true;
           }
         }
