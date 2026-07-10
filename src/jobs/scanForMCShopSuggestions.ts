@@ -94,11 +94,15 @@ export default {
         const { items, total: newTotal } = shopSuggestions.data;
         allShopSuggestions.push(...items);
         if (typeof newTotal === "number") total = newTotal;
-        page++;
-        if (total !== null && (page - 1) * 50 >= total) {
+        if (
+          (total !== null && allShopSuggestions.length >= total) ||
+          items.length < 50
+        ) {
           completed = true;
+          break;
         }
-        break;
+      
+        page++;
       }
       
       if (!completed) {
@@ -162,7 +166,14 @@ export default {
       for (const [id, stored] of storedMap) {
         if (liveIds.has(id)) continue;
         await pg.delete(mcShopSuggestions).where(eq(mcShopSuggestions.id, id));
-        console.log("deleted", id);
+        if (total !== null && allShopSuggestions.length !== total) {
+          const ctx = logger.with({
+            expected: String(total),
+            got: String(allShopSuggestions.length),
+          })
+          ctx.warn("Skipping delete because count mismatch");
+          return;
+        }
         const changeText = [
           {
             label: `${stored.name} was removed.`,
