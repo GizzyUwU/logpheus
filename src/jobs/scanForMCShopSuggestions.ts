@@ -37,6 +37,7 @@ export default {
       const yswsClient = clients[clientKey].raw as Macondo;
       let page = 1;
       let total: number | null = null;
+      let completed = false;
 
       const allShopSuggestions: z.infer<
         typeof MacondoTypes.ShopSuggestionItem
@@ -94,10 +95,22 @@ export default {
         allShopSuggestions.push(...items);
         if (typeof newTotal === "number") total = newTotal;
         page++;
-        if (total !== null && (page - 1) * 50 >= total) break;
-        if (items.length < 50) break;
+        if (total !== null && (page - 1) * 50 >= total) {
+          completed = true;
+        }
+        break;
+      }
+      
+      if (!completed) {
+        const ctx = logger.with({
+          lastCode: yswsClient.lastCode,
+          file: "scanForMcShopSuggestions",
+        });
+        ctx.error("Didn't finish scanning shop suggestions");
+        return;
       }
 
+      
       if (allShopSuggestions.length === 0) {
         const ctx = logger.with({
           lastCode: yswsClient.lastCode,
@@ -110,21 +123,26 @@ export default {
       const storedItems = await pg.select().from(mcShopSuggestions);
       if (storedItems.length === 0) {
         try {
-          await pg.insert(mcShopSuggestions).values(
-            allShopSuggestions.map((item) => ({
-              id: item.id,
-              name: item.name,
-              description: item.description ? item.description : null,
-              storeUrl: item.store_url ? item.store_url : null,
-              imageUrl: item.image_url ? item.image_url : null,
-              groupTag: item.group_tag ? item.group_tag : null,
-              upvoteCount: item.upvote_count ?? 0,
-              showUsername: item.show_username ?? false,
-              createdAt: item.created_at ?? new Date().toISOString(),
-              submitter:
-                item.submitter !== null ? JSON.stringify(item.submitter) : null,
-            })),
-          );
+          await pg
+            .insert(mcShopSuggestions)
+            .values(
+              allShopSuggestions.map((item) => ({
+                id: item.id,
+                name: item.name,
+                description: item.description ? item.description : null,
+                storeUrl: item.store_url ? item.store_url : null,
+                imageUrl: item.image_url ? item.image_url : null,
+                groupTag: item.group_tag ? item.group_tag : null,
+                upvoteCount: item.upvote_count ?? 0,
+                showUsername: item.show_username ?? false,
+                createdAt: item.created_at ?? new Date().toISOString(),
+                submitter:
+                  item.submitter !== null
+                    ? JSON.stringify(item.submitter)
+                    : null,
+              })),
+            )
+            .onConflictDoNothing();
           return;
         } catch (err) {
           const ctx = logger.with({
@@ -135,6 +153,7 @@ export default {
           ctx.error(
             `Failed insertion of shop suggestion row for all items on YSWS ${yswsData.id}`,
           );
+          return;
         }
       }
 
@@ -143,7 +162,7 @@ export default {
       for (const [id, stored] of storedMap) {
         if (liveIds.has(id)) continue;
         await pg.delete(mcShopSuggestions).where(eq(mcShopSuggestions.id, id));
-        console.log("deleted", id)
+        console.log("deleted", id);
         const changeText = [
           {
             label: `${stored.name} was removed.`,
@@ -233,6 +252,7 @@ export default {
             ctx.error(
               `Failed insertion of shop row for item ${shopSuggestionItem.id} on YSWS ${yswsData.id}`,
             );
+            continue;
           }
 
           if (!inserted) continue;
