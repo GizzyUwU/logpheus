@@ -70,9 +70,7 @@ export default {
 
         if (!shopSuggestions.ok || !shopSuggestions.data.items?.length) {
           if (shopSuggestions.status === 408) break;
-          if (
-            shopSuggestions.status === 200
-          ) {
+          if (shopSuggestions.status === 200) {
             logger.warn("API returned data with no items");
             break;
           }
@@ -103,45 +101,40 @@ export default {
       if (allShopSuggestions.length === 0) {
         const ctx = logger.with({
           lastCode: yswsClient.lastCode,
-          file: "scanForMcShopSuggestions"
-        })
-        ctx.error("All Shop Suggestions is empty implying an issue occurred")
+          file: "scanForMcShopSuggestions",
+        });
+        ctx.error("All Shop Suggestions is empty implying an issue occurred");
         return;
       }
 
       const storedItems = await pg.select().from(mcShopSuggestions);
       if (storedItems.length === 0) {
         try {
-          await pg
-            .insert(mcShopSuggestions)
-            .values(
-              allShopSuggestions.map((item) => ({
-                id: item.id,
-                name: item.name,
-                description: item.description ? item.description : null,
-                storeUrl: item.store_url ? item.store_url : null,
-                imageUrl: item.image_url ? item.image_url : null,
-                groupTag: item.group_tag ? item.group_tag : null,
-                upvoteCount: item.upvote_count ?? 0,
-                showUsername: item.show_username ?? false,
-                createdAt: item.created_at ?? new Date().toISOString(),
-                submitter:
-                  item.submitter !== null
-                    ? JSON.stringify(item.submitter)
-                    : null,
-              })),
-            )
+          await pg.insert(mcShopSuggestions).values(
+            allShopSuggestions.map((item) => ({
+              id: item.id,
+              name: item.name,
+              description: item.description ? item.description : null,
+              storeUrl: item.store_url ? item.store_url : null,
+              imageUrl: item.image_url ? item.image_url : null,
+              groupTag: item.group_tag ? item.group_tag : null,
+              upvoteCount: item.upvote_count ?? 0,
+              showUsername: item.show_username ?? false,
+              createdAt: item.created_at ?? new Date().toISOString(),
+              submitter:
+                item.submitter !== null ? JSON.stringify(item.submitter) : null,
+            })),
+          );
           return;
         } catch (err) {
-          const ctx = logger
-            .with({
-              error: err,
-              message: err instanceof Error ? err.message : String(err),
-              cause: (err as any)?.cause,
-            })
+          const ctx = logger.with({
+            error: err,
+            message: err instanceof Error ? err.message : String(err),
+            cause: (err as any)?.cause,
+          });
           ctx.error(
-              `Failed insertion of shop suggestion row for all items on YSWS ${yswsData.id}`,
-            );
+            `Failed insertion of shop suggestion row for all items on YSWS ${yswsData.id}`,
+          );
         }
       }
 
@@ -211,36 +204,37 @@ export default {
       for (const shopSuggestionItem of allShopSuggestions) {
         const stored = storedMap.get(shopSuggestionItem.id);
         if (!stored) {
+          let inserted = false;
           try {
-            await pg
-              .insert(mcShopSuggestions)
-              .values({
-                id: shopSuggestionItem.id,
-                name: shopSuggestionItem.name,
-                description: shopSuggestionItem.description,
-                storeUrl: shopSuggestionItem.store_url,
-                imageUrl: shopSuggestionItem.image_url,
-                groupTag: shopSuggestionItem.group_tag,
-                upvoteCount: shopSuggestionItem.upvote_count,
-                showUsername: shopSuggestionItem.show_username,
-                createdAt: shopSuggestionItem.created_at,
-                submitter:
-                  shopSuggestionItem.submitter !== null
-                    ? JSON.stringify(shopSuggestionItem.submitter)
-                    : null,
-              })
+            await pg.insert(mcShopSuggestions).values({
+              id: shopSuggestionItem.id,
+              name: shopSuggestionItem.name,
+              description: shopSuggestionItem.description,
+              storeUrl: shopSuggestionItem.store_url,
+              imageUrl: shopSuggestionItem.image_url,
+              groupTag: shopSuggestionItem.group_tag,
+              upvoteCount: shopSuggestionItem.upvote_count,
+              showUsername: shopSuggestionItem.show_username,
+              createdAt: shopSuggestionItem.created_at,
+              submitter:
+                shopSuggestionItem.submitter !== null
+                  ? JSON.stringify(shopSuggestionItem.submitter)
+                  : null,
+            });
+
+            inserted = true;
           } catch (err) {
-            logger
-              .with({
-                error: err,
-                message: err instanceof Error ? err.message : String(err),
-                cause: (err as any)?.cause,
-              })
-              .error(
-                `Failed insertion of shop row for item ${shopSuggestionItem.id} on YSWS ${yswsData.id}`,
-              );
+            const ctx = logger.with({
+              error: err,
+              message: err instanceof Error ? err.message : String(err),
+              cause: (err as any)?.cause,
+            });
+            ctx.error(
+              `Failed insertion of shop row for item ${shopSuggestionItem.id} on YSWS ${yswsData.id}`,
+            );
           }
 
+          if (!inserted) continue;
           await client.chat.postMessage({
             channel: yswsData.jobConfig.scanForMCShopSuggestions!.channelId,
             unfurl_links: false,
