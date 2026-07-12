@@ -19,7 +19,7 @@ export const users = pgTable("users", {
     .where(sql`${table.disabled} = false`),
   index("users_hcb_active_idx")
     .on(table.hcbId)
-    .where(sql`${table.disabled} = false AND ${table.hcbId} IS NOT NULL`)
+    .where(sql`${table.disabled} = false AND ${table.hcbId} IS NOT NULL`),
 ]);
 
 export const usersRelations = relations(users, ({ many }) => ({

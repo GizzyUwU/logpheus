@@ -1,13 +1,22 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import ysws from "@/ysws";
+import type { PlainTextOption } from "@slack/web-api";
 
 export default {
   name: "register",
   desc: "Register to use the bot!",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { userData, logger, client, folder, callbackId, prefix, yswsData }: RequestHandler,
+    {
+      userData,
+      logger,
+      client,
+      folder,
+      callbackId,
+      prefix,
+      yswsData,
+    }: RequestHandler,
   ) => {
     try {
       const channel = await client.conversations.info({
@@ -31,10 +40,7 @@ export default {
 
       if (userData && Object.keys(userData).length === 0)
         return await respond({
-          text:
-            "You don't exist in db! Run /" +
-            prefix +
-            " register first",
+          text: "You don't exist in db! Run /" + prefix + " register first",
           response_type: "ephemeral",
         });
 
@@ -49,6 +55,27 @@ export default {
             "config to change it",
           response_type: "ephemeral",
         });
+
+      const jobConfig = ysws.macondo.jobConfig as Partial<
+        Record<(typeof ysws.macondo.jobs)[number], { optional?: boolean }>
+      >;
+
+      const jobSelection: PlainTextOption[] = ysws.macondo.jobs.flatMap(
+        (job) => {
+          const config = jobConfig[job];
+          if (!config || config.optional === undefined) return [];
+          return [
+            {
+              text: {
+                type: "plain_text",
+                text: job,
+                emoji: true,
+              },
+              value: job,
+            },
+          ];
+        },
+      );
 
       await client.views.open({
         trigger_id: command.trigger_id,
@@ -70,7 +97,7 @@ export default {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: "Go to explore, people, search your name, click it, open in new tab, grab it from user id from url 'https://macondo.hackclub.com/u/{userId}'",
+                text: "Go to <here|https://macondo.hackclub.com/explore|>, click people, search your name, click it, open in new tab, grab it from user id from url 'https://macondo.hackclub.com/u/{userId}'. To get api key click <here|https://macondo.hackclub.com/settings/api-keys>!",
               },
             },
             {
@@ -85,6 +112,20 @@ export default {
                 action_id: "acc_id",
                 multiline: false,
               },
+            },
+            {
+              type: "input",
+              block_id: "mcApiKey",
+              label: {
+                type: "plain_text",
+                text: "Want to provide an api key?",
+              },
+              element: {
+                type: "plain_text_input",
+                action_id: "api_key",
+                multiline: false,
+              },
+              optional: true,
             },
             {
               type: "input",
@@ -114,6 +155,29 @@ export default {
               },
               optional: false,
             },
+            ...((jobSelection.length > 0
+              ? [
+                  {
+                    type: "input",
+                    block_id: "jobs",
+                    label: {
+                      type: "plain_text",
+                      text: "What jobs do you want to register to?",
+                    },
+                    element: {
+                      type: "multi_static_select",
+                      action_id: "jobs",
+                      placeholder: {
+                        type: "plain_text",
+                        text: "Select a job",
+                        emoji: true,
+                      },
+                      options: jobSelection,
+                    },
+                    optional: true,
+                  },
+                ]
+              : []) as any[]),
           ],
           submit: {
             type: "plain_text",

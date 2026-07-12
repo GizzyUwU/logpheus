@@ -9,6 +9,7 @@ export const mcShopSuggestions = pgTable(
     imageUrl: text(),
     groupTag: text(),
     upvoteCount: integer(),
+    downvoteCount: integer(),
     showUsername: boolean().notNull(),
     createdAt: timestamp({
       withTimezone: true,

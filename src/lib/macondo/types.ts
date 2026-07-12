@@ -360,22 +360,108 @@ export namespace ZTypes {
     cluster_id: zod.string().nullish(),
     group_tag: zod.string().nullish(),
     upvote_count: zod.number(),
+    downvote_count: zod.number(),
     show_username: zod.boolean(),
     created_at: zod.iso.datetime(),
-    submitter: zod.object({
-      username: zod.string().nullish(),
-      image: zod.string().nullish(),
-    }).nullish(),
+    submitter: zod
+      .object({
+        username: zod.string().nullish(),
+        image: zod.string().nullish(),
+      })
+      .nullish(),
     voted: zod.boolean(),
-    can_delete: zod.boolean()
-  })
-  
+    downvoted: zod.boolean(),
+    can_delete: zod.boolean(),
+  });
+
   export const ShopSuggestionResponse = zod.object({
     items: zod.array(ShopSuggestionItem),
     total: zod.number(),
     page: zod.number(),
     limit: zod.number(),
     viewer_signed_in: zod.boolean(),
-    viewer_verified: zod.boolean()
-  })
+    viewer_verified: zod.boolean(),
+  });
+
+  export const GetMeResponse = zod.object({
+    id: zod.string(),
+    name: zod.string(),
+    email: zod.string(),
+    image: zod.string(),
+    created_at: zod.string(),
+    username: zod.string(),
+    slack_id: zod.string(),
+    locale: zod.string(),
+    timezone: zod.string(),
+    onboarding_step: zod.string(),
+    is_temp: zod.boolean(),
+    has_hackclub: zod.boolean(),
+    has_github: zod.boolean(),
+    has_hackatime: zod.boolean(),
+    hackatime_token_invalid: zod.boolean(),
+    streak_freezes_remaining: zod.number(),
+    worked_today: zod.boolean(),
+    longest_current_streak: zod.number(),
+    streak_slack_notifications: zod.boolean(),
+    auto_use_streak_freezes: zod.boolean(),
+    has_address: zod.boolean(),
+    has_valid_address: zod.boolean(),
+    has_valid_name: zod.boolean(),
+    hca_verification_status: zod.string(),
+    hca_ysws_eligible: zod.boolean(),
+    last_login_at: zod.string(),
+  });
+
+  export const GetMyStreak = zod.object({
+    current_streak: zod.number(),
+    streak_freezes_remaining: zod.number(),
+    worked_today: zod.boolean(),
+    today_seconds_logged: zod.number(),
+    daily_goal_seconds: zod.number(),
+    projects: zod.array(
+      zod.object({
+        id: zod.number(),
+        name: zod.string(),
+        project_streak_days: zod.number(),
+        last_worked_date: zod.string(),
+        worked_today: zod.boolean(),
+        auto_use_streak_freezes: zod.boolean(),
+      }),
+    ),
+  });
+
+  export const GetMyBalance = zod.object({
+    balance: zod.number(),
+  });
+
+  export const GetMyNotificationsQueries = zod.object({
+    page: zod.coerce.number().int().min(1).default(1),
+    limit: zod.coerce.number().int().min(1).default(1),
+  });
+
+  export const GetMyNotificationsResponse = zod.object({
+    items: zod.array(
+      zod.object({
+        id: zod.number(),
+        user_id: zod.string(),
+        type: zod.string(),
+        title: zod.string(),
+        body: zod.string(),
+        action_url: zod.string().nullish(),
+        entity_type: zod.string(),
+        entity_id: zod.string(),
+        read_at: zod.iso.datetime({ offset: true }).nullish(),
+        created_at: zod.iso.datetime({ offset: true }),
+      })),
+    unread_count: zod.number(),
+    next_cursor: zod.number()
+  });
+
+  export const GetMyEarnRate = zod.object({
+    has_shipped: zod.boolean(),
+    gold_per_hour: zod.number(),
+    fruit_per_hour: zod.number(),
+    total_gold: zod.number(),
+    total_hours: zod.number(),
+  });
 }

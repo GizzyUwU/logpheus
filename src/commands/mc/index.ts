@@ -135,7 +135,6 @@ export default {
         }
       });
     
-
       if (!userData || Object.keys(userData).length === 0)
         return args.respond({
           text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,

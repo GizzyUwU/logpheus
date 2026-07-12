@@ -41,11 +41,7 @@ export default {
           response_type: "ephemeral",
         });
 
-      if (userData && Object.keys(userData).length === 0)
-        return respond({
-          text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${prefix} register`,
-          response_type: "ephemeral",
-        });
+
 
       if (yswsData && Object.keys(yswsData).length === 0)
         return respond({

@@ -65,6 +65,17 @@ export default {
         updateFields.region = flatValues["region"];
       }
 
+      if (view.state.values?.["jobs"]?.["jobs"]?.selected_options) {
+        updateFields.registeredJobs =
+          view.state.values["jobs"]["jobs"].selected_options.map(
+            (option) => option.value,
+          );
+      }
+
+      if (flatValues["api_key"]) {
+        updateFields.apiKey = flatValues["api_key"];
+      }
+
       if (Object.keys(updateFields).length > 0) {
         await pg
           .update(yswsUsers)

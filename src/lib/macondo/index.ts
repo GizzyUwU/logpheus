@@ -10,10 +10,15 @@ export default class Macondo {
   private ready: Promise<void>;
   private logger: typeof LogType;
 
-  constructor(logtape: typeof LogType) {
+  constructor(logtape: typeof LogType, apiKey?: string) {
     this.fetch = axios.create({
       baseURL: "https://macondo.hackclub.com/api",
       timeout: 10000,
+      ...(apiKey ? {
+        headers: {
+          Authorization: `Bearer ${apiKey}`
+        }
+      } : {})
     });
     this.logger = logtape;
     this.ready = Promise.resolve();

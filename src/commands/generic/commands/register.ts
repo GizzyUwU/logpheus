@@ -45,9 +45,9 @@ export default {
       if (userData && Object.keys(userData).length > 0)
         return await respond({
           text:
-            "You already got an api key setup in db. Run /" +
+            "You already exist in the db. Run /" +
             prefix +
-            "-config to change it",
+            " config to change it",
           response_type: "ephemeral",
         });
 

@@ -55,6 +55,29 @@ export default {
           (o) => o.value === (yswsData?.region ?? "us").toLowerCase(),
         ) ?? regionOptions[0];
 
+      const jobConfig = ysws.macondo.jobConfig as Partial<
+        Record<typeof ysws.macondo.jobs[number], { optional?: boolean }>
+      >;
+      
+      const jobSelection: PlainTextOption[] = ysws.macondo.jobs.flatMap((job) => {
+        const config = jobConfig[job];
+        if (!config || config.optional === undefined) return [];
+        return [
+          {
+            text: {
+              type: "plain_text",
+              text: job,
+              emoji: true,
+            },
+            value: job,
+          },
+        ];
+      });
+      
+      const alrRegisteredJobs = jobSelection.filter((o) =>
+        yswsData.registeredJobs?.includes(o.value ?? ""),
+      );
+
       await client.views.open({
         trigger_id: command.trigger_id,
         view: {
@@ -72,7 +95,7 @@ export default {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: "Go to explore, people, search your name, click it, open in new tab, grab it from user id from url 'https://macondo.hackclub.com/u/{userId}'",
+                text: "Go to <https://macondo.hackclub.com/explore|here>, click people, search your name, click it, open in new tab, grab it from user id from url 'https://macondo.hackclub.com/u/{userId}'. To get api key click <https://macondo.hackclub.com/settings/api-keys|here>!",
               },
             },
             {
@@ -88,6 +111,21 @@ export default {
                 multiline: false,
                 initial_value: yswsData?.accId ?? ""
               },
+            },
+            {
+              type: "input",
+              block_id: "mcApiKey",
+              label: {
+                type: "plain_text",
+                text: "Want to provide an api key?",
+              },
+              element: {
+                type: "plain_text_input",
+                action_id: "api_key",
+                multiline: false,
+                initial_value: yswsData?.apiKey ?? ""
+              },
+              optional: true
             },
             {
               type: "input",
@@ -109,6 +147,26 @@ export default {
               },
               optional: false,
             },
+            ...(jobSelection.length > 0 ? [{
+              type: "input",
+              block_id: "jobs",
+              label: {
+                type: "plain_text",
+                text: "What jobs do you want to register to?",
+              },
+              element: {
+                type: "multi_static_select",
+                action_id: "jobs",
+                placeholder: {
+                  type: "plain_text",
+                  text: "Select a job",
+                  emoji: true,
+                },
+                options: jobSelection,
+                initial_options: alrRegisteredJobs
+              },
+              optional: true,
+            }] : []) as any[],
           ],
           submit: {
             type: "plain_text",

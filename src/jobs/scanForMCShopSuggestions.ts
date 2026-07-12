@@ -138,6 +138,7 @@ export default {
                 imageUrl: item.image_url ? item.image_url : null,
                 groupTag: item.group_tag ? item.group_tag : null,
                 upvoteCount: item.upvote_count ?? 0,
+                downvoteCount: item.downvote_count ?? 0,
                 showUsername: item.show_username ?? false,
                 createdAt: item.created_at ?? new Date().toISOString(),
                 submitter:
@@ -245,6 +246,7 @@ export default {
               imageUrl: shopSuggestionItem.image_url,
               groupTag: shopSuggestionItem.group_tag,
               upvoteCount: shopSuggestionItem.upvote_count,
+              downvoteCount: shopSuggestionItem.downvote_count,
               showUsername: shopSuggestionItem.show_username,
               createdAt: shopSuggestionItem.created_at,
               submitter:
@@ -352,6 +354,87 @@ export default {
                 text: {
                   type: "plain_text",
                   text: `${shopSuggestionItem.name} got another upvote! It is at ${shopSuggestionItem.upvote_count} upvotes!`,
+                },
+              },
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: (() => {
+                    const desc = `${
+                      shopSuggestionItem.description ??
+                      "No description provided"
+                        .split("\n")
+                        .map((line: string) => line)
+                        .join("\n")
+                    }`;
+                    return desc.length > 500
+                      ? desc.slice(0, desc.lastIndexOf(" ", 497)) + "..."
+                      : desc;
+                  })(),
+                },
+                accessory: {
+                  type: "image",
+                  image_url:
+                    shopSuggestionItem.image_url ??
+                    "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
+                  alt_text: shopSuggestionItem.name,
+                },
+              },
+              {
+                type: "context",
+                elements: [
+                  {
+                    type: "mrkdwn",
+                    text: `${shopSuggestionItem.store_url !== null ? `<${shopSuggestionItem.store_url}|View Store URL>` : "No store url provided"} ${shopSuggestionItem.show_username ? `- Submitted by ${shopSuggestionItem.submitter?.username}` : ""}`,
+                    verbatim: false,
+                  },
+                ],
+              },
+              {
+                type: "divider",
+              },
+            ],
+          });
+          continue;
+        }
+        if (stored.downvoteCount === null) {
+          await pg
+            .update(mcShopSuggestions)
+            .set({
+              downvoteCount: shopSuggestionItem.downvote_count,
+            })
+            .where(eq(mcShopSuggestions.id, shopSuggestionItem.id));
+          return;
+        } else if ((stored.downvoteCount ?? 0) !== shopSuggestionItem.downvote_count) {
+          try {
+            await pg
+              .update(mcShopSuggestions)
+              .set({
+                downvoteCount: shopSuggestionItem.downvote_count,
+              })
+              .where(eq(mcShopSuggestions.id, shopSuggestionItem.id));
+          } catch (err) {
+            logger
+              .with({
+                error: err,
+                message: err instanceof Error ? err.message : String(err),
+                cause: (err as any)?.cause,
+              })
+              .error(
+                `Failed insertion of shop row for item ${shopSuggestionItem.id} on YSWS ${yswsData.id}`,
+              );
+          }
+
+          await client.chat.postMessage({
+            channel: yswsData.jobConfig.scanForMCShopSuggestions!.channelId,
+            unfurl_links: false,
+            blocks: [
+              {
+                type: "header",
+                text: {
+                  type: "plain_text",
+                  text: `${shopSuggestionItem.name} got another downvote! It is at ${shopSuggestionItem.downvote_count} downvotes! ${shopSuggestionItem.downvote_count > 20 ? "God how shit was this suggestion to have over 20 downvotes and still getting downvotes?" : ""}`,
                 },
               },
               {

@@ -105,7 +105,7 @@ export default {
         },
       });
 
-      if (!userData || Object.keys(userData).length === 0)
+      if ((!userData || Object.keys(userData).length === 0) && !rawOption?.includes("register"))
         return args.respond({
           text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
           response_type: "ephemeral",
@@ -159,8 +159,8 @@ export default {
           callbackId: ctx.namespacedPrefix + "_" + option,
           logger: loggerCTX,
           userData: userData,
-          yswsAll: userData.ysws,
-          projects: userData.projects,
+          yswsAll: userData?.ysws ?? [],
+          projects: userData?.projects ?? [],
         },
       );
     } catch (error: any) {

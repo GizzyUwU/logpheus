@@ -76,6 +76,7 @@ export default {
       const insertFields: UserInsert = {
         userId,
         accId: flatValues["acc_id"]!,
+        apiKey: flatValues["api_key"]!,
         disabled: false,
         region: regionOpt ?? "EU",
         yswsId: yswsId,

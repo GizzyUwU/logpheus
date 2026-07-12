@@ -4,6 +4,7 @@ export const jobOptions = z.enum([
   "shopTrack",
   "tempShopMigration",
   "scanForMCShopSuggestions",
+  "scanForMCStreak"
 ]);
 export const jobConfigSchema = z
   .object({
@@ -14,11 +15,13 @@ export const jobConfigSchema = z
     scanForMCShopSuggestions: z.object({
       channelId: z.string(),
     }),
+    scanForMCStreak: z.object({
+      optional: z.boolean()
+    })
   })
   .partial();
 
 const regionsSchema = z.record(z.string(), z.string());
-
 export const yswsItem = z.object({
   id: z.number(),
   humanName: z.string(),
@@ -95,6 +98,9 @@ export default {
           ? "C0BE47SPGJ0"
           : process.env["DEV_CHANNEL"],
       }
+      // scanForMCStreak: {
+      //   optional: true
+      // }
     } as z.infer<typeof jobConfigSchema>,
   },
   stardance: {
