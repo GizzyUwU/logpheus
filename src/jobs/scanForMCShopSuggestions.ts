@@ -70,7 +70,13 @@ export default {
         }
 
         if (!shopSuggestions.ok || !shopSuggestions.data.items?.length) {
-          if (shopSuggestions.status === 408) break;
+          if (shopSuggestions.status === 408) {
+            logger
+              .with({ page })
+              .warn("request timed out on shopSuggestions (408), retrying page");
+            await new Promise((r) => setTimeout(r, 2000));
+            continue;
+          }
           if (shopSuggestions.status === 200) {
             logger.warn("API returned data with no items");
             break;
