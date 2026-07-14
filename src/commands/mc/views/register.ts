@@ -10,7 +10,16 @@ export default {
   name: "register",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, userData, yswsData, yswsId, opClient }: RequestHandler & { yswsId: number },
+    {
+      pg,
+      logger,
+      client,
+      userData,
+      yswsData,
+      yswsId,
+      opClient,
+      prefix,
+    }: RequestHandler & { yswsId: number },
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const metadata = JSON.parse(view.private_metadata);
@@ -82,6 +91,39 @@ export default {
         yswsId: yswsId,
       };
 
+      if (view.state.values?.["jobs"]?.["jobs"]?.selected_options) {
+        for (const job of view.state.values?.["jobs"]?.["jobs"]
+          ?.selected_options) {
+          if (
+            ysws.macondo.jobConfig[job.value] &&
+            ysws.macondo.jobConfig[job.value]?.apiKeyRequired &&
+            (!yswsData?.apiKey || yswsData?.apiKey.length === 0)
+          ) {
+            return await client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: `${job} requires an API key to be set! Rerun the config command to set an api key and add the job`,
+            });
+          }
+
+          if (
+            ysws.macondo.jobConfig[job.value] &&
+            ysws.macondo.jobConfig[job.value]?.channelRequired &&
+            (!userData?.channel || userData?.channel.length === 0)
+          ) {
+            return await client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: `${job} requires a channel id to be set! Run the  /${prefix} config command to set a channel id and then rerun this command to add the job.`,
+            });
+          }
+        }
+
+        insertFields.registeredJobs = view.state.values["jobs"][
+          "jobs"
+        ].selected_options.map((option) => option.value);
+      }
+
       await pg.insert(yswsUsers).values(insertFields);
       await client.chat.postEphemeral({
         channel: channelId,
@@ -98,7 +140,9 @@ export default {
           },
         });
         opClient.track("signup", {
-          ysws: Object.values(ysws).find((x) => x.id === yswsId)?.humanName ?? "unknown"
+          ysws:
+            Object.values(ysws).find((x) => x.id === yswsId)?.humanName ??
+            "unknown",
         });
         opClient.clear();
       }

@@ -189,7 +189,7 @@ export default {
       ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`];
     if (rawOption !== "register" && !yswsClient) {
       const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-      const adapter = new AdapterClass(yswsData?.apiKey, loggerCTX);
+      const adapter = new AdapterClass({ apiKey: yswsData?.apiKey, logtape: loggerCTX });
       yswsClient = adapter;
       ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
     }

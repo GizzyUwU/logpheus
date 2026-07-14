@@ -327,10 +327,10 @@ export default {
           const clientKey = `${yswsRow.yswsId}:${userRow.userId ?? "no-key"}`;
           if (!clients[clientKey]) {
             const AdapterClass = await loadAdapter(yswsConfig.adapter);
-            clients[clientKey] = new AdapterClass(
-              yswsConfig.apiKeyRequired ? yswsRow.apiKey : undefined,
-              logger,
-            );
+            clients[clientKey] = new AdapterClass({
+              apiKey: yswsConfig.apiKeyRequired ? yswsRow.apiKey : undefined,
+              logtape: logger,
+            });
           }
 
           for (const project of userProjects) {

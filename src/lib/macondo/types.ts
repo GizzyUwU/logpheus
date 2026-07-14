@@ -416,14 +416,14 @@ export namespace ZTypes {
     current_streak: zod.number(),
     streak_freezes_remaining: zod.number(),
     worked_today: zod.boolean(),
-    today_seconds_logged: zod.number(),
+    today_seconds_logged: zod.number().nullish(),
     daily_goal_seconds: zod.number(),
     projects: zod.array(
       zod.object({
         id: zod.number(),
         name: zod.string(),
-        project_streak_days: zod.number(),
-        last_worked_date: zod.string(),
+        project_streak_days: zod.number().nullish(),
+        last_worked_date: zod.string().nullish(),
         worked_today: zod.boolean(),
         auto_use_streak_freezes: zod.boolean(),
       }),
@@ -431,7 +431,7 @@ export namespace ZTypes {
   });
 
   export const GetMyBalance = zod.object({
-    balance: zod.number(),
+    balance: zod.number().nullish(),
   });
 
   export const GetMyNotificationsQueries = zod.object({
@@ -446,7 +446,7 @@ export namespace ZTypes {
         user_id: zod.string(),
         type: zod.string(),
         title: zod.string(),
-        body: zod.string(),
+        body: zod.string().nullish(),
         action_url: zod.string().nullish(),
         entity_type: zod.string(),
         entity_id: zod.string(),

@@ -5,13 +5,25 @@ import type { ChatPostEphemeralResponse } from "@slack/web-api";
 import { yswsUsers } from "@/schema/ysws";
 import ysws from "@/ysws";
 import { loadAdapter } from "@/lib/adapters";
+import Macondo from "@/lib/macondo";
+import { getGenericErrorMessage } from "@/lib/genericError";
 type UserRow = typeof yswsUsers._.inferSelect;
 
 export default {
   name: "config",
   execute: async (
     { view, body }: SlackViewMiddlewareArgs,
-    { pg, logger, client, clients, prefix, folder, yswsData, yswsId }: RequestHandler & { yswsId: number },
+    {
+      pg,
+      logger,
+      client,
+      clients,
+      prefix,
+      folder,
+      userData,
+      yswsData,
+      yswsId,
+    }: RequestHandler & { yswsId: number },
   ): Promise<void | ChatPostEphemeralResponse> => {
     try {
       const channelId = JSON.parse(view.private_metadata).channel;
@@ -42,7 +54,7 @@ export default {
         },
         {} as Record<string, string | undefined>,
       );
-      
+
       const updateFields: Partial<UserRow> = {};
       if (flatValues["acc_id"]) {
         const accId = flatValues["acc_id"]!;
@@ -53,11 +65,13 @@ export default {
             text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
           });
 
-        updateFields.accId = accId
+        updateFields.accId = accId;
         if (yswsData?.disabled) updateFields.disabled = false;
         if (!clients[`${yswsData?.yswsId}:${yswsData?.userId}`]) {
           const AdapterClass = await loadAdapter(ysws.macondo.adapter);
-          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = new AdapterClass(logger)
+          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = new AdapterClass({
+            logtape: logger,
+          });
         }
       }
 
@@ -66,21 +80,60 @@ export default {
       }
 
       if (view.state.values?.["jobs"]?.["jobs"]?.selected_options) {
-        updateFields.registeredJobs =
-          view.state.values["jobs"]["jobs"].selected_options.map(
-            (option) => option.value,
-          );
+        for (const job of view.state.values?.["jobs"]?.["jobs"]
+          ?.selected_options) {
+          if (
+            ysws.macondo.jobConfig[job.value] &&
+            ysws.macondo.jobConfig[job.value]?.apiKeyRequired &&
+            (!yswsData?.apiKey || yswsData?.apiKey.length === 0) &&
+            (!flatValues["api_key"] || flatValues["api_key"].length === 0)
+          ) {
+            return await client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: `${job.value} requires an API key to be set! Rerun \`/${prefix}-mc config\` command to set an api key and add the job`,
+            });
+          }
+
+          if (
+            ysws.macondo.jobConfig[job.value] &&
+            ysws.macondo.jobConfig[job.value]?.channelRequired &&
+            (!userData?.channel || userData?.channel.length === 0)
+          ) {
+            return await client.chat.postEphemeral({
+              channel: channelId,
+              user: userId,
+              text: `${job.value} requires a channel id to be set! Run the \`/${prefix} config\` command to set a channel id and then rerun this command to add the job.`,
+            });
+          }
+        }
+        
+        updateFields.registeredJobs = view.state.values["jobs"][
+          "jobs"
+        ].selected_options.map((option) => option.value);
       }
 
       if (flatValues["api_key"]) {
-        updateFields.apiKey = flatValues["api_key"];
+        const mc = new Macondo(logger, flatValues["api_key"]!);
+        const res = await mc.me()
+        if(res.status === 200) {
+          updateFields.apiKey = flatValues["api_key"];
+        } else {
+          return  await client.chat.postEphemeral({
+            channel: channelId,
+            user: userId,
+            text: "Issue with api key: " + getGenericErrorMessage(res.status, prefix!) || "Unable to process api key try later!",
+          });
+        }
       }
 
       if (Object.keys(updateFields).length > 0) {
         await pg
           .update(yswsUsers)
           .set(updateFields)
-          .where(and(eq(yswsUsers.userId, userId), eq(yswsUsers.yswsId, yswsId)));
+          .where(
+            and(eq(yswsUsers.userId, userId), eq(yswsUsers.yswsId, yswsId)),
+          );
 
         await client.chat.postEphemeral({
           channel: channelId,

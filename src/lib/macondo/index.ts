@@ -14,7 +14,7 @@ export default class Macondo {
     this.fetch = axios.create({
       baseURL: "https://macondo.hackclub.com/api",
       timeout: 10000,
-      ...(apiKey ? {
+      ...(apiKey && apiKey.length > 0 ? {
         headers: {
           Authorization: `Bearer ${apiKey}`
         }
@@ -353,6 +353,26 @@ export default class Macondo {
         url: "/shop/requests" + (queries.toString() ? `?${queries.toString()}` : ""),
       },
       ZTypes.ShopSuggestionResponse,
+    );
+  }
+
+  me() {
+    return this.request(
+      {
+        method: "GET",
+        url: "/auth/me",
+      },
+      ZTypes.GetMeResponse,
+    );
+  }
+
+  streak() {
+    return this.request(
+      {
+        method: "GET",
+        url: "/profile/streaks",
+      },
+      ZTypes.GetMyStreak,
     );
   }
 }

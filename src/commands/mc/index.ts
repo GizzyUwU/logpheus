@@ -188,7 +188,7 @@ export default {
         ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`];
       if (rawOption !== "register" && !yswsClient) {
         const AdapterClass = await loadAdapter(ysws.macondo.adapter);
-        const adapter = new AdapterClass(undefined, loggerCTX);
+        const adapter = new AdapterClass({ logtape: loggerCTX });
         yswsClient = adapter;
         ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
       }

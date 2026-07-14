@@ -178,15 +178,15 @@ const formatCost = (v: unknown) => {
 
 export default {
   name: "shopTrack",
-  interval: 30,
+  interval: 10,
   execute: async ({ clients, client, pg, logger, prefix }: RequestHandler) => {
     try {
       for (const yswsData of Object.values(ysws)) {
         if (!yswsData.jobs.includes("shopTrack")) continue;
         if (
-          !yswsData.jobConfig.shopTrack ||
-          !yswsData.jobConfig.shopTrack.channelId ||
-          (yswsData.apiKeyRequired && !yswsData.jobConfig.shopTrack.jobApiKey)
+          !yswsData.jobConfig["shopTrack"] ||
+          !yswsData.jobConfig["shopTrack"].channelId ||
+          (yswsData.apiKeyRequired && !yswsData.jobConfig["shopTrack"].jobApiKey)
         ) {
           logger.info("shopTrack job skipped becasue didn't meet requirements");
           continue;
@@ -195,12 +195,12 @@ export default {
         const clientKey = `${yswsData.id}:shopTrack`;
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsData.adapter);
-          clients[clientKey] = new AdapterClass(
-            yswsData.apiKeyRequired
-              ? yswsData.jobConfig.shopTrack.jobApiKey
+          clients[clientKey] = new AdapterClass({
+            apiKey: yswsData.apiKeyRequired
+              ? yswsData.jobConfig["shopTrack"].jobApiKey
               : undefined,
-            logger,
-          );
+            logtape: logger,
+          });
         }
 
         const yswsClient = clients[clientKey];
@@ -304,7 +304,7 @@ export default {
             .join("\n");
 
           await client.chat.postMessage({
-            channel: yswsData.jobConfig.shopTrack.channelId,
+            channel: yswsData.jobConfig["shopTrack"].channelId,
             unfurl_links: false,
             blocks: [
               {
@@ -403,7 +403,7 @@ export default {
               .join("\n");
 
             await client.chat.postMessage({
-              channel: yswsData.jobConfig.shopTrack.channelId,
+              channel: yswsData.jobConfig["shopTrack"].channelId,
               unfurl_links: false,
               blocks: [
                 {
@@ -631,7 +631,7 @@ export default {
             })();
 
             await client.chat.postMessage({
-              channel: yswsData.jobConfig.shopTrack.channelId,
+              channel: yswsData.jobConfig["shopTrack"].channelId,
               unfurl_links: false,
               blocks: [
                 {

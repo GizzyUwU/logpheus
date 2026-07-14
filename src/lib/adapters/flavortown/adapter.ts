@@ -14,7 +14,13 @@ import type { logger as LogType } from "@/index.ts";
 export class FTAdapter implements ApiAdapter {
   private client: FT;
   ready: Promise<void>;
-  constructor(apiKey: string, logtape: typeof LogType) {
+  constructor({
+    apiKey,
+    logtape,
+  }: {
+    apiKey: string;
+    logtape: typeof LogType;
+  }) {
     this.client = new FT(apiKey, logtape);
     this.ready = Promise.resolve();
   }

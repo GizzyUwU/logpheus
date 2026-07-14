@@ -76,7 +76,7 @@ export default {
 
         if (!clients[`${yswsData?.yswsId}:${yswsData?.userId}`]) {
           const AdapterClass = await loadAdapter(ysws.flavortown.adapter);
-          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = new AdapterClass(apiKey, logger)
+          clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = new AdapterClass({ apiKey, logtape: logger })
         }
       }
 

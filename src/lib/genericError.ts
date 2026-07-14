@@ -4,7 +4,7 @@ export function getGenericErrorMessage(
 ): string | null {
   switch (status) {
     case 401:
-      return "Bad API Key! Run /" + prefix + "-config to fix!";
+      return "Bad API Key! Run /" + prefix + "-(ysws) config to fix!";
     case 408:
       return "Server timed out!";
     case 404:

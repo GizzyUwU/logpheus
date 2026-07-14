@@ -13,7 +13,8 @@ import { ZTypes } from "@/lib/macondo/types";
 import { z } from "zod";
 
 export function macondoContentTypeFromUrl(url: string): string {
-  const ext = (url.split("?").at(0) ?? url).split(".").at(-1)?.toLowerCase() ?? "";
+  const ext =
+    (url.split("?").at(0) ?? url).split(".").at(-1)?.toLowerCase() ?? "";
   switch (ext) {
     case "jpg":
       return "image/jpeg";
@@ -44,8 +45,14 @@ export class MacondoAdapter implements ApiAdapter {
   private client: Macondo;
   ready: Promise<void>;
 
-  constructor(_: string | undefined, logtape: typeof LogType) {
-    this.client = new Macondo(logtape);
+  constructor({
+    apiKey,
+    logtape,
+  }: {
+    apiKey: string;
+    logtape: typeof LogType;
+  }) {
+    this.client = new Macondo(logtape, apiKey);
     this.ready = Promise.resolve();
   }
 
@@ -57,9 +64,19 @@ export class MacondoAdapter implements ApiAdapter {
     return this.client.lastCode ?? 0;
   }
 
-  async project(params: { id: number }): Promise<ApiResult<CanonicalProject, z.infer<typeof ZTypes.ProjectResponse> | null>> {
+  async project(params: {
+    id: number;
+  }): Promise<
+    ApiResult<CanonicalProject, z.infer<typeof ZTypes.ProjectResponse> | null>
+  > {
     const res = await this.client.project({ id: params.id });
-    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null, raw: null };
+    if (!res.ok)
+      return {
+        ok: false,
+        status: res.status ?? this.lastCode,
+        data: null,
+        raw: null,
+      };
 
     return {
       ok: true,
@@ -69,33 +86,46 @@ export class MacondoAdapter implements ApiAdapter {
         title: String(res.data.name),
         devlogIds: res.data.journals.map((j) => j.id),
       },
-      raw: res.data
+      raw: res.data,
     };
   }
 
   async devlogs(
     params: { project_id: number },
     opts: { page: number },
-  ): Promise<ApiResult<PaginatedResult<CanonicalDevlog>, z.infer<typeof ZTypes.ProjectJournalsResponse> | null>> {
+  ): Promise<
+    ApiResult<
+      PaginatedResult<CanonicalDevlog>,
+      z.infer<typeof ZTypes.ProjectJournalsResponse> | null
+    >
+  > {
     const res = await this.client.journals({ id: params.project_id });
-    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null, raw: null };
-  
+    if (!res.ok)
+      return {
+        ok: false,
+        status: res.status ?? this.lastCode,
+        data: null,
+        raw: null,
+      };
+
     const PAGE_SIZE = 20;
     const start = (opts.page - 1) * PAGE_SIZE;
     const pageItems = res.data.slice(start, start + PAGE_SIZE);
     const hasMore = start + PAGE_SIZE < res.data.length;
-  
+
     const MD_IMAGE_RE = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
-  
+
     return {
       ok: true,
       status: res.status,
       data: {
         items: pageItems.map((j) => {
           const raw = j.long_brief ?? j.short_brief ?? "";
-          const mediaUrls = [...raw.matchAll(MD_IMAGE_RE)].map((m) => m[1]).filter((url): url is string => !!url);
+          const mediaUrls = [...raw.matchAll(MD_IMAGE_RE)]
+            .map((m) => m[1])
+            .filter((url): url is string => !!url);
           const body = raw.replace(MD_IMAGE_RE, "").trim() || null;
-  
+
           return {
             id: j.id,
             body,
@@ -109,11 +139,13 @@ export class MacondoAdapter implements ApiAdapter {
         }),
         next_page: hasMore ? opts.page + 1 : null,
       },
-      raw: res.data
+      raw: res.data,
     };
   }
 
-  async user(): Promise<ApiResult<CanonicalUser, z.infer<typeof ZTypes.UserResponse> | null>> {
+  async user(): Promise<
+    ApiResult<CanonicalUser, z.infer<typeof ZTypes.UserResponse> | null>
+  > {
     // const res = await this.client.user({ userId: params.id });
     // if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null };
     // params: { id: string }
@@ -122,15 +154,26 @@ export class MacondoAdapter implements ApiAdapter {
       ok: true,
       status: 200,
       data: {
-        currency: 0
+        currency: 0,
       },
-      raw: null
+      raw: null,
     };
   }
 
-  async shop(): Promise<ApiResult<CanonicalShopItem[], z.infer<typeof ZTypes.ShopItemsResponse>["items"] | null>> {
+  async shop(): Promise<
+    ApiResult<
+      CanonicalShopItem[],
+      z.infer<typeof ZTypes.ShopItemsResponse>["items"] | null
+    >
+  > {
     const res = await this.client.shop();
-    if (!res.ok) return { ok: false, status: res.status ?? this.lastCode, data: null, raw: null };
+    if (!res.ok)
+      return {
+        ok: false,
+        status: res.status ?? this.lastCode,
+        data: null,
+        raw: null,
+      };
     return {
       ok: true,
       status: res.status,
@@ -141,7 +184,9 @@ export class MacondoAdapter implements ApiAdapter {
         baseHours: Math.ceil((item.price_gold ?? 0) / 50),
         baseCost: item.price_gold,
         stock: item.stock_remaining ?? null,
-        image_url: item.image_url ?? "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
+        image_url:
+          item.image_url ??
+          "https://png.pngtree.com/png-vector/20221125/ourlarge/pngtree-no-image-available-icon-flatvector-illustration-pic-design-profile-vector-png-image_40966566.jpg",
         regionalCosts: Object.fromEntries(
           Object.entries(item.regional_pricing ?? {}).map(([region, data]) => [
             region,
@@ -150,10 +195,10 @@ export class MacondoAdapter implements ApiAdapter {
               currency: (data.price_hours ?? 0) * 10,
               hours: Math.ceil(((item.price_hours ?? 0) * 10) / 50),
             },
-          ])
+          ]),
         ),
       })),
-      raw: res.data.items
+      raw: res.data.items,
     };
   }
 }

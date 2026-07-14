@@ -52,7 +52,7 @@ export default {
 
       const initialOption =
         regionOptions.find(
-          (o) => o.value === (yswsData?.region ?? "us").toLowerCase(),
+          (o) => o.value === (yswsData?.region ?? "us").toUpperCase(),
         ) ?? regionOptions[0];
 
       const jobConfig = ysws.macondo.jobConfig as Partial<

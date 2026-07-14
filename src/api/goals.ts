@@ -139,7 +139,7 @@ export default [
           main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`];
         if (!yswsClient) {
           const AdapterClass = await loadAdapter(yswsData.adapter);
-          const adapter = new AdapterClass(userYSWS[0]?.apiKey, main.logger);
+          const adapter = new AdapterClass({ apiKey: userYSWS[0]?.apiKey, logtape: main.logger });
           yswsClient = adapter;
           main.clients[`${userYSWS[0]?.yswsId}:${userYSWS[0]?.userId}`] =
             adapter;

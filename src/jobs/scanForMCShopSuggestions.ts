@@ -19,8 +19,8 @@ export default {
 
       if (!yswsData) return;
       if (
-        !yswsData.jobConfig.scanForMCShopSuggestions ||
-        !yswsData.jobConfig.scanForMCShopSuggestions.channelId
+        !yswsData.jobConfig["scanForMCShopSuggestions"] ||
+          !yswsData.jobConfig["scanForMCShopSuggestions"].channelId
       ) {
         logger.info(
           "scanForMCShopSuggestions job skipped becasue didn't meet requirements",
@@ -31,7 +31,7 @@ export default {
       const clientKey = `${yswsData.id}:scanForMCShopSuggestions`;
       if (!clients[clientKey]) {
         const AdapterClass = await loadAdapter(yswsData.adapter);
-        clients[clientKey] = new AdapterClass(undefined, logger);
+        clients[clientKey] = new AdapterClass({ logtape: logger });
       }
 
       const yswsClient = clients[clientKey].raw as Macondo;
@@ -195,7 +195,7 @@ export default {
           .join("\n");
 
         await client.chat.postMessage({
-          channel: yswsData.jobConfig.scanForMCShopSuggestions!.channelId,
+          channel: yswsData.jobConfig["scanForMCShopSuggestions"]!.channelId,
           unfurl_links: false,
           blocks: [
             {
@@ -276,7 +276,7 @@ export default {
 
           if (!inserted) continue;
           await client.chat.postMessage({
-            channel: yswsData.jobConfig.scanForMCShopSuggestions!.channelId,
+            channel: yswsData.jobConfig["scanForMCShopSuggestions"]!.channelId,
             unfurl_links: false,
             blocks: [
               {
@@ -352,7 +352,7 @@ export default {
           }
 
           await client.chat.postMessage({
-            channel: yswsData.jobConfig.scanForMCShopSuggestions!.channelId,
+            channel: yswsData.jobConfig["scanForMCShopSuggestions"]!.channelId,
             unfurl_links: false,
             blocks: [
               {
@@ -433,7 +433,7 @@ export default {
           }
 
           await client.chat.postMessage({
-            channel: yswsData.jobConfig.scanForMCShopSuggestions!.channelId,
+            channel: yswsData.jobConfig["scanForMCShopSuggestions"]!.channelId,
             unfurl_links: false,
             blocks: [
               {

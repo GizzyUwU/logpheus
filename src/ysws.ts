@@ -4,22 +4,19 @@ export const jobOptions = z.enum([
   "shopTrack",
   "tempShopMigration",
   "scanForMCShopSuggestions",
-  "scanForMCStreak"
+  "scanForMCStreak",
 ]);
 export const jobConfigSchema = z
-  .object({
-    shopTrack: z.object({
+  .record(
+    z.string(),
+    z.object({
       channelId: z.string(),
       jobApiKey: z.string().nullish(),
-    }),
-    scanForMCShopSuggestions: z.object({
-      channelId: z.string(),
-    }),
-    scanForMCStreak: z.object({
+      apiKeyRequired: z.boolean(),
+      channelRequired: z.boolean(),
       optional: z.boolean()
-    })
-  })
-  .partial();
+    }).partial(),
+  );
 
 const regionsSchema = z.record(z.string(), z.string());
 export const yswsItem = z.object({
@@ -73,7 +70,7 @@ export default {
     url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: ["newDevlog", "shopTrack", "scanForMCShopSuggestions"] as z.infer<
+    jobs: ["newDevlog", "shopTrack", "scanForMCShopSuggestions", "scanForMCStreak"] as z.infer<
       typeof jobOptions
     >[],
     regions: {
@@ -97,10 +94,12 @@ export default {
         channelId: !process.env["DEV_CHANNEL"]
           ? "C0BE47SPGJ0"
           : process.env["DEV_CHANNEL"],
+      },
+      scanForMCStreak: {
+        optional: true,
+        apiKeyRequired: true,
+        channelRequired: true
       }
-      // scanForMCStreak: {
-      //   optional: true
-      // }
     } as z.infer<typeof jobConfigSchema>,
   },
   stardance: {

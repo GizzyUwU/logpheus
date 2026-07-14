@@ -13,9 +13,10 @@ export default {
       for (const yswsData of Object.values(ysws)) {
         if (!yswsData.jobs.includes("tempShopMigration")) continue;
         if (
-          !yswsData.jobConfig.shopTrack ||
-          !yswsData.jobConfig.shopTrack.channelId ||
-          (yswsData.apiKeyRequired && !yswsData.jobConfig.shopTrack.jobApiKey)
+          !yswsData.jobConfig["shopTrack"] ||
+          !yswsData.jobConfig["shopTrack"].channelId ||
+          (yswsData.apiKeyRequired &&
+            !yswsData.jobConfig["shopTrack"].jobApiKey)
         ) {
           logger.info(
             "tempShopMigration job skipped becasue didn't meet requirements",
@@ -26,12 +27,12 @@ export default {
         const clientKey = `${yswsData.id}:shopTrack`;
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsData.adapter);
-          clients[clientKey] = new AdapterClass(
-            yswsData.apiKeyRequired
-              ? yswsData.jobConfig.shopTrack.jobApiKey
+          clients[clientKey] = new AdapterClass({
+            apiKey: yswsData.apiKeyRequired
+              ? yswsData.jobConfig["shopTrack"].jobApiKey
               : undefined,
-            logger,
-          );
+            logtape: logger,
+          });
         }
 
         const yswsClient = clients[clientKey];
@@ -67,13 +68,21 @@ export default {
           .where(
             and(
               eq(shopTrack.yswsId, yswsData.id),
-              or(eq(shopTrack.previousRaw, ""), isNull(shopTrack.previousRaw), eq(shopTrack.previousRaw, "null")),
+              or(
+                eq(shopTrack.previousRaw, ""),
+                isNull(shopTrack.previousRaw),
+                eq(shopTrack.previousRaw, "null"),
+              ),
             ),
           );
 
         if (storedItems.length === 0) continue;
-        const rawItems = Array.isArray(shop.raw) ? (shop.raw as Record<string, unknown>[]) : [];
-        const itemMap = new Map(rawItems.map((item) => [item["id"] as number, item]));
+        const rawItems = Array.isArray(shop.raw)
+          ? (shop.raw as Record<string, unknown>[])
+          : [];
+        const itemMap = new Map(
+          rawItems.map((item) => [item["id"] as number, item]),
+        );
         for (const shopItem of storedItems) {
           const item = itemMap.get(shopItem.id);
           if (!item) continue;
