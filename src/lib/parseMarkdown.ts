@@ -320,6 +320,6 @@ export function stripMrkdwn(text: string): string {
     .replace(/_/g, "")
     .replace(/~/g, "")
     .replace(/^>/gm, "")
-    .replace(/<[^>]+>/g, "")
+    .replace(/<(?!@)[^>]+>/g, "")
     .replace(/:[a-z0-9_+-]+:/g, "")
 }
