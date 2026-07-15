@@ -558,7 +558,7 @@ async function loadJobs() {
 
           const response = await aiClient.chat.send({
             chatRequest: {
-              model: "liquid/lfm-2-24b-a2b",
+              model: "qwen/qwen3.6-flash",
               messages: [
                 {
                   role: "system",
