@@ -50,7 +50,7 @@ export default {
         )
           continue;
         const yswsData = user.ysws[0]!;
-        const clientKey = `${yswsData.yswsId}:scanForMCStreak`;
+        const clientKey = `${yswsData.yswsId}:${user.userId ?? crypto.randomUUID()}`;
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsConfig.macondo.adapter);
           clients[clientKey] = new AdapterClass({
@@ -88,7 +88,7 @@ export default {
           continue;
         }
         
-        if ((streak.data.today_seconds_logged ?? 0) >= streak.data.daily_goal_seconds) {
+        if (((streak.data.today_seconds_logged ?? 0) >= streak.data.daily_goal_seconds) && streak.data.worked_today) {
           const updateFields: Partial<YSWSRow> = {};
           const filteredMeta = (updateFields.meta ?? []).filter(
             (i) => !i.startsWith("StreakMet::"),

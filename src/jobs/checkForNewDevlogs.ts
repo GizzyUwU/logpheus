@@ -324,7 +324,7 @@ export default {
             (p) => p.ysws === yswsRow.yswsId,
           );
           if (!userProjects || userProjects.length === 0) continue;
-          const clientKey = `${yswsRow.yswsId}:${userRow.userId ?? "no-key"}`;
+          const clientKey = `${yswsRow.yswsId}:${userRow.userId ?? crypto.randomUUID()}`;
           if (!clients[clientKey]) {
             const AdapterClass = await loadAdapter(yswsConfig.adapter);
             clients[clientKey] = new AdapterClass({
