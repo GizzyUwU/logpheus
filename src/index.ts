@@ -480,7 +480,7 @@ async function loadJobs() {
           );
         }
         registeredInitModules.add(mod.name);
-        const interval = Math.max(30, mod.interval ?? 60) * 1000;
+        const interval = Math.max(10, mod.interval ?? 60) * 1000;
         if (now - (jobLastRun.get(mod.name) ?? 0) < interval) continue;
         jobLastRun.set(mod.name, now);
         const ctxLogger = logger.with({
@@ -606,7 +606,7 @@ async function loadJobs() {
 
     async function jobLoop() {
       await loadJobs();
-      setTimeout(jobLoop, 30 * 1000);
+      setTimeout(jobLoop, 10 * 1000);
     }
 
     jobLoop();
