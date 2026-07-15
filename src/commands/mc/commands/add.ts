@@ -167,6 +167,8 @@ export default {
             .insert(projects)
             .values({
               id: project.id,
+              userId: command.user_id,
+              ysws: yswsId,
               devlogIds,
             })
             .onConflictDoUpdate({
@@ -301,6 +303,8 @@ export default {
           .insert(projects)
           .values({
             id: projectId,
+            userId: command.user_id,
+            ysws: yswsId,
             devlogIds,
           })
           .onConflictDoUpdate({

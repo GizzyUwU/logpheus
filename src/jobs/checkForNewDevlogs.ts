@@ -1,4 +1,4 @@
-import type { RichTextBlock, WebClient } from "@slack/web-api";
+import type { KnownBlock, RichTextBlock, WebClient } from "@slack/web-api";
 import { projects } from "@/schema/projects";
 import { and, eq } from "drizzle-orm";
 import { containsMarkdown } from "@/lib/parseMarkdown";
@@ -25,6 +25,39 @@ export function resolveItemCost(
     return item.regionalCosts[region.toLowerCase()]?.currency ?? item.baseCost;
   }
   return item.baseCost;
+}
+
+function truncateToLimit(text: string, maxLength = 3000, suffix = "…"): string {
+  if (text.length <= maxLength) return text;
+  const sliceLength = maxLength - suffix.length;
+  const sliced = text.slice(0, sliceLength);
+  const lastSpace = sliced.lastIndexOf(" ");
+  const lastNewline = sliced.lastIndexOf("\n");
+  const cutPoint = Math.max(lastSpace, lastNewline);
+  let trimmed = (cutPoint > 0 ? sliced.slice(0, cutPoint) : sliced).trimEnd();
+  const fenceCount = (trimmed.match(/^```/gm) ?? []).length;
+  if (fenceCount % 2 !== 0) trimmed += "\n```";
+  return trimmed + suffix;
+}
+
+function limitBlockCount(
+  blocks: KnownBlock[],
+  maxBlocks: number,
+): KnownBlock[] {
+  if (blocks.length <= maxBlocks) return blocks;
+
+  const truncated = blocks.slice(0, maxBlocks - 1);
+  truncated.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: "_...and more!_",
+      },
+    ],
+  } as KnownBlock);
+
+  return truncated;
 }
 
 async function getNewDevlogs(params: {
@@ -409,7 +442,7 @@ export default {
                     )
                     .map(
                       (m, i) =>
-                        `<${m.url?.includes("https") ? m.url : yswsConfig.mediaUrl + m.url}|Video ${i + 1}>`,
+                        `<${m.url?.includes("https") ? m.url : yswsConfig.mediaUrl + m.url}|${i + 1}>`,
                     );
 
                   const pingGroupId = userRow?.pingGroup;
@@ -431,7 +464,7 @@ export default {
                             type: "section",
                             text: {
                               type: "mrkdwn",
-                              text: String(devlog.body)
+                              text: truncateToLimit(String(devlog.body), 2900)
                                 .split("\n")
                                 .map((line: string) => `> ${line}`)
                                 .join("\n"),
@@ -488,6 +521,19 @@ export default {
                         ],
                       });
                     } else {
+                      const devlogBlocks = devlog.body
+                        ? parseMarkdownToSlackBlocks(truncateToLimit(String(devlog.body), 2900))
+                        : [];
+                      
+                      const fixedBlockCount =
+                        1 +
+                        (pingGroupId ? 1 : 0) +
+                        (videoLinks.length > 0 ? 1 : 0) +
+                        1 +
+                        1 +
+                        mediaBlocks.length;
+                      
+                      const limitedBlocks = limitBlockCount(devlogBlocks, 50 - fixedBlockCount);
                       await client.chat.postMessage({
                         channel: userRow.channel,
                         unfurl_links: false,
@@ -501,7 +547,7 @@ export default {
                             },
                           },
                           ...(devlog.body
-                            ? parseMarkdownToSlackBlocks(devlog.body)
+                            ? limitedBlocks
                             : []),
                           ...(pingGroupId
                             ? [
@@ -521,23 +567,6 @@ export default {
                                 } as RichTextBlock,
                               ]
                             : []),
-                          ...(videoLinks.length > 0
-                            ? [
-                                {
-                                  type: "section",
-                                  text: {
-                                    type: "mrkdwn",
-                                    text: `> Video Devlog Links: ${videoLinks.join(", ")}`,
-                                  },
-                                } as {
-                                  type: "section";
-                                  text: {
-                                    type: "mrkdwn";
-                                    text: string;
-                                  };
-                                },
-                              ]
-                            : []),
                           {
                             type: "divider",
                           },
@@ -546,7 +575,7 @@ export default {
                             elements: [
                               {
                                 type: "mrkdwn",
-                                text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}> ${seconds !== 0 ? `and took ${durationString}.` : ""} ${projData.additionCurrency && projData.additionCurrency !== 0 ? `+${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""} ${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? `Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}`,
+                                text: `Devlog created at <https://time.cs50.io/${cs50Timestamp}|${timestamp}>${seconds !== 0 ? ` and took ${durationString}.` : ""}${projData.additionCurrency && projData.additionCurrency !== 0 ? ` +${projData.additionCurrency} based off predicted ${yswsConfig.currencyName}.` : ""}${projData.nextGoalItem && projData.distanceFromGoal && projData.distanceFromGoal > 0 ? ` Next goal is ${projData.nextGoalItem} which based off of predicted is ${projData.distanceFromGoal} ${yswsConfig.currencyName} away!` : ""}${videoLinks.length > 0 ? ` ${videoLinks.join(", ")}` : ""}`,
                               },
                             ],
                           },
