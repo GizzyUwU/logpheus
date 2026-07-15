@@ -90,7 +90,7 @@ export default {
         
         if (((streak.data.today_seconds_logged ?? 0) >= streak.data.daily_goal_seconds) && streak.data.worked_today) {
           const updateFields: Partial<YSWSRow> = {};
-          const filteredMeta = (updateFields.meta ?? []).filter(
+          const filteredMeta = (yswsData.meta ?? []).filter(
             (i) => !i.startsWith("StreakMet::"),
           );
           updateFields.meta = [
