@@ -47,7 +47,7 @@ async function setup(app: App, ctx: RequestHandler) {
         where: eq(users.userId, args.body.user.id),
         with: {
           ysws: {
-            where: eq(yswsUsers.yswsId, ysws.macondo.id),
+            where: eq(yswsUsers.yswsId, ysws.stardance.id),
             limit: 1
           },
           projects: true
@@ -79,8 +79,8 @@ async function setup(app: App, ctx: RequestHandler) {
           profileId: args.body.user.id,
           firstName: args.body.user.name,
           properties: {
-            yswsId: ysws.macondo.id,
-            friendlyName: ysws.macondo.humanName,
+            yswsId: ysws.stardance.id,
+            friendlyName: ysws.stardance.humanName,
           },
         });
         ctx.opClient.track("commandViews", {
@@ -96,7 +96,7 @@ async function setup(app: App, ctx: RequestHandler) {
           yswsData,
           userData,
           projects: userData.projects ?? [],
-          yswsId: ysws.macondo.id,
+          yswsId: ysws.stardance.id,
         } satisfies RequestHandler);
       } catch (err) {
         ctx.logger.error({ err });
@@ -128,7 +128,7 @@ export default {
         where: eq(users.userId, args.body.user_id),
         with: {
           ysws: {
-            where: eq(yswsUsers.yswsId, ysws.macondo.id),
+            where: eq(yswsUsers.yswsId, ysws.stardance.id),
             limit: 1
           },
           projects: true
@@ -168,10 +168,10 @@ export default {
           profileId: args.command.user_id,
           firstName: args.command.user_name,
           properties: {
-            yswsId: ysws.macondo.id,
+            yswsId: ysws.stardance.id,
             channelId: args.command.channel_id,
             channelName: args.command.channel_name,
-            friendlyName: ysws.macondo.humanName,
+            friendlyName: ysws.stardance.humanName,
           },
         });
         ctx.opClient.track("commands", {
@@ -187,11 +187,12 @@ export default {
       let yswsClient =
         ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`];
       if (rawOption !== "register" && !yswsClient) {
-        const AdapterClass = await loadAdapter(ysws.macondo.adapter);
+        const AdapterClass = await loadAdapter(ysws.stardance.adapter);
         const adapter = new AdapterClass({ logtape: loggerCTX });
         yswsClient = adapter;
         ctx.clients[`${yswsData?.yswsId}:${yswsData?.userId}`] = adapter;
       }
+      
       await handler.execute(
         {
           ...args,
@@ -208,7 +209,7 @@ export default {
           userData,
           projects: userData.projects ?? [],
           yswsClient,
-          yswsId: ysws.macondo.id,
+          yswsId: ysws.stardance.id,
         } satisfies RequestHandler,
       );
     } catch (error: any) {

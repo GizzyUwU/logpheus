@@ -1,0 +1,1109 @@
+openapi: 3.1.0
+info:
+  title: Stardance API
+  version: 2.0.0
+  description: API for accessing Stardance hackclub project data. All endpoints
+    are read-only and return cached results. When cached data is older than 12
+    hours, the requested resource is re-scraped synchronously while cascading
+    refreshes run in the background.
+servers:
+  - url: https://stardance.jam06452.uk
+    description: Stardance API Server
+tags:
+  - name: V1 - Projects
+  - name: V1 - Devlogs
+  - name: V1 - Users
+  - name: V2 - Projects
+  - name: V2 - Devlogs
+  - name: V2 - Users
+  - name: V2 - Comments
+paths:
+  /api/v1/projects:
+    get:
+      tags:
+        - V1 - Projects
+      operationId: listProjectsV1
+      summary: List projects (V1)
+      description: Fetch a paginated list of all projects. Supports optional search
+        query and limit.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+        - name: query
+          in: query
+          required: false
+          description: Search projects by title or description
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectV1"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+  /api/v1/projects/{id}:
+    get:
+      tags:
+        - V1 - Projects
+      operationId: getProjectV1
+      summary: Get a project (V1)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectV1"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/projects/{id}/devlogs:
+    get:
+      tags:
+        - V1 - Projects
+      operationId: listProjectDevlogsV1
+      summary: List devlogs for a project (V1)
+      description: Fetch a paginated list of devlogs belonging to a specific project.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of devlogs for the project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devlogs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DevlogV1"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/projects/{id}/devlogs/{devlog_id}:
+    get:
+      tags:
+        - V1 - Projects
+      operationId: getProjectDevlogV1
+      summary: Get a devlog scoped to a project (V1)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+        - name: devlog_id
+          in: path
+          required: true
+          description: Devlog ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Devlog found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevlogV1"
+        "404":
+          description: Devlog or project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/devlogs:
+    get:
+      tags:
+        - V1 - Devlogs
+      operationId: listDevlogsV1
+      summary: List all devlogs (V1)
+      description: Fetch a paginated list of all devlogs across all projects.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of all devlogs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devlogs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DevlogV1"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+  /api/v1/devlogs/{id}:
+    get:
+      tags:
+        - V1 - Devlogs
+      operationId: getDevlogV1
+      summary: Get a devlog by ID (V1)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Devlog ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Devlog found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevlogV1"
+        "404":
+          description: Devlog not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/users:
+    get:
+      tags:
+        - V1 - Users
+      operationId: listUsersV1
+      summary: List users (V1)
+      description: Fetch a paginated list of all users. Supports optional search query.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+        - name: query
+          in: query
+          required: false
+          description: Search users by username or bio
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserV1"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+  /api/v1/users/{username}:
+    get:
+      tags:
+        - V1 - Users
+      operationId: getUserV1
+      summary: Get a user profile (V1)
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Username (with or without "@" prefix)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserV1"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/users/{username}/projects:
+    get:
+      tags:
+        - V1 - Users
+      operationId: listUserProjectsV1
+      summary: List projects for a user (V1)
+      description: Fetch a paginated list of projects belonging to a specific user.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Username (with or without "@" prefix)
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of the user's projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectV1"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/projects/top:
+    get:
+      tags:
+        - V2 - Projects
+      operationId: listTopProjectsV2
+      summary: List top projects (V2)
+      description: Fetch a ranked list of projects sorted by score (highest first).
+        Defaults to top 10; max 100 per page.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 10)"
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Ranked list of top projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TopRankedProjectV2"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+  /api/v2/projects:
+    get:
+      tags:
+        - V2 - Projects
+      operationId: listProjectsV2
+      summary: List projects (V2)
+      description: Fetch a paginated list of all projects with V2 extended fields.
+        Supports optional search query and limit.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+        - name: query
+          in: query
+          required: false
+          description: Search projects by title or description
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectV2"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+  /api/v2/projects/{id}:
+    get:
+      tags:
+        - V2 - Projects
+      operationId: getProjectV2
+      summary: Get a project (V2)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectV2"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/projects/{id}/devlogs:
+    get:
+      tags:
+        - V2 - Projects
+      operationId: listProjectDevlogsV2
+      summary: List devlogs for a project (V2)
+      description: Fetch a paginated list of devlogs belonging to a specific project
+        with V2 extended fields.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of devlogs for the project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devlogs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DevlogV2"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/projects/{id}/devlogs/{devlog_id}:
+    get:
+      tags:
+        - V2 - Projects
+      operationId: getProjectDevlogV2
+      summary: Get a devlog scoped to a project (V2)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+        - name: devlog_id
+          in: path
+          required: true
+          description: Devlog ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Devlog found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevlogV2"
+        "404":
+          description: Devlog or project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/devlogs:
+    get:
+      tags:
+        - V2 - Devlogs
+      operationId: listDevlogsV2
+      summary: List all devlogs (V2)
+      description: Fetch a paginated list of all devlogs across all projects with V2
+        extended fields.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of all devlogs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devlogs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DevlogV2"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+  /api/v2/devlogs/{id}:
+    get:
+      tags:
+        - V2 - Devlogs
+      operationId: getDevlogV2
+      summary: Get a devlog by ID (V2)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Devlog ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Devlog found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevlogV2"
+        "404":
+          description: Devlog not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/users:
+    get:
+      tags:
+        - V2 - Users
+      operationId: listUsersV2
+      summary: List users (V2)
+      description: Fetch a paginated list of all users with V2 extended fields.
+        Supports optional search query.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+        - name: query
+          in: query
+          required: false
+          description: Search users by username or bio
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserV2"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+  /api/v2/users/{username}:
+    get:
+      tags:
+        - V2 - Users
+      operationId: getUserV2
+      summary: Get a user profile (V2)
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Username (with or without "@" prefix)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserV2"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/users/{username}/projects:
+    get:
+      tags:
+        - V2 - Users
+      operationId: listUserProjectsV2
+      summary: List projects for a user (V2)
+      description: Fetch a paginated list of projects belonging to a specific user
+        with V2 extended fields.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Username (with or without "@" prefix)
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: "Number of results per page (max 100, default: 20)"
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of the user's projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectV2"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/comments/devlog/{id}:
+    get:
+      tags:
+        - V2 - Comments
+      operationId: getDevlogCommentsV2
+      summary: Get all comments for a devlog (V2)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Devlog ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comments for the devlog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommentV2"
+        "404":
+          description: Devlog not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/comments/project/{id}:
+    get:
+      tags:
+        - V2 - Comments
+      operationId: getProjectCommentsV2
+      summary: Get all comments across all devlogs of a project (V2)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comments for the project (across all of its devlogs)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommentV2"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_count:
+          type: integer
+        next_page:
+          type: integer
+          nullable: true
+    ProjectV1:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Project ID (from stardance.hackclub.com)
+        title:
+          type: string
+        description:
+          type: string
+        repo_url:
+          type: string
+          nullable: true
+          format: uri
+        demo_url:
+          type: string
+          nullable: true
+          format: uri
+        readme_url:
+          type: string
+          nullable: true
+          format: uri
+        ai_declaration:
+          type: string
+          nullable: true
+        ship_status:
+          type: string
+          nullable: true
+        devlog_ids:
+          type: array
+          items:
+            type: integer
+        banner_url:
+          type: string
+          nullable: true
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+    TopRankedProjectV2:
+      allOf:
+        - $ref: "#/components/schemas/ProjectV2"
+        - type: object
+          properties:
+            rank:
+              type: integer
+              description: The overall rank (1 = highest score)
+          required:
+            - rank
+    ProjectV2:
+      allOf:
+        - $ref: "#/components/schemas/ProjectV1"
+        - type: object
+          properties:
+            username:
+              type: string
+              nullable: true
+              description: Author's username (without @)
+            devlog_count:
+              type: integer
+            total_hours:
+              type: number
+              format: float
+            followers:
+              type: integer
+            sourcecode:
+              type: string
+              nullable: true
+              format: uri
+            superstar:
+              type: boolean
+            score:
+              type: number
+              nullable: true
+              format: float
+            user_id:
+              type: string
+              format: uuid
+    UserV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Internal user ID
+        slack_id:
+          type: string
+          nullable: true
+        display_name:
+          type: string
+          description: Display name (same as username)
+        avatar:
+          type: string
+          nullable: true
+          format: uri
+          description: Profile picture URL
+        project_ids:
+          type: array
+          items:
+            type: integer
+        stardust:
+          type: integer
+          nullable: true
+      required:
+        - id
+        - display_name
+    UserV2:
+      allOf:
+        - $ref: "#/components/schemas/UserV1"
+        - type: object
+          properties:
+            username:
+              type: string
+            user_pfp:
+              type: string
+              nullable: true
+              format: uri
+            bio:
+              type: string
+              nullable: true
+            banner_url:
+              type: string
+              nullable: true
+              format: uri
+            devlog_count:
+              type: integer
+            project_count:
+              type: integer
+            devlog_ids:
+              type: array
+              items:
+                type: integer
+            ships:
+              type: integer
+            votes:
+              type: integer
+            vote_count:
+              type: integer
+            like_count:
+              type: integer
+            slack_url:
+              type: string
+              nullable: true
+              format: uri
+            achievements:
+              type: array
+              items:
+                $ref: "#/components/schemas/Achievement"
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    Achievement:
+      type: object
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+      required:
+        - slug
+        - name
+    DevlogV1:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Devlog ID (from stardance.hackclub.com)
+        body:
+          type: string
+          description: Devlog text content
+        comments_count:
+          type: integer
+          description: Total number of comments
+        duration_seconds:
+          type: integer
+          description: Duration in seconds
+        likes_count:
+          type: integer
+        scrapbook_url:
+          type: string
+          nullable: true
+          format: uri
+        media:
+          type: array
+          description: Media attachments (derived from image_urls)
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                format: uri
+              content_type:
+                type: string
+                example: image/png
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentV1"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - body
+    DevlogV2:
+      allOf:
+        - $ref: "#/components/schemas/DevlogV1"
+        - type: object
+          properties:
+            description:
+              type: string
+            image_urls:
+              type: array
+              items:
+                type: string
+                format: uri
+            likes:
+              type: integer
+            views:
+              type: integer
+            project_id:
+              type: integer
+            user_id:
+              type: string
+              format: uuid
+    CommentV1:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Internal comment ID
+        author:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            display_name:
+              type: string
+            avatar:
+              type: string
+              nullable: true
+              format: uri
+        body:
+          type: string
+          description: Comment body
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - body
+    CommentV2:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Internal comment ID
+        body:
+          type: string
+          description: Comment body
+        user:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/CommentUser"
+          description: Author's public profile. Null when the author has no user record.
+      required:
+        - id
+        - body
+    CommentUser:
+      type: object
+      description: Minimal public user profile embedded in a comment.
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        user_pfp:
+          type: string
+          nullable: true
+          format: uri
+          description: Profile picture URL
+      required:
+        - id
+        - username
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+x-scalar-order:
+  - stardance-api-100/description/introduction
+  - stardance-api-100/GET/api/v1/projects
+  - stardance-api-100/GET/api/v1/projects/{id}
+  - stardance-api-100/GET/api/v1/projects/{id}/devlogs
+  - stardance-api-100/GET/api/v1/projects/{id}/devlogs/{devlog_id}
+  - stardance-api-100/GET/api/v1/devlogs
+  - stardance-api-100/GET/api/v1/devlogs/{id}
+  - stardance-api-100/GET/api/v1/users
+  - stardance-api-100/GET/api/v1/users/{username}
+  - stardance-api-100/GET/api/v1/users/{username}/projects
+  - stardance-api-100/GET/api/v2/projects
+  - stardance-api-100/GET/api/v2/projects/{id}
+  - stardance-api-100/GET/api/v2/projects/{id}/devlogs
+  - stardance-api-100/GET/api/v2/projects/{id}/devlogs/{devlog_id}
+  - stardance-api-100/GET/api/v2/devlogs
+  - stardance-api-100/GET/api/v2/devlogs/{id}
+  - stardance-api-100/GET/api/v2/users
+  - stardance-api-100/GET/api/v2/users/{username}
+  - stardance-api-100/GET/api/v2/users/{username}/projects
+  - stardance-api-100/GET/api/v2/comments/devlog/{id}
+  - stardance-api-100/GET/api/v2/comments/project/{id}
+  - stardance-api-100/models

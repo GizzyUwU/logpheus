@@ -14,11 +14,13 @@ export default class Macondo {
     this.fetch = axios.create({
       baseURL: "https://macondo.hackclub.com/api",
       timeout: 10000,
-      ...(apiKey && apiKey.length > 0 ? {
-        headers: {
-          Authorization: `Bearer ${apiKey}`
-        }
-      } : {})
+      ...(apiKey && apiKey.length > 0
+        ? {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+            },
+          }
+        : {}),
     });
     this.logger = logtape;
     this.ready = Promise.resolve();
@@ -28,24 +30,32 @@ export default class Macondo {
     config: AxiosRequestConfig,
     schema: S,
   ): Promise<
-    | { ok: true; status: number; data: z.infer<S> }
+    | {
+        ok: true;
+        status: number;
+        data: z.infer<S>;
+        etag: string | null;
+        lastModified: string | null;
+      }
     | { ok: false; status: number | null; msg: string | unknown }
   > {
     await this.ready;
 
     const ctx = this.logger.with({
-      request: config.url
+      request: config.url,
     });
-    
+
     try {
       const res = await this.fetch.request(config);
       this.lastCode = res.status;
       try {
-        if(res.status === 408) this.logger.warn(`${config.url} timed out`)
+        if (res.status === 408) this.logger.warn(`${config.url} timed out`);
         return {
           ok: true,
           status: res.status,
           data: schema.parse(res.data),
+          etag: (res.headers?.["etag"] as string) ?? null,
+          lastModified: (res.headers?.["last-modified"] as string) ?? null,
         };
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -53,12 +63,12 @@ export default class Macondo {
             const path = issue.path
               .map((p) => (typeof p === "number" ? `[${p}]` : p))
               .join(".");
-        
+
             const received = issue.path.reduce(
               (obj: any, key) => obj?.[key],
-              res.data
+              res.data,
             );
-        
+
             return `${path}: expected ${(issue as any).expected ?? "?"}, got ${JSON.stringify(received)} — ${issue.message}`;
           });
           ctx.error("Zod validation failed", {
@@ -97,16 +107,21 @@ export default class Macondo {
       : undefined;
 
     const queries = new URLSearchParams(
-      Object.entries(parsedQuery ?? {}).reduce((acc, [key, value]) => {
-        if (value !== undefined) acc[key] = String(value);
-        return acc;
-      }, {} as Record<string, string>)
+      Object.entries(parsedQuery ?? {}).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined) acc[key] = String(value);
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
     );
 
     return this.request(
       {
         method: "GET",
-        url: "/explore/projects" + (queries.toString() ? `?${queries.toString()}` : ""),
+        url:
+          "/explore/projects" +
+          (queries.toString() ? `?${queries.toString()}` : ""),
       },
       ZTypes.ExploreProjectsResponse,
     );
@@ -131,23 +146,33 @@ export default class Macondo {
       : undefined;
 
     const queries = new URLSearchParams(
-      Object.entries(parsedQuery ?? {}).reduce((acc, [key, value]) => {
-        if (value !== undefined) acc[key] = String(value);
-        return acc;
-      }, {} as Record<string, string>)
+      Object.entries(parsedQuery ?? {}).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined) acc[key] = String(value);
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
     );
 
     return this.request(
       {
         method: "GET",
-        url: "/hackatime/projects" + (queries.toString() ? `?${queries.toString()}` : ""),
+        url:
+          "/hackatime/projects" +
+          (queries.toString() ? `?${queries.toString()}` : ""),
       },
       ZTypes.HackatimeProjectsResponse,
     );
   }
 
-  async hackatimeProject(params: z.infer<typeof ZTypes.HackatimeProjectsParams>, query: z.infer<typeof ZTypes.HackatimeProjectsQueries>) {
-    const parsedParam = params ? ZTypes.HackatimeProjectsParams.parse(params) : undefined;
+  async hackatimeProject(
+    params: z.infer<typeof ZTypes.HackatimeProjectsParams>,
+    query: z.infer<typeof ZTypes.HackatimeProjectsQueries>,
+  ) {
+    const parsedParam = params
+      ? ZTypes.HackatimeProjectsParams.parse(params)
+      : undefined;
     if (!parsedParam) throw new Error("Missing Params");
     const hackatimeProjects = await this.hackatimeProjects(query);
     if (!hackatimeProjects.ok) return hackatimeProjects;
@@ -171,9 +196,10 @@ export default class Macondo {
     };
   }
 
-  
   hackatimeBreakdown(params: z.infer<typeof ZTypes.HackatimeBreakdownParams>) {
-    const parsedParam = params ? ZTypes.HackatimeBreakdownParams.parse(params) : undefined;
+    const parsedParam = params
+      ? ZTypes.HackatimeBreakdownParams.parse(params)
+      : undefined;
     if (!parsedParam) throw new Error("Missing Params");
 
     return this.request(
@@ -232,18 +258,23 @@ export default class Macondo {
     const parsedQuery = query
       ? ZTypes.ExplorePeopleQueryParams.parse(query)
       : undefined;
-    
+
     const queries = new URLSearchParams(
-      Object.entries(parsedQuery ?? {}).reduce((acc, [key, value]) => {
-        if (value !== undefined) acc[key] = String(value);
-        return acc;
-      }, {} as Record<string, string>)
+      Object.entries(parsedQuery ?? {}).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined) acc[key] = String(value);
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
     );
 
     return this.request(
       {
         method: "GET",
-        url: "/explore/people" + (queries.toString() ? `?${queries.toString()}` : ""),
+        url:
+          "/explore/people" +
+          (queries.toString() ? `?${queries.toString()}` : ""),
       },
       ZTypes.ExplorePeopleResponse,
     );
@@ -307,9 +338,7 @@ export default class Macondo {
   }
 
   async shopItem(param: z.infer<typeof ZTypes.ShopItemParams>) {
-    const parsedParam = param
-      ? ZTypes.ShopItemParams.parse(param)
-      : undefined;
+    const parsedParam = param ? ZTypes.ShopItemParams.parse(param) : undefined;
 
     if (!parsedParam) throw new Error("Missing Params");
     const shop = await this.shop();
@@ -334,23 +363,27 @@ export default class Macondo {
     };
   }
 
-  
   shopSuggestions(query?: z.infer<typeof ZTypes.ShopSuggestionQueries>) {
     const parsedQuery = query
       ? ZTypes.ShopSuggestionQueries.parse(query)
       : undefined;
 
     const queries = new URLSearchParams(
-      Object.entries(parsedQuery ?? {}).reduce((acc, [key, value]) => {
-        if (value !== undefined) acc[key] = String(value);
-        return acc;
-      }, {} as Record<string, string>)
+      Object.entries(parsedQuery ?? {}).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined) acc[key] = String(value);
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
     );
 
     return this.request(
       {
         method: "GET",
-        url: "/shop/requests" + (queries.toString() ? `?${queries.toString()}` : ""),
+        url:
+          "/shop/requests" +
+          (queries.toString() ? `?${queries.toString()}` : ""),
       },
       ZTypes.ShopSuggestionResponse,
     );
@@ -370,7 +403,7 @@ export default class Macondo {
     return this.request(
       {
         method: "GET",
-        url: "/profile/streaks",
+        url: "/profile/streaks?rrrrr=" + crypto.randomUUID(),
       },
       ZTypes.GetMyStreak,
     );

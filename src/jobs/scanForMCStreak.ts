@@ -11,8 +11,8 @@ export default {
   name: "scanFoMCStreak",
   execute: async ({ client, clients, pg, logger, prefix }: RequestHandler) => {
     try {
-      const userRows = (await pg.query.users
-        .findMany({
+      const userRows = (
+        await pg.query.users.findMany({
           columns: {
             userId: true,
             channel: true,
@@ -37,20 +37,16 @@ export default {
               ),
             },
           },
-        }))
-        .filter((u) => u.ysws.length > 0);
-
+        })
+      ).filter((u) => u.ysws.length > 0);
       if (!userRows || userRows.length === 0) return;
+      const seenProjectIds = new Set<number>();
       for (const user of userRows) {
-        if (
-          !user ||
-          !user.channel ||
-          !user.userId ||
-          !user.ysws[0]!.apiKey
-        )
+        if (!user || !user.channel || !user.userId || !user.ysws[0]!.apiKey)
           continue;
         const yswsData = user.ysws[0]!;
         const clientKey = `${yswsData.yswsId}:${user.userId ?? crypto.randomUUID()}`;
+        console.log(clientKey);
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsConfig.macondo.adapter);
           clients[clientKey] = new AdapterClass({
@@ -60,13 +56,15 @@ export default {
         }
 
         const yswsClient = clients[clientKey].raw as Macondo;
-        const streak = await yswsClient.streak();
+        let streak = await yswsClient.streak();
         if (!streak || !streak.status) {
           const ctx = logger.with({
             status: streak?.status,
             ok: streak?.ok,
           });
-          ctx.error("scanForMCStreak failed because streak api failed to work correctly");
+          ctx.error(
+            "scanForMCStreak failed because streak api failed to work correctly",
+          );
           continue;
         }
 
@@ -84,11 +82,78 @@ export default {
             status: streak.status,
             ok: streak.ok,
           });
-          ctx.error("scanForMCStreak failed because streak api failed to work correctly");
+          ctx.error(
+            "scanForMCStreak failed because streak api failed to work correctly",
+          );
           continue;
         }
-        
-        if (((streak.data.today_seconds_logged ?? 0) >= streak.data.daily_goal_seconds) && streak.data.worked_today) {
+
+        const streakCopy = streak;
+        const incomingProjectIds = streakCopy.data.projects.map((p) => p.id);
+        const isStale = incomingProjectIds.some((id) => seenProjectIds.has(id));
+        if (isStale) {
+          await new Promise((res) => setTimeout(res, 10000));
+          const streakRetry = await yswsClient.streak();
+          if (!streakRetry || !streakRetry.status) {
+            const ctx = logger.with({
+              status: streak?.status,
+              ok: streak?.ok,
+            });
+            ctx.error(
+              "scanForMCStreak failed because streak api failed to work correctly",
+            );
+            continue;
+          }
+
+          if (!streakRetry.ok || !Object.keys(streakRetry.data)?.length) {
+            if (streakRetry.status === 200) {
+              logger.warn(
+                "API returned data with no items which is unexpected.",
+              );
+              continue;
+            }
+
+            const msg = getGenericErrorMessage(streak.status, prefix!);
+            if (msg === "Server is down!" || msg === "Server timed out!") break;
+
+            const ctx = logger.with({
+              msg,
+              status: streak.status,
+              ok: streak.ok,
+            });
+            ctx.error(
+              "scanForMCStreak failed because streak api failed to work correctly",
+            );
+            continue;
+          }
+
+          const retriedProjectIds = streakRetry.data.projects.map((p) => p.id);
+          const stillStale = retriedProjectIds.some((id) =>
+            seenProjectIds.has(id),
+          );
+
+          if (stillStale) {
+            logger.error(
+              "Streak response still stale after retry, skipping user this cycle",
+              {
+                userId: user.userId,
+                projectIds: retriedProjectIds,
+              },
+            );
+            continue;
+          }
+
+          streak = streakRetry;
+        }
+
+        for (const p of streak.data.projects) seenProjectIds.add(p.id);
+
+        if (
+          (streak.data.today_seconds_logged ?? 0) >=
+            streak.data.daily_goal_seconds &&
+          streak.data.worked_today
+        ) {
+          console.log("aaa");
           const updateFields: Partial<YSWSRow> = {};
           const filteredMeta = (yswsData.meta ?? []).filter(
             (i) => !i.startsWith("StreakMet::"),

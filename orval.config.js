@@ -41,4 +41,14 @@ export default defineConfig({
       target: "./specs/hcb.json",
     },
   },
+  sdjam: {
+    output: {
+      client: "zod",
+      mode: "single",
+      target: "./src/lib/sdjam/types.ts",
+    },
+    input: {
+      target: "./specs/sdjam.yaml",
+    },
+  },
 });

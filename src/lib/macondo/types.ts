@@ -407,8 +407,8 @@ export namespace ZTypes {
     has_address: zod.boolean(),
     has_valid_address: zod.boolean(),
     has_valid_name: zod.boolean(),
-    hca_verification_status: zod.string(),
-    hca_ysws_eligible: zod.boolean(),
+    hca_verification_status: zod.string().nullish(),
+    hca_ysws_eligible: zod.boolean().nullish(),
     last_login_at: zod.string(),
   });
 
