@@ -97,7 +97,7 @@ export default {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: "Go to <here|https://macondo.hackclub.com/explore|>, click people, search your name, click it, open in new tab, grab it from user id from url 'https://macondo.hackclub.com/u/{userId}'. To get api key click <here|https://macondo.hackclub.com/settings/api-keys>!",
+                text: "Go to <https://macondo.hackclub.com/explore|here>, click people, search your name, click it, open in new tab, grab it from user id from url 'https://macondo.hackclub.com/u/{userId}'. To get api key click <https://macondo.hackclub.com/settings/api-keys|here>!",
               },
             },
             {

@@ -39,7 +39,7 @@ export default {
       }
 
       if (userData.hcbId) {
-        await pg.delete(schemas.hcb).where(eq(schemas.users.userId, command.user_id));
+        await pg.delete(schemas.hcb).where(eq(schemas.hcb.userId, userData.hcbId));
       }
       
       await pg.delete(schemas.users).where(eq(schemas.users.userId, command.user_id));
