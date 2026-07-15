@@ -70,7 +70,7 @@ export default {
     url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: ["newDevlog", "shopTrack", "scanForMCShopSuggestions", "scanForMCStreak"] as z.infer<
+    jobs: ["newDevlog", "shopTrack", "scanForMCShopSuggestions"] as z.infer<
       typeof jobOptions
     >[],
     regions: {
@@ -107,7 +107,7 @@ export default {
     humanName: "Stardance",
     short: "sd",
     currencyName: "stardust",
-    adapter: "",
+    adapter: "sdjam/adapter.ts",
     mediaUrl: "https://stardance.hackclub.com",
     url: "https://stardance.hackclub.com",
     apiKeyRequired: false,

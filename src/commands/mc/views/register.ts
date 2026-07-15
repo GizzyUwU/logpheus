@@ -97,12 +97,13 @@ export default {
           if (
             ysws.macondo.jobConfig[job.value] &&
             ysws.macondo.jobConfig[job.value]?.apiKeyRequired &&
-            (!yswsData?.apiKey || yswsData?.apiKey.length === 0)
+            (!yswsData?.apiKey || yswsData?.apiKey.length === 0) &&
+            (!flatValues["api_key"] || flatValues["api_key"].length === 0)
           ) {
             return await client.chat.postEphemeral({
               channel: channelId,
               user: userId,
-              text: `${job} requires an API key to be set! Rerun the config command to set an api key and add the job`,
+              text: `${job.value} requires an API key to be set! Rerun the config command to set an api key and add the job`,
             });
           }
 
@@ -114,7 +115,7 @@ export default {
             return await client.chat.postEphemeral({
               channel: channelId,
               user: userId,
-              text: `${job} requires a channel id to be set! Run the  /${prefix} config command to set a channel id and then rerun this command to add the job.`,
+              text: `${job.value} requires a channel id to be set! Run the  /${prefix} config command to set a channel id and then rerun this command to add the job.`,
             });
           }
         }
