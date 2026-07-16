@@ -44,7 +44,7 @@ function parseProjectCommand(text: string) {
 export default {
   name: "projects",
   params: "[projectName] [--page (integer)] [--limit (integer >= 70)]",
-  desc: "Search through all the projects on flavortown.",
+  desc: "Search through all the projects.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     {

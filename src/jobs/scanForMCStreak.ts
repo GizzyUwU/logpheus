@@ -5,12 +5,27 @@ import { yswsUsers } from "@/schema";
 import { loadAdapter } from "@/lib/adapters";
 import type Macondo from "@/lib/macondo";
 import { getGenericErrorMessage } from "@/lib/genericError";
+import ysws from "@/ysws";
 type YSWSRow = typeof yswsUsers._.inferSelect;
 
 export default {
   name: "scanFoMCStreak",
   execute: async ({ client, clients, pg, logger, prefix }: RequestHandler) => {
     try {
+      const yswsData = Object.values(ysws).find((x) =>
+        x.jobs.includes("scanForMCStreak"),
+      );
+
+      if (!yswsData) return;
+      if (
+        !yswsData.jobConfig["scanForMCStreak"]
+      ) {
+        logger.info(
+          "scanForMCStreak job skipped becasue didn't meet requirements",
+        );
+        return;
+      }
+
       const userRows = (
         await pg.query.users.findMany({
           columns: {
@@ -46,7 +61,6 @@ export default {
           continue;
         const yswsData = user.ysws[0]!;
         const clientKey = `${yswsData.yswsId}:${user.userId ?? crypto.randomUUID()}`;
-        console.log(clientKey);
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsConfig.macondo.adapter);
           clients[clientKey] = new AdapterClass({

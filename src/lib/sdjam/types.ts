@@ -44,8 +44,8 @@ export namespace ZTypes {
           ship_status: zod.string().nullish(),
           devlog_ids: zod.array(zod.number()).optional(),
           banner_url: zod.url().nullish(),
-          created_at: zod.iso.datetime({}).optional(),
-          updated_at: zod.iso.datetime({}).optional(),
+          created_at: zod.iso.datetime({ local: true }).optional(),
+          updated_at: zod.iso.datetime({ local: true }).optional(),
         }),
       )
       .optional(),
@@ -77,8 +77,8 @@ export namespace ZTypes {
     ship_status: zod.string().nullish(),
     devlog_ids: zod.array(zod.number()).optional(),
     banner_url: zod.url().nullish(),
-    created_at: zod.iso.datetime({}).optional(),
-    updated_at: zod.iso.datetime({}).optional(),
+    created_at: zod.iso.datetime({ local: true }).optional(),
+    updated_at: zod.iso.datetime({ local: true }).optional(),
   });
 
   /**
@@ -140,13 +140,13 @@ export namespace ZTypes {
                   })
                   .nullish(),
                 body: zod.string().describe("Comment body"),
-                created_at: zod.iso.datetime({}).optional(),
-                updated_at: zod.iso.datetime({}).optional(),
+                created_at: zod.iso.datetime({ local: true }).optional(),
+                updated_at: zod.iso.datetime({ local: true }).optional(),
               }),
             )
             .optional(),
-          created_at: zod.iso.datetime({}).optional(),
-          updated_at: zod.iso.datetime({}).optional(),
+          created_at: zod.iso.datetime({ local: true }).optional(),
+          updated_at: zod.iso.datetime({ local: true }).optional(),
         }),
       )
       .optional(),
@@ -199,13 +199,13 @@ export namespace ZTypes {
             })
             .nullish(),
           body: zod.string().describe("Comment body"),
-          created_at: zod.iso.datetime({}).optional(),
-          updated_at: zod.iso.datetime({}).optional(),
+          created_at: zod.iso.datetime({ local: true }).optional(),
+          updated_at: zod.iso.datetime({ local: true }).optional(),
         }),
       )
       .optional(),
-    created_at: zod.iso.datetime({}).optional(),
-    updated_at: zod.iso.datetime({}).optional(),
+    created_at: zod.iso.datetime({ local: true }).optional(),
+    updated_at: zod.iso.datetime({ local: true }).optional(),
   });
 
   /**
@@ -263,13 +263,13 @@ export namespace ZTypes {
                   })
                   .nullish(),
                 body: zod.string().describe("Comment body"),
-                created_at: zod.iso.datetime({}).optional(),
-                updated_at: zod.iso.datetime({}).optional(),
+                created_at: zod.iso.datetime({ local: true }).optional(),
+                updated_at: zod.iso.datetime({ local: true }).optional(),
               }),
             )
             .optional(),
-          created_at: zod.iso.datetime({}).optional(),
-          updated_at: zod.iso.datetime({}).optional(),
+          created_at: zod.iso.datetime({ local: true }).optional(),
+          updated_at: zod.iso.datetime({ local: true }).optional(),
         }),
       )
       .optional(),
@@ -321,13 +321,13 @@ export namespace ZTypes {
             })
             .nullish(),
           body: zod.string().describe("Comment body"),
-          created_at: zod.iso.datetime({}).optional(),
-          updated_at: zod.iso.datetime({}).optional(),
+          created_at: zod.iso.datetime({ local: true }).optional(),
+          updated_at: zod.iso.datetime({ local: true }).optional(),
         }),
       )
       .optional(),
-    created_at: zod.iso.datetime({}).optional(),
-    updated_at: zod.iso.datetime({}).optional(),
+    created_at: zod.iso.datetime({ local: true }).optional(),
+    updated_at: zod.iso.datetime({ local: true }).optional(),
   });
 
   /**
@@ -426,8 +426,8 @@ export namespace ZTypes {
           ship_status: zod.string().nullish(),
           devlog_ids: zod.array(zod.number()).optional(),
           banner_url: zod.url().nullish(),
-          created_at: zod.iso.datetime({}).optional(),
-          updated_at: zod.iso.datetime({}).optional(),
+          created_at: zod.iso.datetime({ local: true }).optional(),
+          updated_at: zod.iso.datetime({ local: true }).optional(),
         }),
       )
       .optional(),
@@ -476,8 +476,8 @@ export namespace ZTypes {
             ship_status: zod.string().nullish(),
             devlog_ids: zod.array(zod.number()).optional(),
             banner_url: zod.url().nullish(),
-            created_at: zod.iso.datetime({}).optional(),
-            updated_at: zod.iso.datetime({}).optional(),
+            created_at: zod.iso.datetime({ local: true }).optional(),
+            updated_at: zod.iso.datetime({ local: true }).optional(),
           })
           .and(
             zod.object({
@@ -552,8 +552,8 @@ export namespace ZTypes {
             ship_status: zod.string().nullish(),
             devlog_ids: zod.array(zod.number()).optional(),
             banner_url: zod.url().nullish(),
-            created_at: zod.iso.datetime({}).optional(),
-            updated_at: zod.iso.datetime({}).optional(),
+            created_at: zod.iso.datetime({ local: true }).optional(),
+            updated_at: zod.iso.datetime({ local: true }).optional(),
           })
           .and(
             zod.object({
@@ -601,8 +601,8 @@ export namespace ZTypes {
       ship_status: zod.string().nullish(),
       devlog_ids: zod.array(zod.number()).optional(),
       banner_url: zod.url().nullish(),
-      created_at: zod.iso.datetime({}).optional(),
-      updated_at: zod.iso.datetime({}).optional(),
+      created_at: zod.iso.datetime({ local: true }).optional(),
+      updated_at: zod.iso.datetime({ local: true }).optional(),
     })
     .and(
       zod.object({
@@ -682,13 +682,13 @@ export namespace ZTypes {
                     })
                     .nullish(),
                   body: zod.string().describe("Comment body"),
-                  created_at: zod.iso.datetime({}).optional(),
-                  updated_at: zod.iso.datetime({}).optional(),
+                  created_at: zod.iso.datetime({ local: true }).optional(),
+                  updated_at: zod.iso.datetime({ local: true }).optional(),
                 }),
               )
               .optional(),
-            created_at: zod.iso.datetime({}).optional(),
-            updated_at: zod.iso.datetime({}).optional(),
+            created_at: zod.iso.datetime({ local: true }).optional(),
+            updated_at: zod.iso.datetime({ local: true }).optional(),
           })
           .and(
             zod.object({
@@ -752,13 +752,13 @@ export namespace ZTypes {
               })
               .nullish(),
             body: zod.string().describe("Comment body"),
-            created_at: zod.iso.datetime({}).optional(),
-            updated_at: zod.iso.datetime({}).optional(),
+            created_at: zod.iso.datetime({ local: true }).optional(),
+            updated_at: zod.iso.datetime({ local: true }).optional(),
           }),
         )
         .optional(),
-      created_at: zod.iso.datetime({}).optional(),
-      updated_at: zod.iso.datetime({}).optional(),
+      created_at: zod.iso.datetime({ local: true }).optional(),
+      updated_at: zod.iso.datetime({ local: true }).optional(),
     })
     .and(
       zod.object({
@@ -829,13 +829,13 @@ export namespace ZTypes {
                     })
                     .nullish(),
                   body: zod.string().describe("Comment body"),
-                  created_at: zod.iso.datetime({}).optional(),
-                  updated_at: zod.iso.datetime({}).optional(),
+                  created_at: zod.iso.datetime({ local: true }).optional(),
+                  updated_at: zod.iso.datetime({ local: true }).optional(),
                 }),
               )
               .optional(),
-            created_at: zod.iso.datetime({}).optional(),
-            updated_at: zod.iso.datetime({}).optional(),
+            created_at: zod.iso.datetime({ local: true }).optional(),
+            updated_at: zod.iso.datetime({ local: true }).optional(),
           })
           .and(
             zod.object({
@@ -898,13 +898,13 @@ export namespace ZTypes {
               })
               .nullish(),
             body: zod.string().describe("Comment body"),
-            created_at: zod.iso.datetime({}).optional(),
-            updated_at: zod.iso.datetime({}).optional(),
+            created_at: zod.iso.datetime({ local: true }).optional(),
+            updated_at: zod.iso.datetime({ local: true }).optional(),
           }),
         )
         .optional(),
-      created_at: zod.iso.datetime({}).optional(),
-      updated_at: zod.iso.datetime({}).optional(),
+      created_at: zod.iso.datetime({ local: true }).optional(),
+      updated_at: zod.iso.datetime({ local: true }).optional(),
     })
     .and(
       zod.object({
@@ -973,8 +973,8 @@ export namespace ZTypes {
                   }),
                 )
                 .optional(),
-              created_at: zod.iso.datetime({}).optional(),
-              updated_at: zod.iso.datetime({}).optional(),
+              created_at: zod.iso.datetime({ local: true }).optional(),
+              updated_at: zod.iso.datetime({ local: true }).optional(),
             }),
           ),
       )
@@ -1028,8 +1028,8 @@ export namespace ZTypes {
             }),
           )
           .optional(),
-        created_at: zod.iso.datetime({}).optional(),
-        updated_at: zod.iso.datetime({}).optional(),
+        created_at: zod.iso.datetime({ local: true }).optional(),
+        updated_at: zod.iso.datetime({ local: true }).optional(),
       }),
     );
 
@@ -1072,8 +1072,8 @@ export namespace ZTypes {
             ship_status: zod.string().nullish(),
             devlog_ids: zod.array(zod.number()).optional(),
             banner_url: zod.url().nullish(),
-            created_at: zod.iso.datetime({}).optional(),
-            updated_at: zod.iso.datetime({}).optional(),
+            created_at: zod.iso.datetime({ local: true }).optional(),
+            updated_at: zod.iso.datetime({ local: true }).optional(),
           })
           .and(
             zod.object({

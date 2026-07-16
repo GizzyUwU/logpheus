@@ -35,6 +35,7 @@
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "https": "^1.0.0",
+    "markdown-table": "^3.0.4",
     "node-vikunja": "^0.4.0",
     "octokit": "^5.0.5",
     "orval": "^8.19.0",

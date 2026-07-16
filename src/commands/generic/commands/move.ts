@@ -2,7 +2,6 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { users } from "@/schema/users";
 import { eq } from "drizzle-orm";
-import checkAPIKey from "@/lib/ft/apiKeyCheck";
 type UserRow = typeof users._.inferSelect;
 
 export default {
@@ -51,17 +50,6 @@ export default {
         });
 
       const checkKey = String(userData[0]?.apiKey);
-
-      const working = await checkAPIKey({
-        db: pg,
-        apiKey: checkKey,
-        logger,
-      });
-      if (!working.works)
-        return respond({
-          text: "Flavortown API Key is invalid, provide a valid one.",
-          response_type: "ephemeral",
-        });
 
       if (!userData[0]?.userId) {
         updateFields.userId = command.user_id;

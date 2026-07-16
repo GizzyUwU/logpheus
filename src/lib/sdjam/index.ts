@@ -75,6 +75,7 @@ export default class SDJam {
       }
     } catch (err) {
       if (axios.isAxiosError(err)) {
+         console.log("FAILING URL:", err.config?.url, err.config?.params);
         let status = err.response?.status ?? err.status ?? null;
 
         if (

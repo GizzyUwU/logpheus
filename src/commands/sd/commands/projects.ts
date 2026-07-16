@@ -1,7 +1,7 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { getGenericErrorMessage } from "@/lib/genericError";
-import type Macondo from "@/lib/macondo";
+import type SDJam from "@/lib/sdjam";
 import { markdownTable } from "markdown-table";
 
 function parseProjectCommand(text: string) {
@@ -18,6 +18,7 @@ function parseProjectCommand(text: string) {
     const token = tokens[i];
 
     if (token === "--page") {
+      console.log("meow");
       const val = Number(tokens[i + 1]);
       if (Number.isInteger(val) && val > 0) {
         page = val;
@@ -47,32 +48,17 @@ export default {
   desc: "Search through all the projects.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
-    { yswsClient, prefix, folder, yswsData }: RequestHandler,
+    { yswsClient, prefix }: RequestHandler,
   ) => {
-    if (yswsData && Object.keys(yswsData).length === 0)
-      return respond({
-        text: `Hey! You aren't registered to this ysws, register to it with /${prefix}-${folder} register`,
-        response_type: "ephemeral",
-      });
-
     const { query, page: userPage, limit } = parseProjectCommand(command.text);
-
-    if (!yswsClient)
-      return respond({
-        text: `Unexpected error has occured`,
-        response_type: "ephemeral",
-      });
-
-    const mcClient: Macondo = yswsClient.raw as Macondo;
+    const client: SDJam = yswsClient!.raw as SDJam;
     const cursor =
       userPage && userPage > 0 ? (userPage - 1) * limit : undefined;
-
-    const projects = await mcClient.projects({
-      search: query,
-      cursor,
+    const projects = await client.projects({
+      query,
+      page: cursor,
       limit,
     });
-
     if (!projects || !projects.status) {
       return respond({
         text: "Unexpected error has occurred.",
@@ -96,19 +82,19 @@ export default {
       }
     }
 
-    if (!projects.data.items?.length)
+    if (!projects.data.projects?.length)
       return respond({
         text: "There is no projects to view on this page!",
         response_type: "ephemeral",
       });
 
-    let tableArr = [["Id", "Title", "Shipped", "Level"]];
-    projects.data.items.forEach((p) =>
+    let tableArr = [["Id", "Title", "Ship Status", "Used AI"]];
+    projects.data.projects.forEach((p) =>
       tableArr.push([
         String(p.id),
-        p.name ?? "Unknown",
-        p.has_shipped ? "True" : "False",
-        p.level ?? "None",
+        p.title,
+        p.ship_status ?? "None",
+        String(p.ai_declaration).length > 0 ? "True" : "False",
       ]),
     );
 
@@ -119,7 +105,7 @@ export default {
           type: "header",
           text: {
             type: "plain_text",
-            text: `Projects:`,
+            text: `Projects index by API ${projects.data.pagination?.current_page}/${projects.data.pagination?.total_pages}:`,
           },
         },
         {
@@ -130,7 +116,6 @@ export default {
           },
         },
       ],
-      response_type: "ephemeral",
     });
   },
 };

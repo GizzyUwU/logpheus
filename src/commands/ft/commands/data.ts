@@ -4,7 +4,7 @@ import ysws from "@/ysws";
 
 export default {
   name: "data",
-  desc: "Look through what data from flavortown the bot has on you!",
+  desc: "Look through what data the bot has on you!",
   execute: async (
     { respond }: SlackCommandMiddlewareArgs,
     { prefix, userData, yswsData }: RequestHandler,

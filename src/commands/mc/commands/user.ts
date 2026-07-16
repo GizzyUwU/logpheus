@@ -18,7 +18,7 @@ const formatDate = (iso: string) => {
 export default {
   name: "user",
   params: "[userMention]",
-  desc: "View a user's flavortown profile.",
+  desc: "View a user's profile.",
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     {
