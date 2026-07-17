@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
+import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from "axios";
 import type { ZodType } from "zod";
 import type { logger as LogType } from "@/index.ts";
 import { ZTypes } from "./types";
@@ -26,16 +26,13 @@ export default class Macondo {
     this.ready = Promise.resolve();
   }
 
-  private async request<S extends ZodType<any, any, any>>(
+  private async request<T extends z.ZodType>(
     config: AxiosRequestConfig,
-    schema: S,
+    schema: T,
   ): Promise<
-    | {
-        ok: true;
-        status: number;
-        data: z.infer<S>;
-        etag: string | null;
-        lastModified: string | null;
+    | Omit<AxiosResponse, 'data'> & {
+      ok: boolean;
+        data: z.infer<T>;
       }
     | { ok: false; status: number | null; msg: string | unknown }
   > {
@@ -51,11 +48,9 @@ export default class Macondo {
       try {
         if (res.status === 408) this.logger.warn(`${config.url} timed out`);
         return {
+          ...res,
           ok: true,
-          status: res.status,
-          data: schema.parse(res.data),
-          etag: (res.headers?.["etag"] as string) ?? null,
-          lastModified: (res.headers?.["last-modified"] as string) ?? null,
+          data: schema.parse(res.data)
         };
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -101,84 +96,49 @@ export default class Macondo {
     }
   }
 
-  projects(query?: z.infer<typeof ZTypes.ExploreProjectsQueryParams>) {
-    const parsedQuery = query
-      ? ZTypes.ExploreProjectsQueryParams.parse(query)
-      : undefined;
-
-    const queries = new URLSearchParams(
-      Object.entries(parsedQuery ?? {}).reduce(
-        (acc, [key, value]) => {
-          if (value !== undefined) acc[key] = String(value);
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-    );
-
+  projects(query?: z.infer<typeof ZTypes["ExploreProjectsQueryParams"]>) {
     return this.request(
       {
         method: "GET",
         url:
-          "/explore/projects" +
-          (queries.toString() ? `?${queries.toString()}` : ""),
+          "/explore/projects",
+        params: query
       },
-      ZTypes.ExploreProjectsResponse,
+      ZTypes["ExploreProjectsResponse"],
     );
   }
 
-  project(param: z.infer<typeof ZTypes.ProjectParams>) {
-    const parsedParam = param ? ZTypes.ProjectParams.parse(param) : undefined;
-
-    if (!parsedParam) throw new Error("Missing Params");
+  project(param: z.infer<typeof ZTypes["ProjectParams"]>) {
     return this.request(
       {
         method: "GET",
-        url: "/projects/" + parsedParam.id,
+        url: "/projects/" + param.id,
       },
-      ZTypes.ProjectResponse,
+      ZTypes["ProjectResponse"],
     );
   }
 
-  hackatimeProjects(query: z.infer<typeof ZTypes.HackatimeProjectsQueries>) {
-    const parsedQuery = query
-      ? ZTypes.HackatimeProjectsQueries.parse(query)
-      : undefined;
-
-    const queries = new URLSearchParams(
-      Object.entries(parsedQuery ?? {}).reduce(
-        (acc, [key, value]) => {
-          if (value !== undefined) acc[key] = String(value);
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-    );
-
+  hackatimeProjects(query?: z.infer<typeof ZTypes["HackatimeProjectsQueries"]>) {
     return this.request(
       {
         method: "GET",
         url:
-          "/hackatime/projects" +
-          (queries.toString() ? `?${queries.toString()}` : ""),
+          "/hackatime/projects",
+        params: query
       },
-      ZTypes.HackatimeProjectsResponse,
+      ZTypes["HackatimeProjectsResponse"],
     );
   }
 
   async hackatimeProject(
-    params: z.infer<typeof ZTypes.HackatimeProjectsParams>,
-    query: z.infer<typeof ZTypes.HackatimeProjectsQueries>,
+    params: z.infer<typeof ZTypes["HackatimeProjectsParams"]>,
+    query?: z.infer<typeof ZTypes["HackatimeProjectsQueries"]>,
   ) {
-    const parsedParam = params
-      ? ZTypes.HackatimeProjectsParams.parse(params)
-      : undefined;
-    if (!parsedParam) throw new Error("Missing Params");
     const hackatimeProjects = await this.hackatimeProjects(query);
     if (!hackatimeProjects.ok) return hackatimeProjects;
 
     const project = hackatimeProjects.data.projects.find(
-      (entry) => entry.name === parsedParam.name,
+      (entry) => entry.name === params.name,
     );
 
     if (!project) {
@@ -196,47 +156,33 @@ export default class Macondo {
     };
   }
 
-  hackatimeBreakdown(params: z.infer<typeof ZTypes.HackatimeBreakdownParams>) {
-    const parsedParam = params
-      ? ZTypes.HackatimeBreakdownParams.parse(params)
-      : undefined;
-    if (!parsedParam) throw new Error("Missing Params");
-
+  hackatimeBreakdown(params: z.infer<typeof ZTypes["HackatimeBreakdownParams"]>) {
     return this.request(
       {
         method: "GET",
-        url: "/projects/" + parsedParam.projectId + "/hackatime-breakdown",
+        url: "/projects/" + params.projectId + "/hackatime-breakdown",
       },
-      ZTypes.HackatimeBreakdownResponse,
+      ZTypes["HackatimeBreakdownResponse"],
     );
   }
 
-  journals(param: z.infer<typeof ZTypes.ProjectParams>) {
-    const parsedParam = param ? ZTypes.ProjectParams.parse(param) : undefined;
-
-    if (!parsedParam) throw new Error("Missing Params");
+  journals(param: z.infer<typeof ZTypes["ProjectParams"]>) {
     return this.request(
       {
         method: "GET",
-        url: "/projects/" + parsedParam.id,
+        url: "/projects/" + param.id,
       },
-      ZTypes.ProjectJournalsResponse,
+      ZTypes["ProjectJournalsResponse"],
     );
   }
 
-  async journal(param: z.infer<typeof ZTypes.ProjectJournalParams>) {
-    const parsedParam = param
-      ? ZTypes.ProjectJournalParams.parse(param)
-      : undefined;
-
-    if (!parsedParam) throw new Error("Missing Params");
-
-    const project = await this.project({ id: parsedParam.projectId });
+  async journal(param: z.infer<typeof ZTypes["ProjectJournalParams"]>) {
+    const project = await this.project({ id: param.projectId });
 
     if (!project.ok) return project;
 
     const journal = project.data.journals.find(
-      (entry) => entry.id === parsedParam.journalId,
+      (entry) => entry.id === param.journalId,
     );
 
     if (!journal) {
@@ -254,49 +200,30 @@ export default class Macondo {
     };
   }
 
-  users(query?: z.infer<typeof ZTypes.ExplorePeopleQueryParams>) {
-    const parsedQuery = query
-      ? ZTypes.ExplorePeopleQueryParams.parse(query)
-      : undefined;
-
-    const queries = new URLSearchParams(
-      Object.entries(parsedQuery ?? {}).reduce(
-        (acc, [key, value]) => {
-          if (value !== undefined) acc[key] = String(value);
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-    );
-
+  users(query?: z.infer<typeof ZTypes["ExplorePeopleQueryParams"]>) {
     return this.request(
       {
         method: "GET",
         url:
-          "/explore/people" +
-          (queries.toString() ? `?${queries.toString()}` : ""),
+          "/explore/people",
+        params: query
       },
       ZTypes.ExplorePeopleResponse,
     );
   }
 
   user(param: z.infer<typeof ZTypes.UserParams>) {
-    const parsedParam = param ? ZTypes.UserParams.parse(param) : undefined;
-    if (!parsedParam) throw new Error("Missing Params");
     return this.request(
       {
         method: "GET",
-        url: "/users/" + parsedParam.userId,
+        url: "/users/" + param.userId,
       },
       ZTypes.UserResponse,
     );
   }
 
   async userProjects(param: z.infer<typeof ZTypes.UserParams>) {
-    const parsedParam = param ? ZTypes.UserParams.parse(param) : undefined;
-    if (!parsedParam) throw new Error("Missing Params");
-
-    const user = await this.user(parsedParam);
+    const user = await this.user(param);
     if (!user.ok) return user;
     if (!user.data.projects) {
       return {
@@ -337,15 +264,12 @@ export default class Macondo {
     );
   }
 
-  async shopItem(param: z.infer<typeof ZTypes.ShopItemParams>) {
-    const parsedParam = param ? ZTypes.ShopItemParams.parse(param) : undefined;
-
-    if (!parsedParam) throw new Error("Missing Params");
+  async shopItem(param: z.infer<typeof ZTypes["ShopItemParams"]>) {
     const shop = await this.shop();
     if (!shop.ok) return shop;
 
     const itemData = shop.data.items.find(
-      (entry) => entry.id === parsedParam.itemId,
+      (entry) => entry.id === param.itemId,
     );
 
     if (!shop) {
@@ -363,27 +287,13 @@ export default class Macondo {
     };
   }
 
-  shopSuggestions(query?: z.infer<typeof ZTypes.ShopSuggestionQueries>) {
-    const parsedQuery = query
-      ? ZTypes.ShopSuggestionQueries.parse(query)
-      : undefined;
-
-    const queries = new URLSearchParams(
-      Object.entries(parsedQuery ?? {}).reduce(
-        (acc, [key, value]) => {
-          if (value !== undefined) acc[key] = String(value);
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-    );
-
+  shopSuggestions(query?: z.infer<typeof ZTypes["ShopSuggestionQueries"]>) {
     return this.request(
       {
         method: "GET",
         url:
-          "/shop/requests" +
-          (queries.toString() ? `?${queries.toString()}` : ""),
+          "/shop/requests",
+        params: query
       },
       ZTypes.ShopSuggestionResponse,
     );
@@ -403,7 +313,7 @@ export default class Macondo {
     return this.request(
       {
         method: "GET",
-        url: "/profile/streaks?rrrrr=" + crypto.randomUUID(),
+        url: "/profile/streaks",
       },
       ZTypes.GetMyStreak,
     );

@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
+import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from "axios";
 import type { ZodType } from "zod";
 import type { logger as LogType } from "@/index.ts";
 import { ZTypes } from "./types";
@@ -24,11 +24,11 @@ export default class SDJam {
     this.ready = Promise.resolve();
   }
 
-  private async request<S extends ZodType<any, any, any>>(
+  private async request<T extends z.ZodType>(
     config: AxiosRequestConfig,
-    schema: S,
+    schema: T,
   ): Promise<
-    | { ok: true; status: number; data: z.infer<S> }
+    | Omit<AxiosResponse, 'data'> & { ok: true;  data: z.infer<T> }
     | { ok: false; status: number | null; msg: string | unknown }
   > {
     await this.ready;
@@ -43,8 +43,8 @@ export default class SDJam {
       try {
         if(res.status === 408) this.logger.warn(`${config.url} timed out`)
         return {
+          ...res,
           ok: true,
-          status: res.status,
           data: schema.parse(res.data),
         };
       } catch (error) {

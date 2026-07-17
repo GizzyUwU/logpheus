@@ -49,7 +49,6 @@ export default {
           response_type: "ephemeral",
         });
 
-      const checkKey = String(userData[0]?.apiKey);
 
       if (!userData[0]?.userId) {
         updateFields.userId = command.user_id;
