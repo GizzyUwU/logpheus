@@ -12,6 +12,7 @@ export const jobConfigSchema = z
     z.object({
       channelId: z.string(),
       jobApiKey: z.string().nullish(),
+      webhook: z.string().nullish(),
       apiKeyRequired: z.boolean(),
       channelRequired: z.boolean(),
       optional: z.boolean()
@@ -85,9 +86,9 @@ export default {
     },
     jobConfig: {
       shopTrack: {
-        channelId: !process.env["DEV_CHANNEL"]
-          ? "C0B99K6H2SW"
-          : process.env["DEV_CHANNEL"],
+        webhook: !process.env["DEV_CHANNEL_WEBHOOK"]
+          ? process.env["MC_SHOPTRACK_WEBHOOK"]
+          : process.env["DEV_CHANNEL_WEBHOOK"],
         jobApiKey: null,
       },
       scanForMCShopSuggestions: {

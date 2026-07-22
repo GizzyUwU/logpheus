@@ -7,6 +7,7 @@ import { getGenericErrorMessage } from "@/lib/genericError";
 import type { SectionBlockAccessory, TextObject } from "@slack/web-api";
 import type { RegionalCost } from "@/lib/adapters/types";
 import Decimal from "decimal.js";
+import { postBlocksToWebhook } from "@/lib/postToWebhook";
 type Diff = { field: string; from: unknown; to: unknown };
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -179,14 +180,15 @@ const formatCost = (v: unknown) => {
 export default {
   name: "shopTrack",
   interval: 10,
-  execute: async ({ clients, client, pg, logger, prefix }: RequestHandler) => {
+  execute: async ({ clients, pg, logger, prefix }: RequestHandler) => {
     try {
       for (const yswsData of Object.values(ysws)) {
         if (!yswsData.jobs.includes("shopTrack")) continue;
         if (
           !yswsData.jobConfig["shopTrack"] ||
           !yswsData.jobConfig["shopTrack"].channelId ||
-          (yswsData.apiKeyRequired && !yswsData.jobConfig["shopTrack"].jobApiKey)
+          (yswsData.apiKeyRequired &&
+            !yswsData.jobConfig["shopTrack"].jobApiKey)
         ) {
           logger.info("shopTrack job skipped becasue didn't meet requirements");
           continue;
@@ -303,15 +305,13 @@ export default {
             )
             .join("\n");
 
-          await client.chat.postMessage({
-            channel: yswsData.jobConfig["shopTrack"].channelId,
-            unfurl_links: false,
-            blocks: [
+          await postBlocksToWebhook(
+            yswsData.jobConfig["shopTrack"].webhook ?? "", [
               {
                 type: "header",
                 text: {
                   type: "plain_text",
-                  text: `Shop has updated!`,
+                  text: `${stored.name} was removed from the Macondo shop.`,
                 },
               },
               {
@@ -334,7 +334,7 @@ export default {
                 elements: [
                   {
                     type: "mrkdwn",
-                    text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
+                    text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "<!channel>"}`,
                     verbatim: false,
                   },
                 ],
@@ -343,7 +343,7 @@ export default {
                 type: "divider",
               },
             ],
-          });
+            "Shop updated 2", logger);
           if (!alrPinged) alrPinged = true;
         }
 
@@ -402,15 +402,13 @@ export default {
               .map((f) => `*${f.label}*: ${f.value}`)
               .join("\n");
 
-            await client.chat.postMessage({
-              channel: yswsData.jobConfig["shopTrack"].channelId,
-              unfurl_links: false,
-              blocks: [
+            await postBlocksToWebhook(
+               yswsData.jobConfig["shopTrack"].webhook ?? "", [
                 {
                   type: "header",
                   text: {
                     type: "plain_text",
-                    text: `New item added to the shop!`,
+                    text: `New item added to the Macondo shop!`,
                   },
                 },
                 {
@@ -472,7 +470,7 @@ export default {
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
+                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "<!channel>"}`,
                       verbatim: false,
                     },
                   ],
@@ -481,7 +479,7 @@ export default {
                   type: "divider",
                 },
               ],
-            });
+            "New item added to the Macondo shop!", logger)
             if (!alrPinged) alrPinged = true;
             continue;
           }
@@ -498,7 +496,7 @@ export default {
               const stored = storedRegional[region];
               if (!stored) return true;
 
-              return stored.currency !== cost.currency 
+              return stored.currency !== cost.currency;
             },
           );
 
@@ -565,10 +563,14 @@ export default {
                       : "No changes detected",
                 value: "",
               },
-              ...(nameChange ? [{
-                label: `${stored.name !== shopItem.name ? `${stored.name} → ${shopItem.name}` : `${stored.name}`}`,
-                value: "",
-              } ] : []),
+              ...(nameChange
+                ? [
+                    {
+                      label: `${stored.name !== shopItem.name ? `${stored.name} → ${shopItem.name}` : `${stored.name}`}`,
+                      value: "",
+                    },
+                  ]
+                : []),
               ...(descChange
                 ? [
                     {
@@ -630,10 +632,9 @@ export default {
               return text;
             })();
 
-            await client.chat.postMessage({
-              channel: yswsData.jobConfig["shopTrack"].channelId,
-              unfurl_links: false,
-              blocks: [
+            await postBlocksToWebhook(
+               yswsData.jobConfig["shopTrack"].webhook ?? "",
+              [
                 {
                   type: "header",
                   text: {
@@ -659,7 +660,7 @@ export default {
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "@channel"}`,
+                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "<!channel>"}`,
                       verbatim: false,
                     },
                   ],
@@ -668,7 +669,9 @@ export default {
                   type: "divider",
                 },
               ],
-            });
+              `${changes.length + rawDiffs.length} change${changes.length + rawDiffs.length > 1 ? "s" : ""} to ${shopItem.name} detected!`,
+              logger,
+            );
             if (!alrPinged) alrPinged = true;
           }
         }

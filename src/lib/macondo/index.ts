@@ -1,5 +1,4 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from "axios";
-import type { ZodType } from "zod";
 import type { logger as LogType } from "@/index.ts";
 import { ZTypes } from "./types";
 import { z } from "zod";
