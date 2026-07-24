@@ -1,3 +1,7 @@
+FROM oven/bun:alpine AS gitfetch
+RUN apk add git
+RUN git clone --no-checkout --depth 1 https://github.com/gizzyuwu/logpheus.git /tmp/repo
+
 FROM oven/bun:alpine
 WORKDIR /usr/src/app
 RUN --mount=type=cache,target=/var/cache/apk \
@@ -11,7 +15,7 @@ COPY --chown=bun:bun migrations/ /usr/src/app/migrations
 COPY --chown=bun:bun drizzle.config.ts /usr/src/app/drizzle.config.ts
 COPY --chown=bun:bun entrypoint.sh /usr/src/app/entrypoint.sh
 COPY --chown=bun:bun tsconfig.json /usr/src/app/tsconfig.json
-COPY --chown=bun:bun .git /usr/src/app/.git
+COPY --chown=bun:bun --from=gitfetch /tmp/repo/.git /usr/src/app/.git
 
 RUN mkdir /usr/src/app/cache
 RUN chmod 700 /usr/src/app/cache
