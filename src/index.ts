@@ -123,9 +123,11 @@ const openPanelSink: AsyncSink = async (record) => {
 if (process.env["SENTRY_DSN"]) {
   Sentry.init({
     dsn: process.env["SENTRY_DSN"],
-    release: process.env["SENTRY_NAME"] || "logpheus",
+    release:
+      process.env["GIT_COMMIT_SHA"] || process.env["SENTRY_NAME"] || "logpheus",
     integrations: [],
-    tracesSampleRate: 0,
+    tracesSampleRate: 0.01,
+    environment: process.env["DEV_CHANNEL"] && process.env["DEV_CHANNEL"].length > 0 ? "development" : "production",
     sendDefaultPii: true,
     beforeSend(event) {
       if (Array.isArray(event.breadcrumbs)) {
@@ -198,8 +200,7 @@ await configure({
         ...(opClient ? ["openpanel"] : []),
       ],
       lowestLevel:
-        logLevel[configuredLogLevel as keyof typeof logLevel] ??
-        "info",
+        logLevel[configuredLogLevel as keyof typeof logLevel] ?? "info",
     },
   ],
 });

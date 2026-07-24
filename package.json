@@ -11,8 +11,8 @@
     "migrate": "bunx drizzle-kit migrate",
     "i-migrate": "infisical run --env=dev -- bunx drizzle-kit migrate",
     "generate": "bunx drizzle-kit generate",
-    "dev:manual": "bun run src/index.ts",
-    "dev": "infisical run --env=dev -- bun run src/index.ts",
+    "dev:manual": "GIT_COMMIT_SHA=\"$(git rev-parse HEAD 2>/dev/null || echo unknown)\" bun run src/index.ts",
+    "dev": "GIT_COMMIT_SHA=\"$(git rev-parse HEAD 2>/dev/null || echo unknown)\" infisical run --env=dev -- bun run src/index.ts",
     "scanEnv": "bun run src/envScan.ts"
   },
   "peerDependencies": {

@@ -56,6 +56,10 @@ export default {
           label: "Objects in Heap",
           value: jsHeap.objectCount,
         },
+        {
+          label: "Commit SHA",
+          value: process.env["GIT_COMMIT_SHA"] && process.env["GIT_COMMIT_SHA"].length > 0 ? `<https://github.com/GizzyUwU/logpheus/commit/${process.env["GIT_COMMIT_SHA"]}|${process.env["GIT_COMMIT_SHA"]}>` : "Unavailable"
+        }
       ]
         .map((f) => `*${f.label}*: ${f.value}`)
         .join("\n");
