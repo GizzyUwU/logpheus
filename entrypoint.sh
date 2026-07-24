@@ -5,5 +5,4 @@ if [ ! -d "/usr/src/app/cache" ]; then
 fi
 
 chown -R bun:bun /usr/src/app/cache
-export GIT_COMMIT_SHA="$(git --git-dir=/usr/src/app/.git rev-parse HEAD 2>/dev/null || echo unknown)"
-exec su-exec bun bun run src/index.ts
+exec su-exec bun GIT_COMMIT_SHA="$(git --git-dir=/usr/src/app/.git rev-parse HEAD 2>/dev/null || echo unknown)" bun run src/index.ts
