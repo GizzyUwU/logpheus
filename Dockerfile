@@ -5,7 +5,7 @@ RUN git clone --no-checkout --depth 1 https://github.com/gizzyuwu/logpheus.git /
 FROM oven/bun:alpine
 WORKDIR /usr/src/app
 RUN --mount=type=cache,target=/var/cache/apk \
-    apk add curl su-exec jq
+    apk add curl su-exec jq git
 COPY package.json bun.lock ./
 RUN --mount=type=cache,target=$HOME/.bun/install/cache \
     bun install --frozen-lockfile --production
