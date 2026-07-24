@@ -186,7 +186,7 @@ export default {
         if (!yswsData.jobs.includes("shopTrack")) continue;
         if (
           !yswsData.jobConfig["shopTrack"] ||
-          !yswsData.jobConfig["shopTrack"].channelId ||
+          !yswsData.jobConfig["shopTrack"].webhook ||
           (yswsData.apiKeyRequired &&
             !yswsData.jobConfig["shopTrack"].jobApiKey)
         ) {

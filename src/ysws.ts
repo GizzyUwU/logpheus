@@ -6,18 +6,19 @@ export const jobOptions = z.enum([
   "scanForMCShopSuggestions",
   "scanForMCStreak",
 ]);
-export const jobConfigSchema = z
-  .record(
-    z.string(),
-    z.object({
+export const jobConfigSchema = z.record(
+  z.string(),
+  z
+    .object({
       channelId: z.string(),
       jobApiKey: z.string().nullish(),
       webhook: z.string().nullish(),
       apiKeyRequired: z.boolean(),
       channelRequired: z.boolean(),
-      optional: z.boolean()
-    }).partial(),
-  );
+      optional: z.boolean(),
+    })
+    .partial(),
+);
 
 const regionsSchema = z.record(z.string(), z.string());
 export const yswsItem = z.object({
@@ -86,9 +87,11 @@ export default {
     },
     jobConfig: {
       shopTrack: {
-        webhook: !process.env["DEV_CHANNEL_WEBHOOK"]
-          ? process.env["MC_SHOPTRACK_WEBHOOK"]
-          : process.env["DEV_CHANNEL_WEBHOOK"],
+        webhook:
+          process.env["DEV_CHANNEL_WEBHOOK"] &&
+          process.env["DEV_CHANNEL_WEBHOOK"].length > 0
+            ? process.env["DEV_CHANNEL_WEBHOOK"]
+            : process.env["MC_SHOPTRACK_WEBHOOK"],
         jobApiKey: null,
       },
       scanForMCShopSuggestions: {
@@ -99,8 +102,8 @@ export default {
       scanForMCStreak: {
         optional: true,
         apiKeyRequired: true,
-        channelRequired: true
-      }
+        channelRequired: true,
+      },
     } as z.infer<typeof jobConfigSchema>,
   },
   stardance: {
