@@ -36,6 +36,7 @@ export default {
                 yswsId: true,
                 apiKey: true,
                 meta: true,
+                disabled: true
               },
               where: and(
                 arrayContains(yswsUsers.registeredJobs, ["scanForMCStreak"]),
@@ -63,6 +64,7 @@ export default {
         )
           continue;
         const yswsData = user.ysws[0]!;
+        if (yswsData.disabled) return;
         const clientKey = `${yswsData.yswsId}:${user.userId ?? crypto.randomUUID()}`;
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsConfig.macondo.adapter);
@@ -91,6 +93,23 @@ export default {
 
           const msg = getGenericErrorMessage(streak.status, prefix!);
           if (msg === "Server is down!" || msg === "Server timed out!") break;
+          if (streak.status === 401) {
+            await pg
+              .update(yswsUsers)
+              .set({
+                disabled: true
+              })
+              .where(
+                and(
+                  eq(yswsUsers.userId, user.userId),
+                  eq(yswsUsers.yswsId, yswsData.yswsId),
+                ),
+              );
+            return await client.chat.postMessage({
+              channel: user.channel,
+              text: `Hey! You're streak tracking disabled because of the api key returning 401! Setup the API Key again in /${prefix}-mc config to get it re-enabled.`,
+            });
+          }
 
           const ctx = logger.with({
             msg,
