@@ -81,20 +81,23 @@ export default {
       });
 
       if (!queryWithTarget || !queryWithTarget.status) {
+        console.log("meow")
         return respond({
           text: "Unexpected error has occurred.",
         });
       }
 
-      if (!queryWithTarget.ok || !queryWithTarget.data.items.length) {
+      if (!queryWithTarget.ok) {
         switch (queryWithTarget.status) {
           case 404:
             return respond({
-              text: "User doesn't have an FT account.",
+              text: "User doesn't have an MC account.",
               response_type: "ephemeral",
             });
           default:
             const msg = getGenericErrorMessage(queryWithTarget.status, prefix!);
+            console.log("meow4", queryWithTarget.status)
+            
             return respond({
               text: msg ?? "Unexpected error has occured!",
               response_type: "ephemeral",
@@ -102,11 +105,17 @@ export default {
         }
       }
 
+      if (!queryWithTarget.data.items.length)  return respond({
+          text: "User's macondo account couldn't be found",
+          response_type: "ephemeral",
+        });
+
       const targetUser = await mcClient.user({
         userId: String(queryWithTarget.data.items[0]?.id),
       });
 
       if (!targetUser || !targetUser.status) {
+        console.log("meow2")
         return respond({
           text: "Unexpected error has occurred.",
           response_type: "ephemeral",
@@ -121,6 +130,8 @@ export default {
               response_type: "ephemeral",
             });
           default:
+          console.log("meow3")
+            
             const msg = getGenericErrorMessage(targetUser.status, prefix!);
             return respond({
               text: msg ?? "Unexpected error has occured!",
