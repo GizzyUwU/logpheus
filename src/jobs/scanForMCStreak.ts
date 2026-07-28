@@ -64,7 +64,7 @@ export default {
         )
           continue;
         const yswsData = user.ysws[0]!;
-        if (yswsData.disabled) return;
+        if (yswsData.disabled || !yswsData.apiKey) return;
         const clientKey = `${yswsData.yswsId}:${user.userId ?? crypto.randomUUID()}`;
         if (!clients[clientKey]) {
           const AdapterClass = await loadAdapter(yswsConfig.macondo.adapter);
