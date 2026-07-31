@@ -539,7 +539,7 @@ async function loadJobs() {
     }
 
     main.prefix = prefix;
-    if (checkEnvs("HCAI_API_KEY", false)) {
+    if (checkEnvs("HCAI_API_KEY", true)) {
       const aiClient = new OpenRouter({
         apiKey: process.env["HCAI_API_KEY"],
         serverURL: "https://ai.hackclub.com/proxy/v1",
