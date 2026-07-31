@@ -295,7 +295,7 @@ export default {
             },
             {
               label: "Base price was",
-              value: `*${formatCost(stored.baseCost)} ${yswsData.currencyName}* (${stored.baseHours}hrs)`,
+              value: `*${formatCost(stored.baseCost)} ${yswsData.currencyName}* (${formatCost(stored.baseHours)}hrs)`,
             },
           ]
             .map((f) =>
@@ -452,7 +452,7 @@ export default {
                         type: "section",
                         text: {
                           type: "mrkdwn",
-                          text: `*Base Price*: *${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
+                          text: `*Base Price*: *${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${formatCost(shopItem.baseHours)}hrs)`,
                         },
                         accessory: {
                           type: "image",
@@ -589,7 +589,7 @@ export default {
                 ? [
                     {
                       label: "Base Price",
-                      value: `${formatCost(stored.baseCost)} → *${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${shopItem.baseHours}hrs)`,
+                      value: `${formatCost(stored.baseCost)} → *${formatCost(shopItem.baseCost)} ${yswsData.currencyName}* (${formatCost(shopItem.baseHours)}hrs)`,
                     },
                   ]
                 : []),
