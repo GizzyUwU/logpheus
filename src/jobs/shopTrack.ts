@@ -553,6 +553,12 @@ export default {
             if (regionalChanges.length > 0) changes.push("Regional Pricing");
             if (stockChange) changes.push("Stock");
 
+            
+            const descriptionOnly =
+              changes.length === 1 &&
+              changes[0] === "Description" &&
+              rawDiffs.length === 0;
+
             const changeText = [
               {
                 label:
@@ -660,7 +666,7 @@ export default {
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged ? "No ping as already pinged" : "<!channel>"}`,
+                      text: `<${yswsData.url + "/shop"}|View Shop> - ${alrPinged || descriptionOnly ? "No ping as already pinged" : "<!channel>"}`,
                       verbatim: false,
                     },
                   ],
@@ -672,7 +678,7 @@ export default {
               `${changes.length + rawDiffs.length} change${changes.length + rawDiffs.length > 1 ? "s" : ""} to ${shopItem.name} detected!`,
               logger,
             );
-            if (!alrPinged) alrPinged = true;
+            if (!alrPinged && !descriptionOnly) alrPinged = true;
           }
         }
       }
