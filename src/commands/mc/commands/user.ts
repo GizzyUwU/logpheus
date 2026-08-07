@@ -22,7 +22,6 @@ export default {
   execute: async (
     { command, respond }: SlackCommandMiddlewareArgs,
     {
-      pg,
       client,
       yswsClient,
       logger,

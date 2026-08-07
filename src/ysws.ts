@@ -72,7 +72,7 @@ export default {
     url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: ["newDevlog", "shopTrack", "scanForMCStreak"] as z.infer<
+    jobs: ["newDevlog", "scanForMCStreak"] as z.infer<
       typeof jobOptions
     >[],
     regions: {
@@ -86,14 +86,14 @@ export default {
       ME: "Middle East",
     },
     jobConfig: {
-      shopTrack: {
-        webhook:
-          process.env["DEV_CHANNEL_WEBHOOK"] &&
-          process.env["DEV_CHANNEL_WEBHOOK"].length > 0
-            ? process.env["DEV_CHANNEL_WEBHOOK"]
-            : process.env["MC_SHOPTRACK_WEBHOOK"],
-        jobApiKey: null,
-      },
+      // shopTrack: {
+      //   webhook:
+      //     process.env["DEV_CHANNEL_WEBHOOK"] &&
+      //     process.env["DEV_CHANNEL_WEBHOOK"].length > 0
+      //       ? process.env["DEV_CHANNEL_WEBHOOK"]
+      //       : process.env["MC_SHOPTRACK_WEBHOOK"],
+      //   jobApiKey: null,
+      // },
       scanForMCShopSuggestions: {
         channelId: !process.env["DEV_CHANNEL"]
           ? "C0BE47SPGJ0"
