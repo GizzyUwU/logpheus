@@ -2,6 +2,7 @@ import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { getGenericErrorMessage } from "@/lib/genericError";
 import Theseus from "@/lib/theseus";
+import { ZTypes } from "@/lib/theseus/types";
 
 function paginateLines(lines: string[]): string[] {
   const pages: string[] = [];
@@ -175,10 +176,6 @@ export default {
               "I'm a pretty little femboy >w< I mean this has no name",
           },
           {
-            label: "Status",
-            value: item.data.letter.status ?? "No status set",
-          },
-          {
             label: "Tags",
             value:
               item.data.letter.tags.length > 0
@@ -253,7 +250,12 @@ export default {
             },
             {
               label: "Status",
-              value: item.data.status ?? "No status set",
+              value:
+                ZTypes["PackageStatusText"][
+                  item.data.status as keyof typeof ZTypes["PackageStatusText"]
+                ] ??
+                item.data.status ??
+                "No status set",
             },
             {
               label: "Tags",

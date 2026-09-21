@@ -139,4 +139,12 @@ export namespace ZTypes {
   export const ListPackagesResponse = z.object({
     packages: z.array(PackageItem),
   });
+
+  export const PackageStatusText = {
+    draft: "Draft",
+    dispatched: "Sent to warehouse",
+    mailed: "Shipped!",
+    errored: "Errored?",
+    canceled: "Canceled",
+  } as const;
 }
