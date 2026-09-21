@@ -4,6 +4,7 @@ import type { RequestHandler } from "@/index.ts";
 import { theseus } from "@/schema/theseus";
 import Theseus from "@/lib/theseus";
 import { getGenericErrorMessage } from "@/lib/genericError";
+import { ZTypes } from "@/lib/theseus/types";
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
@@ -198,12 +199,13 @@ export default {
               dbv: string | null | undefined,
               apiv: string | null | undefined,
               hideInChannel?: boolean,
+              displayFormatter?: (v: string | null | undefined) => string,
             ) => {
               if (dbv !== apiv) {
                 changes.push({
                   label,
-                  from: dbv ?? "(none)",
-                  to: apiv ?? "(none)",
+                  from: displayFormatter ? displayFormatter(dbv) : (dbv ?? "(none)"),
+                  to: displayFormatter ? displayFormatter(apiv) : (apiv ?? "(none)"),
                   hideInChannel: hideInChannel ? hideInChannel : false,
                 });
                 return true;
@@ -211,7 +213,22 @@ export default {
             };
 
             checkAgainstDB("Title", mailRow.title, apiMail.title);
-            checkAgainstDB("Status", mailRow.status, apiMail.status);
+  
+            checkAgainstDB(
+              "Status",
+              mailRow.status,
+              apiMail.status,
+              false,
+              mailRow.id.startsWith("pkg!")
+                ? (v) =>
+                    (v &&
+                      ZTypes["PackageStatusText"][
+                        v as keyof typeof ZTypes["PackageStatusText"]
+                      ]) ??
+                    v ??
+                    "No status set"
+                : undefined,
+            );
             checkAgainstDB("URL", mailRow.public_url, apiMail.public_url, true);
             checkAgainstDB(
               "Dispatched At",

@@ -54,9 +54,7 @@ export default {
         response_type: "ephemeral",
       });
     const requestedPage = getPageArg(command.text);
-    const query = command.text
-      .replace(/\s*-p\s+\S+/g, "")
-      .trim();
+    const query = command.text.replace(/\s*-p\s+\S+/g, "").trim();
 
     const mailClient = new Theseus(userData.theseusKey, logger);
 
@@ -82,7 +80,15 @@ export default {
       }
 
       const itemLines = items.data.mail.map((item) => {
-        return `• ${item.id} - <${item.public_url}|${item.title ?? "Untitled"}> - ${item.dispatched_at ? formatDate(item.dispatched_at) : item.mailed_at ? formatDate(item.mailed_at) : item.status === "mailed" ? formatDate(item.updated_at) : "Not dispatched/mail yet"} - ${item.status}`;
+        return `• ${item.id} - <${item.public_url}|${item.title ?? "Untitled"}> - ${item.dispatched_at ? formatDate(item.dispatched_at) : item.mailed_at ? formatDate(item.mailed_at) : item.status === "mailed" ? formatDate(item.updated_at) : "Not dispatched/mail yet"} - ${
+          item.id.startsWith("pkg!")
+            ? (ZTypes["PackageStatusText"][
+                item.status as keyof (typeof ZTypes)["PackageStatusText"]
+              ] ??
+              item.status ??
+              "No status set")
+            : item.status
+        }`;
       });
 
       const pages = paginateLines(itemLines);
@@ -211,96 +217,99 @@ export default {
           ],
         });
       } else if (query.startsWith("pkg")) {
-          const item = await mailClient.package({ id: query });
-  
-          if (!item.ok || !item.data || !Object.keys(item.data)?.length) {
-            switch (item.status) {
-              default:
-                const msg = getGenericErrorMessage(item.status, prefix!);
-                return respond({
-                  text: msg ?? "Unexpected error has occured!",
-                  response_type: "ephemeral",
-                });
-            }
+        const item = await mailClient.package({ id: query });
+
+        if (!item.ok || !item.data || !Object.keys(item.data)?.length) {
+          switch (item.status) {
+            default:
+              const msg = getGenericErrorMessage(item.status, prefix!);
+              return respond({
+                text: msg ?? "Unexpected error has occured!",
+                response_type: "ephemeral",
+              });
           }
-  
-          const contents = item.data.contents?.length
-            ? item.data.contents
-                .map((item, index) =>
-                  [
-                    `  • *${index + 1}*`,
-                    `     - Item SKU: ${item.hc_sku}`,
-                    `     - Name: ${item.name ?? "No name provided"}`,
-                    `     - Quantity: ${item.quantity}`,
-                  ].join("\n"),
-                )
-                .join("\n")
-            : "No events";
-  
-          const userText = [
+        }
+
+        const contents = item.data.contents?.length
+          ? item.data.contents
+              .map((item, index) =>
+                [
+                  `  • *${index + 1}*`,
+                  `     - Item SKU: ${item.hc_sku}`,
+                  `     - Name: ${item.name ?? "No name provided"}`,
+                  `     - Quantity: ${item.quantity}`,
+                ].join("\n"),
+              )
+              .join("\n")
+          : "No events";
+
+        const userText = [
+          {
+            label: "ID",
+            value: `<${item.data.public_url}|${item.data.id}>`,
+          },
+          {
+            label: "Title",
+            value:
+              item.data.title ??
+              "I'm a pretty little femboy >w< I mean this has no name",
+          },
+          {
+            label: "Status",
+            value:
+              ZTypes["PackageStatusText"][
+                item.data.status as keyof (typeof ZTypes)["PackageStatusText"]
+              ] ??
+              item.data.status ??
+              "No status set",
+          },
+          {
+            label: "Tags",
+            value:
+              item.data.tags.length > 0
+                ? item.data.tags.join(", ")
+                : "No tags set",
+          },
+          {
+            label: "Created at",
+            value: formatDate(item.data.created_at),
+          },
+          {
+            label: "Last updated at",
+            value: formatDate(item.data.updated_at),
+          },
+          {
+            label: "Dispatched at",
+            value: item.data.dispatched_at
+              ? formatDate(item.data.dispatched_at)
+              : "Not dispatched yet",
+          },
+          {
+            label: "Mailed at",
+            value: item.data.mailed_at
+              ? formatDate(item.data.mailed_at)
+              : "Not mailed yet",
+          },
+          {
+            label: "Contents",
+            value: "\n" + contents,
+          },
+        ]
+          .map((f) => `*${f.label}*: ${f.value}`)
+          .join("\n");
+        return await client.chat.postEphemeral({
+          channel: command.channel_id,
+          user: command.user_id,
+          blocks: [
             {
-              label: "ID",
-              value: `<${item.data.public_url}|${item.data.id}>`,
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: userText,
+              },
             },
-            {
-              label: "Title",
-              value:
-                item.data.title ??
-                "I'm a pretty little femboy >w< I mean this has no name",
-            },
-            {
-              label: "Status",
-              value:
-                ZTypes["PackageStatusText"][
-                  item.data.status as keyof typeof ZTypes["PackageStatusText"]
-                ] ??
-                item.data.status ??
-                "No status set",
-            },
-            {
-              label: "Tags",
-              value:
-                item.data.tags.length > 0
-                  ? item.data.tags.join(", ")
-                  : "No tags set",
-            },
-            {
-              label: "Created at",
-              value: formatDate(item.data.created_at),
-            },
-            {
-              label: "Last updated at",
-              value: formatDate(item.data.updated_at),
-            },
-            {
-              label: "Dispatched at",
-              value: item.data.dispatched_at ? formatDate(item.data.dispatched_at) : "Not dispatched yet",
-            },
-            {
-              label: "Mailed at",
-              value: item.data.mailed_at ? formatDate(item.data.mailed_at) : "Not mailed yet",
-            },
-            {
-              label: "Contents",
-              value: "\n" + contents,
-            },
-          ]
-            .map((f) => `*${f.label}*: ${f.value}`)
-            .join("\n");
-          return await client.chat.postEphemeral({
-            channel: command.channel_id,
-            user: command.user_id,
-            blocks: [
-              {
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: userText,
-                },
-              }
-            ],
-          });
-        
+          ],
+        });
       } else {
         return respond({
           text: "This only supports packages (ids starting with pkg!) and letters (ids starting with ltr!).",
