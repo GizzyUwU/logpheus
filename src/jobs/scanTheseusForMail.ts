@@ -40,9 +40,13 @@ export default {
         const theseusClient = new Theseus(user.theseusKey, logger);
         const newMail = await theseusClient.mail();
         if (!newMail.ok) {
+          const msg = getGenericErrorMessage(newMail.status, prefix!);
+          if (msg === "Server is down!" || msg === "Server timed out!") return;
           const ctx = logger.with({
             status: newMail.status,
             ok: newMail.ok,
+            user: user.userId,
+            msg
           });
           ctx.error("scanTheseusForMail failed because theseus api fail");
           continue;
@@ -51,7 +55,6 @@ export default {
         if (!newMail.data) {
           if (newMail.status === 200 || newMail.status === 408) continue;
           const msg = getGenericErrorMessage(newMail.status, prefix!);
-          if (msg === "Server is down!" || msg === "Server timed out!") return;
           const ctx = logger.with({
             msg,
             status: newMail.status,
