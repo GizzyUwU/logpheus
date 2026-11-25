@@ -105,7 +105,7 @@ export default {
         });
       }
 
-      if (!items.ok || !items.data?.mail.length) {
+      if (!items.ok) {
         switch (items.status) {
           default:
             const msg = getGenericErrorMessage(items.status, prefix!);
@@ -116,7 +116,7 @@ export default {
         }
       }
 
-      if (!items.data?.mail.length)  return respond({
+      if (!items.data?.mail.length) return respond({
         text: "You got no mail!",
         response_type: "ephemeral",
       });
