@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import type { SlackCommandMiddlewareArgs, App } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { stripMrkdwn } from "@/lib/parseMarkdown";
+import { getErrorDetails, chunkForModal } from "@/lib/errorDetails";
 const commandHandlers = new Map<string, { execute: Function }>();
 
 const commandsDir = path.join(__dirname, "commands");
@@ -24,6 +25,32 @@ if (fs.existsSync(commandsDir)) {
 }
 
 async function setup(app: App, ctx: RequestHandler) {
+  app.action("mail_error_details", async (args) => {
+    await args.ack();
+    try {
+      const body = args.body as any;
+      const action = body?.actions?.[0];
+      const detailsId = String(action?.value ?? "");
+      const details = getErrorDetails(detailsId) ?? "Details expired. Run the command again.";
+      const chunks = chunkForModal(details);
+
+      await args.client.views.open({
+        trigger_id: body.trigger_id,
+        view: {
+          type: "modal",
+          title: { type: "plain_text", text: "Error details" },
+          close: { type: "plain_text", text: "Close" },
+          blocks: chunks.map((c) => ({
+            type: "section",
+            text: { type: "mrkdwn", text: "```\n" + c.slice(0, 2800) + "\n```" },
+          })),
+        },
+      });
+    } catch (err) {
+      ctx.logger.error({ err });
+    }
+  });
+
   const viewsDir = path.join(__dirname, "views");
   if (!fs.existsSync(viewsDir)) return;
 

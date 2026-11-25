@@ -1,8 +1,45 @@
 import type { SlackCommandMiddlewareArgs } from "@slack/bolt";
 import type { RequestHandler } from "@/index.ts";
 import { getGenericErrorMessage } from "@/lib/genericError";
+import { createErrorDetails } from "@/lib/errorDetails";
 import Theseus from "@/lib/theseus";
 import { ZTypes } from "@/lib/theseus/types";
+
+async function respondWithErrorDetails(
+  respond: SlackCommandMiddlewareArgs["respond"],
+  msg: string,
+  details: unknown,
+) {
+  let pretty: string;
+  try {
+    pretty = JSON.stringify(details, null, 2);
+  } catch {
+    pretty = String(details);
+  }
+  // button value limit is 2000 chars -> store full text server-side
+  const detailsId = createErrorDetails(pretty.slice(0, 20000));
+  return respond({
+    text: msg,
+    blocks: [
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: msg },
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "View details" },
+            action_id: "mail_error_details",
+            value: detailsId,
+          },
+        ],
+      },
+    ],
+    response_type: "ephemeral",
+  });
+}
 
 function paginateLines(lines: string[]): string[] {
   const pages: string[] = [];
@@ -62,16 +99,9 @@ export default {
       const items = await mailClient.mail();
 
       if (!items || !items.status) {
-        return respond({
-          text: "Unexpected error has occurred with items.",
-          metadata: {
-            "event_type": "items_not_found_or_no_status",
-            "event_payload": {
-              "status": String(items.status),
-              "items": JSON.stringify(items)
-            },
-          },
-          response_type: "ephemeral",
+        return respondWithErrorDetails(respond, "Unexpected error has occurred with items.", {
+          status: String((items as any)?.status),
+          items,
         });
       }
 
@@ -79,16 +109,9 @@ export default {
         switch (items.status) {
           default:
             const msg = getGenericErrorMessage(items.status, prefix!);
-            return respond({
-              text: msg ?? "Unexpected error has occured!",
-              metadata: {
-                "event_type": "items_not_okay",
-                "event_payload": {
-                  "status": String(items.status),
-                  "items": JSON.stringify(items)
-                },
-              },
-              response_type: "ephemeral",
+            return respondWithErrorDetails(respond, msg ?? "Unexpected error has occured!", {
+              status: String(items.status),
+              items,
             });
         }
       }
@@ -167,16 +190,9 @@ export default {
           switch (item.status) {
             default:
               const msg = getGenericErrorMessage(item.status, prefix!);
-              return respond({
-                text: msg ?? "Unexpected error has occured!",
-                metadata: {
-                  "event_type": "item_not_okay_or_missing_data",
-                  "event_payload": {
-                    "item_status": String(item.status),
-                    "item": JSON.stringify(item)
-                  }
-                },
-                response_type: "ephemeral",
+              return respondWithErrorDetails(respond, msg ?? "Unexpected error has occured!", {
+                item_status: String(item.status),
+                item,
               });
           }
         }
@@ -249,9 +265,9 @@ export default {
           switch (item.status) {
             default:
               const msg = getGenericErrorMessage(item.status, prefix!);
-              return respond({
-                text: msg ?? "Unexpected error has occured!",
-                response_type: "ephemeral",
+              return respondWithErrorDetails(respond, msg ?? "Unexpected error has occured!", {
+                item_status: String(item.status),
+                item,
               });
           }
         }
