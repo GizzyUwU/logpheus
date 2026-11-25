@@ -63,7 +63,14 @@ export default {
 
       if (!items || !items.status) {
         return respond({
-          text: "Unexpected error has occurred.",
+          text: "Unexpected error has occurred with items.",
+          metadata: {
+            "event_type": "items_not_found_or_no_status",
+            "event_payload": {
+              "status": String(items.status),
+              "items": JSON.stringify(items)
+            },
+          },
           response_type: "ephemeral",
         });
       }
@@ -74,10 +81,22 @@ export default {
             const msg = getGenericErrorMessage(items.status, prefix!);
             return respond({
               text: msg ?? "Unexpected error has occured!",
+              metadata: {
+                "event_type": "items_not_okay",
+                "event_payload": {
+                  "status": String(items.status),
+                  "items": JSON.stringify(items)
+                },
+              },
               response_type: "ephemeral",
             });
         }
       }
+
+      if (!items.data?.mail.length)  return respond({
+        text: "You got no mail!",
+        response_type: "ephemeral",
+      });
 
       const itemLines = items.data.mail.map((item) => {
         return `• ${item.id} - <${item.public_url}|${item.title ?? "Untitled"}> - ${item.dispatched_at ? formatDate(item.dispatched_at) : item.mailed_at ? formatDate(item.mailed_at) : item.status === "mailed" ? formatDate(item.updated_at) : "Not dispatched/mail yet"} - ${
@@ -150,6 +169,13 @@ export default {
               const msg = getGenericErrorMessage(item.status, prefix!);
               return respond({
                 text: msg ?? "Unexpected error has occured!",
+                metadata: {
+                  "event_type": "item_not_okay_or_missing_data",
+                  "event_payload": {
+                    "item_status": String(item.status),
+                    "item": JSON.stringify(item)
+                  }
+                },
                 response_type: "ephemeral",
               });
           }
