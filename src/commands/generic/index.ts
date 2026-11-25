@@ -73,7 +73,7 @@ async function setup(app: App, ctx: RequestHandler) {
         .where(eq(users.userId, args.body.user.id))
         .limit(1);
 
-      if (userData.length === 0 && !callbackId.includes("register"))
+      if (userData.length === 0 && callbackId !== "register")
         return args.respond({
           text: `Hey! Looks like you don't exist in the db? You can't use this bot in this state. Register to the bot with /${ctx.prefix} register`,
           response_type: "ephemeral",

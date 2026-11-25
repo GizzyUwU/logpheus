@@ -67,7 +67,7 @@ function getPageArg(input: string): number | null {
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
-
+  if (isNaN(d.getTime())) return "Unknown date";
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${String(
@@ -101,6 +101,7 @@ export default {
       if (!items || !items.status) {
         return respondWithErrorDetails(respond, "Unexpected error has occurred with items.", {
           status: String((items as any)?.status),
+          ...(!items.ok && items.msg ? { msg: String(items.msg || "") } : {}),
           items,
         });
       }
@@ -116,7 +117,7 @@ export default {
         }
       }
 
-      if (!items.data?.mail.length) return respond({
+      if (!items.data?.mail?.length) return respond({
         text: "You got no mail!",
         response_type: "ephemeral",
       });
@@ -173,7 +174,7 @@ export default {
                   elements: [
                     {
                       type: "mrkdwn" as const,
-                      text: `Use /${prefix}-${folder} mail -p <page> to see other pages and /${prefix}-folder [mailId] to see more details on an item`,
+                      text: `Use /${prefix}-${folder} mail -p <page> to see other pages and /${prefix} mail [mailId] to see more details on an item`,
                     },
                   ],
                 },
@@ -210,7 +211,7 @@ export default {
                 ].join("\n"),
               )
               .join("\n")
-          : "No events";
+          : "No contents";
 
         const userText = [
           {
@@ -294,7 +295,7 @@ export default {
             label: "Title",
             value:
               item.data.title ??
-              "I'm a pretty little femboy >w< I mean this has no name",
+              "Untitled",
           },
           {
             label: "Status",

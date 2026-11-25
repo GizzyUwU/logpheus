@@ -72,7 +72,7 @@ export default {
     url: "https://macondo.hackclub.com",
     apiKeyRequired: false,
     maxMult: 2,
-    jobs: ["newDevlog", "scanForMCStreak"] as z.infer<
+    jobs: [] as z.infer<
       typeof jobOptions
     >[],
     regions: {
